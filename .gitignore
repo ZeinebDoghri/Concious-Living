@@ -1,0 +1,103 @@
+# ─── Miscellaneous ───────────────────────────────────────
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# ─── IntelliJ / Android Studio ───────────────────────────
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# ─── VS Code ─────────────────────────────────────────────
+# Remove the # below if you do NOT want to share VS Code settings
+#.vscode/
+
+# ─── Flutter / Dart / Pub ────────────────────────────────
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# ─── Symbolication & Obfuscation ─────────────────────────
+app.*.symbols
+app.*.map.json
+
+# ─── Android build artifacts ─────────────────────────────
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/local.properties
+/android/key.properties
+*.jks
+*.keystore
+
+# ─── iOS ─────────────────────────────────────────────────
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/flutter_export_environment.sh
+Podfile.lock
+
+# ─── Firebase ────────────────────────────────────────────
+# CRITICAL — never commit these to GitHub
+google-services.json
+GoogleService-Info.plist
+lib/core/firebase_options.dart
+
+# ─── FastAPI backend (your AI model server) ──────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.env
+.env.local
+.env.production
+venv/
+.venv/
+env/
+
+# Model weights — too large for GitHub
+*.pt
+*.pth
+*.pkl
+*.onnx
+*.tflite
+*.bin
+*.h5
+
+# ─── Environment & secrets ───────────────────────────────
+.env
+.env.*
+secrets.json
+api_keys.dart
+**/assets/config/secrets.json
+
+# ─── macOS ───────────────────────────────────────────────
+*.xcworkspace
+!default.xcworkspace
+
+# ─── Windows ─────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── Large assets you don't want in git ──────────────────
+assets/lottie/*.json
+# Remove line above if your Lottie files are small (<1MB)
