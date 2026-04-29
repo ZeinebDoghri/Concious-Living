@@ -298,6 +298,11 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) =>
                     slidePage(child: const WasteScreen()),
               ),
+            ],
+          ),
+          // ⭐ Compost AI — own branch so it appears in the bottom nav
+          StatefulShellBranch(
+            routes: [
               GoRoute(
                 path: AppRoutes.restaurantCompost,
                 pageBuilder: (context, state) =>

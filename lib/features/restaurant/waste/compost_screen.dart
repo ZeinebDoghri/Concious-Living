@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -99,18 +101,18 @@ class _CompostHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).maybePop(),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 16),
+                // Compost AI icon badge
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3)),
                   ),
+                  child: const Icon(Icons.eco_rounded,
+                      color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -771,7 +773,8 @@ class _ImagePreviewCard extends StatelessWidget {
           children: [
             if (prov.selectedImageBytes != null)
               Image.memory(prov.selectedImageBytes!, fit: BoxFit.cover)
-            else if (prov.selectedImageFile != null)
+            else if (!kIsWeb && prov.selectedImageFile != null)
+              // ignore: avoid_web_libraries_in_flutter
               Image.file(prov.selectedImageFile!, fit: BoxFit.cover),
             Positioned.fill(
               child: DecoratedBox(
@@ -1015,18 +1018,18 @@ class _ResultSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = prov.result!;
-    final Uint8List originalBytes;
-    if (prov.selectedImageBytes != null) {
-      originalBytes = prov.selectedImageBytes!;
-    } else {
-      originalBytes = prov.selectedImageFile!.readAsBytesSync();
-    }
+    // Safe on both web (selectedImageBytes) and native (file read)
+    final Uint8List? originalBytes = prov.selectedImageBytes ??
+        (!kIsWeb && prov.selectedImageFile != null
+            ? prov.selectedImageFile!.readAsBytesSync()
+            : null);
+    if (originalBytes == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ImageComparisonSlider(
-          originalBytes: originalBytes,
+          originalBytes: originalBytes,  // non-null guaranteed above
           maskBytes: result.maskPng,
         ),
         const SizedBox(height: 16),
@@ -1185,7 +1188,7 @@ class _ResultSection extends StatelessWidget {
 
 // ── Split-view comparison slider ──────────────────────────────────────────────
 class _ImageComparisonSlider extends StatefulWidget {
-  final Uint8List originalBytes;
+  final Uint8List? originalBytes;
   final Uint8List maskBytes;
   const _ImageComparisonSlider({
     required this.originalBytes,
@@ -1250,7 +1253,10 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.memory(widget.originalBytes, fit: BoxFit.cover),
+                  if (widget.originalBytes != null)
+                    Image.memory(widget.originalBytes!, fit: BoxFit.cover)
+                  else
+                    Container(color: const Color(0xFF1B4332)),
                   FadeTransition(
                     opacity: _maskOpacity,
                     child: ClipRect(
