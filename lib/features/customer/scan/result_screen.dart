@@ -1,14 +1,17 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
 import '../../../providers/scan_history_provider.dart';
+import '../allergens/allergen_lookup.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 import '../../../shared/widgets/nutrient_card.dart';
@@ -25,22 +28,42 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen>
     with SingleTickerProviderStateMixin {
+  static const _prefsAllergensKey = 'customer_allergens_json';
+  static const _confidenceThreshold = 65.0;
+
   late final AnimationController _nutrientController;
   late final TextEditingController _dishNameController;
 
   bool _saved = false;
+  bool _loadingAllergens = true;
+  bool _lowConfidence = false;
+  double _modelConfidence = 0.0;
+  List<String> _dishAllergens = <String>[];
+  List<String> _matchedAllergens = <String>[];
+  List<String> _dishIngredients = <String>[];
+  String _lookupSource = 'unknown';
 
   @override
   void initState() {
     super.initState();
 
     final initialDishName = (widget.args['dishName'] as String?)?.trim() ?? '';
+    final confidence = (widget.args['dishConfidence'] as num?)?.toDouble() ?? 0.0;
+
     _dishNameController = TextEditingController(text: initialDishName);
+    _modelConfidence = confidence;
+    _lowConfidence = confidence < _confidenceThreshold;
 
     _nutrientController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..forward();
+
+    if (!_lowConfidence) {
+      _loadAllergenInfo();
+    } else {
+      setState(() => _loadingAllergens = false);
+    }
   }
 
   @override
@@ -62,6 +85,46 @@ class _ResultScreenState extends State<ResultScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _loadAllergenInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawProfile = prefs.getString(_prefsAllergensKey);
+
+    final profileAllergens = <String>[];
+    if (rawProfile != null && rawProfile.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawProfile);
+        if (decoded is List) {
+          profileAllergens.addAll(decoded.whereType<String>());
+        }
+      } catch (_) {
+        profileAllergens.clear();
+      }
+    }
+
+    final dishName = _dishNameController.text.trim();
+    final lookup = await AllergenLookupService.fetch(dishName);
+    final matched = AllergenLookupService.matchAgainstProfile(
+      profileAllergens: profileAllergens,
+      detectedAllergens: lookup.allergens,
+    ).toList(growable: false)
+      ..sort();
+
+    if (!mounted) return;
+
+    setState(() {
+      _dishAllergens = lookup.allergens;
+      _matchedAllergens = matched;
+      _dishIngredients = lookup.ingredients;
+      _lookupSource = lookup.source;
+      _loadingAllergens = false;
+    });
+  }
+
+  Future<void> _refreshAllergens() async {
+    setState(() => _loadingAllergens = true);
+    await _loadAllergenInfo();
   }
 
   Future<void> _save() async {
@@ -141,13 +204,213 @@ class _ResultScreenState extends State<ResultScreen>
                       ],
                       TextField(
                         controller: _dishNameController,
+                        onSubmitted: (_) => _refreshAllergens(),
                         decoration: const InputDecoration(
                           labelText: 'Dish name',
                           prefixIcon:
                               Icon(Icons.restaurant_menu, color: AppColors.cocoa),
+                          suffixIcon: Icon(Icons.search, color: AppColors.cocoa),
                         ),
                       ),
                       const SizedBox(height: 14),
+                      if (_lowConfidence) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3E2),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.innerCard),
+                            border: Border.all(
+                              color: AppColors.butterDeep.withValues(alpha: 0.5),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.help_outline,
+                                    color: AppColors.butterDeep,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Unable to identify this dish',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.butterDeep,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Confidence: ${_modelConfidence.toStringAsFixed(1)}%',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.cocoa,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'We don\'t have enough information in our database to identify this dish with confidence. Please ask a staff member for assistance.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppColors.cocoa,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: _matchedAllergens.isEmpty
+                                ? AppColors.infoBg
+                                : const Color(0xFFFDEBEC),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.innerCard),
+                            border: Border.all(
+                              color: _matchedAllergens.isEmpty
+                                  ? AppColors.sand
+                                  : AppColors.cherry.withValues(alpha: 0.25),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    _matchedAllergens.isEmpty
+                                        ? Icons.info_outline
+                                        : Icons.warning_amber_rounded,
+                                    color: _matchedAllergens.isEmpty
+                                        ? AppColors.infoText
+                                        : AppColors.cherry,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _loadingAllergens
+                                          ? 'Checking allergen profile...'
+                                          : _matchedAllergens.isEmpty
+                                              ? (_dishAllergens.isEmpty
+                                                  ? 'No allergen overlap detected.'
+                                                  : 'Safe to consume.')
+                                              : '⚠️ WARNING: Allergen match detected!',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: _matchedAllergens.isEmpty
+                                            ? AppColors.infoText
+                                            : AppColors.cherry,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                  if (!_loadingAllergens)
+                                    TextButton(
+                                      onPressed: _refreshAllergens,
+                                      child: Text(
+                                        'Refresh',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (!_loadingAllergens && _dishAllergens.isNotEmpty) ...[
+                                Text(
+                                  'Detected allergens',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.cocoa,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _dishAllergens
+                                      .map(
+                                        (item) => _Chip(
+                                          label: item,
+                                          background: AppColors.parchment,
+                                          foreground: AppColors.espresso,
+                                          border: AppColors.sand,
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                ),
+                              ],
+                              if (!_loadingAllergens && _matchedAllergens.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Your allergen profile matches',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.cherry,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _matchedAllergens
+                                      .map(
+                                        (item) => _Chip(
+                                          label: item,
+                                          background: AppColors.cherryBlush,
+                                          foreground: AppColors.cherry,
+                                          border: AppColors.cherry,
+                                        ),
+                                      )
+                                      .toList(growable: false),
+                                ),
+                              ],
+                              if (!_loadingAllergens && _dishIngredients.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Source: $_lookupSource',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.cocoa,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _dishIngredients.join(' • '),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppColors.cocoa,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -272,6 +535,41 @@ class _ResultScreenState extends State<ResultScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final Color background;
+  final Color foreground;
+  final Color border;
+
+  const _Chip({
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadii.badge),
+        border: Border.all(color: border, width: 0.6),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: foreground,
+          height: 1.2,
         ),
       ),
     );

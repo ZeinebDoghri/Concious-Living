@@ -49,6 +49,7 @@ dependencies:
   email_validator: ^2.1.17
   uuid: ^4.3.3
   shimmer: ^3.0.0
+  tflite_flutter: ^0.12.0
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +76,7 @@ flutter:
   assets:
     - assets/lottie/
     - assets/images/
+    - assets/models/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

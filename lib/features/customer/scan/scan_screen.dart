@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
+import '../../../core/tflite_service.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 
@@ -60,7 +61,15 @@ class _ScanScreenState extends State<ScanScreen>
         _isAnalysing = true;
       });
 
-      final result = await ApiService.predictNutrients(File(file.path));
+      // Run TFLite food classification
+      final tfliteService = TFLiteService();
+      final prediction = await tfliteService.predict(File(file.path));
+
+      if (!mounted) return;
+
+      // Get nutrition analysis from API
+      final nutritionResult = await ApiService.predictNutrients(File(file.path));
+
       if (!mounted) return;
 
       setState(() => _isAnalysing = false);
@@ -68,9 +77,10 @@ class _ScanScreenState extends State<ScanScreen>
       context.go(
         AppRoutes.customerResult,
         extra: <String, dynamic>{
-          'dishName': 'Dish',
+          'dishName': prediction?.className ?? 'Dish',
+          'dishConfidence': prediction?.confidence ?? 0.0,
           'imagePath': file.path,
-          'result': result.toJson(),
+          'result': nutritionResult.toJson(),
         },
       );
     } catch (e) {
