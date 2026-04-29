@@ -8,6 +8,7 @@ import 'app_router.dart';
 import 'core/constants.dart';
 import 'core/firebase_options.dart';
 import 'providers/alerts_provider.dart';
+import 'providers/compost_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/scan_history_provider.dart';
 import 'providers/user_provider.dart';
@@ -48,6 +49,7 @@ class _ConsciousLivingAppState extends State<ConsciousLivingApp> {
         ChangeNotifierProvider(create: (_) => ScanHistoryProvider()),
         ChangeNotifierProvider(create: (_) => AlertsProvider()),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
+        ChangeNotifierProvider(create: (_) => CompostProvider()),
       ],
       child: MaterialApp.router(
         title: AppStrings.appName,

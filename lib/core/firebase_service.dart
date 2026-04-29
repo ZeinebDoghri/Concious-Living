@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import 'models/alert_model.dart';
+import 'models/compost_session_model.dart';
 import 'models/inventory_item_model.dart';
 import 'models/scan_history_item.dart';
 import 'models/user_model.dart';
@@ -232,6 +233,45 @@ class FirebaseService {
         SettableMetadata(contentType: 'image/jpeg'),
       );
     }
+    return await ref.getDownloadURL();
+  }
+
+  // ── Compost sessions ────────────────────────────────────────────────────────
+
+  static Future<void> saveCompostSession(
+    String venueId,
+    CompostSession session,
+  ) async {
+    await _db
+        .collection('venues')
+        .doc(venueId)
+        .collection('compost_logs')
+        .doc(session.id)
+        .set(session.toJson());
+  }
+
+  static Stream<List<CompostSession>> watchCompostSessions(String venueId) {
+    return _db
+        .collection('venues')
+        .doc(venueId)
+        .collection('compost_logs')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (s) =>
+              s.docs.map((d) => CompostSession.fromJson(d.data())).toList(),
+        );
+  }
+
+  static Future<String> uploadCompostThumbnail({
+    required String venueId,
+    required String sessionId,
+    required Uint8List bytes,
+  }) async {
+    final ref = FirebaseStorage.instance.ref(
+      'venues/$venueId/compost/$sessionId.jpg',
+    );
+    await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
     return await ref.getDownloadURL();
   }
 }
