@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-// Web stub — no dart:ffi, no onnxruntime, no image package needed.
-// Returns a realistic mock result so the UI is fully demo-able in the browser.
+import 'package:image/image.dart' as img;
+
+// Web stub — no dart:ffi, no onnxruntime.
+// Uses the pure-Dart image package to generate a real coloured mask PNG.
 
 class CompostInferenceResult {
   final Uint8List maskPng;
@@ -58,30 +60,40 @@ class CompostInferenceService {
     final bg = 100.0 - compost - nonCompost;
 
     return CompostInferenceResult(
-      maskPng: _createMockPng(),
+      maskPng: _createMockPng(compost, nonCompost),
       compostablePct: compost,
       nonCompostablePct: nonCompost,
       backgroundPct: bg,
       inferenceTimeMs: 920,
-      originalWidth: 640,
-      originalHeight: 480,
+      originalWidth: 320,
+      originalHeight: 240,
     );
   }
 
   void dispose() {}
 }
 
-/// Minimal valid 1×1 transparent PNG (68 bytes).
-Uint8List _createMockPng() {
-  return Uint8List.fromList([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-    0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
-    0x54, 0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x02,
-    0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33, 0x00, 0x00,
-    0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42,
-    0x60, 0x82,
-  ]);
+/// Generates a real 320×240 coloured segmentation mask PNG using the
+/// pure-Dart image package (safe on web — no dart:ffi).
+Uint8List _createMockPng(double compostPct, double nonCompostPct) {
+  const w = 320;
+  const h = 240;
+  final mask = img.Image(width: w, height: h, numChannels: 4);
+  final rng  = math.Random();
+
+  for (int y = 0; y < h; y++) {
+    for (int x = 0; x < w; x++) {
+      final nx = x / w;
+      final ny = y / h;
+      // Left half + top-right quarter → compostable (emerald)
+      if (nx < 0.55 && ny < 0.85) {
+        mask.setPixelRgba(x, y, 16, 185, 129, 160);   // emerald
+      } else if (nx > 0.6 || ny > 0.7) {
+        mask.setPixelRgba(x, y, 239, 68, 68, 160);    // rose
+      } else {
+        mask.setPixelRgba(x, y, 148, 163, 184, 50);   // slate
+      }
+    }
+  }
+  return Uint8List.fromList(img.encodePng(mask));
 }

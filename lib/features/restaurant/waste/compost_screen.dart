@@ -897,7 +897,7 @@ class _AnalyzingCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'SegFormer-B3 segmente votre image\npixel par pixel',
+            'Mask2Former segmente votre image\npixel par pixel',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,
@@ -1269,6 +1269,27 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                           child: Image.memory(
                             widget.maskBytes,
                             fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: _emerald.withValues(alpha: 0.35),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.eco_rounded,
+                                        color: Colors.white, size: 32),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Masque IA',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
