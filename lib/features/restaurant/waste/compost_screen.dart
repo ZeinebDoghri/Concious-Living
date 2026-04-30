@@ -897,7 +897,7 @@ class _AnalyzingCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Mask2Former segmente votre image\npixel par pixel',
+            'Segmentation pixel par pixel\ncompostable · non-compostable · fond',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,
@@ -974,9 +974,9 @@ class _AnimatedStepsState extends State<_AnimatedSteps> {
   int _step = 0;
   static const _steps = [
     "Décodage de l'image…",
-    'Normalisation ImageNet…',
-    'Inférence ONNX…',
-    'Génération du masque…',
+    'Normalisation 384×384 ImageNet…',
+    'Inférence ONNX (compost_int8)…',
+    "Génération de l'overlay coloré…",
   ];
 
   @override
@@ -1324,12 +1324,12 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                   Positioned(
                     top: 10,
                     left: 10,
-                    child: _overlayLabel('Masque IA'),
+                    child: _overlayLabel('🟢 Segmentation IA'),
                   ),
                   Positioned(
                     top: 10,
                     right: 10,
-                    child: _overlayLabel('Original'),
+                    child: _overlayLabel('📷 Original'),
                   ),
                 ],
               ),

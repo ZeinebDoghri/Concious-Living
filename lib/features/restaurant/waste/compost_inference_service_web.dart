@@ -4,9 +4,12 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 // Web stub — no dart:ffi, no onnxruntime.
-// Uses the pure-Dart image package to generate a real coloured mask PNG.
+// Decodes the real image and applies a realistic segmentation overlay using
+// the pure-Dart image package (safe on web — no dart:ffi).
 
+// ── Result (mirrors native version) ───────────────────────────────────────────
 class CompostInferenceResult {
+  /// PNG = original image with coloured segmentation overlay
   final Uint8List maskPng;
   final double compostablePct;
   final double nonCompostablePct;
@@ -46,54 +49,90 @@ class CompostInferenceResult {
       };
 }
 
+// ── Web stub service ───────────────────────────────────────────────────────────
 class CompostInferenceService {
   bool get isModelLoaded => false;
 
   Future<bool> init() async => false;
 
   Future<CompostInferenceResult> classify(Uint8List imageBytes) async {
-    await Future.delayed(const Duration(milliseconds: 900));
+    // Simulate inference latency
+    await Future.delayed(const Duration(milliseconds: 920));
 
-    final rng = math.Random();
-    final compost = 42.0 + rng.nextDouble() * 28;
-    final nonCompost = 15.0 + rng.nextDouble() * 20;
-    final bg = 100.0 - compost - nonCompost;
+    final rng        = math.Random();
+    final compost    = 38.0 + rng.nextDouble() * 32;
+    final nonCompost = 18.0 + rng.nextDouble() * 22;
+    final bg         = 100.0 - compost - nonCompost;
+
+    // Decode the actual image so the overlay looks realistic
+    final src = img.decodeImage(imageBytes);
+    final int W = src?.width  ?? 320;
+    final int H = src?.height ?? 240;
+
+    final overlayPng = _buildMockOverlay(src, W, H);
 
     return CompostInferenceResult(
-      maskPng: _createMockPng(compost, nonCompost),
+      maskPng: overlayPng,
       compostablePct: compost,
       nonCompostablePct: nonCompost,
       backgroundPct: bg,
       inferenceTimeMs: 920,
-      originalWidth: 320,
-      originalHeight: 240,
+      originalWidth: W,
+      originalHeight: H,
     );
   }
 
   void dispose() {}
 }
 
-/// Generates a real 320×240 coloured segmentation mask PNG using the
-/// pure-Dart image package (safe on web — no dart:ffi).
-Uint8List _createMockPng(double compostPct, double nonCompostPct) {
-  const w = 320;
-  const h = 240;
-  final mask = img.Image(width: w, height: h, numChannels: 4);
-  final rng  = math.Random();
+// ── Realistic overlay mock ─────────────────────────────────────────────────────
+/// Applies a fake segmentation overlay on the real image:
+///   • Centre area  → compostable (emerald tint)  — e.g. vegetables/salad
+///   • Right region → non-compostable (rose tint) — e.g. meat
+///   • Edges        → background (original pixels)
+Uint8List _buildMockOverlay(img.Image? src, int W, int H) {
+  const blendOrig  = 0.42;
+  const blendColor = 0.58;
 
-  for (int y = 0; y < h; y++) {
-    for (int x = 0; x < w; x++) {
-      final nx = x / w;
-      final ny = y / h;
-      // Left half + top-right quarter → compostable (emerald)
-      if (nx < 0.55 && ny < 0.85) {
-        mask.setPixelRgba(x, y, 16, 185, 129, 160);   // emerald
-      } else if (nx > 0.6 || ny > 0.7) {
-        mask.setPixelRgba(x, y, 239, 68, 68, 160);    // rose
+  final out = img.Image(width: W, height: H, numChannels: 3);
+  final rng = math.Random(42); // fixed seed for deterministic look
+
+  for (int y = 0; y < H; y++) {
+    for (int x = 0; x < W; x++) {
+      final nx = x / W;
+      final ny = y / H;
+
+      // Get original pixel (or grey if no image)
+      int r = 120, g = 120, b = 120;
+      if (src != null) {
+        final p = src.getPixel(x, y);
+        r = p.r.toInt();
+        g = p.g.toInt();
+        b = p.b.toInt();
+      }
+
+      // Smooth noise for organic-looking edges
+      final noise = (rng.nextDouble() - 0.5) * 0.08;
+      final dist = math.sqrt(
+          math.pow(nx - 0.5, 2) + math.pow(ny - 0.48, 2));
+
+      if (dist > 0.44 + noise) {
+        // Background — original pixel
+        out.setPixelRgb(x, y, r, g, b);
+      } else if (nx < 0.50 + noise) {
+        // Compostable — emerald tint
+        out.setPixelRgb(x, y,
+          (r * blendOrig + 16  * blendColor).round(),
+          (g * blendOrig + 185 * blendColor).round(),
+          (b * blendOrig + 129 * blendColor).round());
       } else {
-        mask.setPixelRgba(x, y, 148, 163, 184, 50);   // slate
+        // Non-compostable — rose tint
+        out.setPixelRgb(x, y,
+          (r * blendOrig + 239 * blendColor).round(),
+          (g * blendOrig + 68  * blendColor).round(),
+          (b * blendOrig + 68  * blendColor).round());
       }
     }
   }
-  return Uint8List.fromList(img.encodePng(mask));
+  return Uint8List.fromList(img.encodePng(out));
 }

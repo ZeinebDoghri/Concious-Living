@@ -298,7 +298,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 // ── Compost IA card (star feature — first!) ────────────────
                 _SectionCard(
                   title: '♻️ Compost IA',
-                  subtitle: 'Mask2Former INT8 · On-device',
+                  subtitle: 'compost_model_int8 · On-device ONNX',
                   color: _kEmerald,
                   delay: 0,
                   child: _CompostCard(
@@ -718,29 +718,57 @@ class _CompostCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Mask image with error fallback
-        if (maskPng != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              height: 150,
-              width: double.infinity,
-              child: Image.memory(
-                maskPng!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _MaskFallback(
-                  compostPct: compostPct,
-                  nonCompostPct: nonCompostPct,
-                  bgPct: bgPct,
-                ),
+        // Overlay image: original photo blended with coloured segmentation
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 180,
+            width: double.infinity,
+            child: maskPng != null
+                ? Image.memory(
+                    maskPng!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _MaskFallback(
+                      compostPct: compostPct,
+                      nonCompostPct: nonCompostPct,
+                      bgPct: bgPct,
+                    ),
+                  )
+                : _MaskFallback(
+                    compostPct: compostPct,
+                    nonCompostPct: nonCompostPct,
+                    bgPct: bgPct,
+                  ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Label hint
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _Dot(color: _kEmerald),
+            const SizedBox(width: 4),
+            Text('Compostable',
+                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
+            const SizedBox(width: 10),
+            _Dot(color: _kRose),
+            const SizedBox(width: 4),
+            Text('Non-compost.',
+                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
+            const SizedBox(width: 10),
+            Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(color: _kSlate),
               ),
             ),
-          )
-        else
-          _MaskFallback(
-              compostPct: compostPct,
-              nonCompostPct: nonCompostPct,
-              bgPct: bgPct),
+            const SizedBox(width: 4),
+            Text('Fond',
+                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
+          ],
+        ),
 
         const SizedBox(height: 12),
 
