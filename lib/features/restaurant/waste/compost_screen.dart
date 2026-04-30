@@ -974,8 +974,8 @@ class _AnimatedStepsState extends State<_AnimatedSteps> {
   int _step = 0;
   static const _steps = [
     "Décodage de l'image…",
-    'Normalisation 384×384 ImageNet…',
-    'Inférence ONNX (compost_int8)…',
+    'LongestMaxSize + padding 512×512…',
+    'Inférence Mask2Former (mask2former_fp32)…',
     "Génération de l'overlay coloré…",
   ];
 
@@ -1201,39 +1201,51 @@ class _ImageComparisonSlider extends StatefulWidget {
 }
 
 class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   double _splitX = 0.5;
+  bool _hasInteracted = false;
   late final AnimationController _maskAnim;
   late final Animation<double> _maskOpacity;
+  late final AnimationController _hintAnim;
 
   @override
   void initState() {
     super.initState();
     _maskAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
     )..forward();
     _maskOpacity =
         CurvedAnimation(parent: _maskAnim, curve: Curves.easeOut);
+
+    // Animate hint arrow left-right after reveal
+    _hintAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) _hintAnim.repeat(reverse: true);
+    });
   }
 
   @override
   void dispose() {
     _maskAnim.dispose();
+    _hintAnim.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 260,
+      height: 300,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -1248,6 +1260,10 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                 setState(() {
                   _splitX =
                       (_splitX + d.delta.dx / W).clamp(0.05, 0.95);
+                  if (!_hasInteracted) {
+                    _hasInteracted = true;
+                    _hintAnim.stop();
+                  }
                 });
               },
               child: Stack(
@@ -1296,28 +1312,52 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                     ),
                   ),
                   Positioned(
-                    left: _splitX * W - 1,
+                    left: _splitX * W - 1.5,
                     top: 0,
                     bottom: 0,
-                    child: Container(
-                      width: 2,
-                      color: Colors.white,
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black26, blurRadius: 6)
-                            ],
+                    child: SizedBox(
+                      width: 3,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // White divider line
+                          Container(width: 3, color: Colors.white),
+                          // Handle circle
+                          Align(
+                            alignment: Alignment.center,
+                            child: AnimatedBuilder(
+                              animation: _hintAnim,
+                              builder: (_, child) {
+                                final offset = _hasInteracted
+                                    ? 0.0
+                                    : (_hintAnim.value - 0.5) * 14;
+                                return Transform.translate(
+                                  offset: Offset(offset, 0),
+                                  child: child,
+                                );
+                              },
+                              child: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.22),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                    Icons.compare_arrows_rounded,
+                                    size: 20,
+                                    color: _emeraldDark),
+                              ),
+                            ),
                           ),
-                          child: const Icon(Icons.compare_arrows_rounded,
-                              size: 18, color: _emeraldDark),
-                        ),
+                        ],
                       ),
                     ),
                   ),

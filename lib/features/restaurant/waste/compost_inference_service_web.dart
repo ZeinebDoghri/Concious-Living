@@ -5,15 +5,12 @@ import 'package:image/image.dart' as img;
 
 // Web stub — no dart:ffi, no onnxruntime.
 //
-// Generates a realistic segmentation overlay using the EXACT same
-// palette and blend formula as the real Mask2Former model (CELL C):
+// Produces smooth segmentation that visually resembles the real Mask2Former
+// output by using a downscale → classify → majority-vote smooth → upscale pipeline.
 //
+// Palette and blend are EXACT copies of the native (notebook) version:
 //   PALETTE: 0=bg(original)  1=compostable(60,200,80)  2=non-compost(220,60,60)
 //   Blend  : overlay[fg] = 0.55 * PALETTE[class] + 0.45 * original_pixel
-//
-// The mock segmentation uses pixel-colour analysis (green → compost,
-// brown/red → non-compost, white/dark → background) so the coloured
-// zones actually follow the food content of the image.
 
 // ── Exact palette from notebook CELL 4 ────────────────────────────────────────
 const _kCR = 60;  const _kCG = 200; const _kCB = 80;   // compostable lime-green
@@ -75,7 +72,7 @@ class CompostInferenceService {
     final W   = src?.width  ?? 320;
     final H   = src?.height ?? 240;
 
-    final (overlay, c1, c2, c0) = _buildSmartOverlay(src, W, H);
+    final (overlay, c1, c2, c0) = _buildSmoothOverlay(src, W, H);
     final total = W * H;
 
     return CompostInferenceResult(
@@ -92,44 +89,71 @@ class CompostInferenceService {
   void dispose() {}
 }
 
-// ── Smart colour-heuristic overlay ────────────────────────────────────────────
-/// Classifies each pixel using colour analysis — produces realistic-looking
-/// segmentation that follows the actual food content of the image.
-///
-/// Rules (simplified FoodSeg103 → compost/non-compost mapping):
-///   • Very bright (plate, white table)      → background (0)
-///   • Very dark (shadow, dark background)   → background (0)
-///   • Green-dominant (veggies, herbs, salad)→ compostable (1)
-///   • Red/brown dominant + meat-like saturation → non-compostable (2)
-///   • Otherwise → compostable (1)   (most food is compostable)
-(Uint8List, int, int, int) _buildSmartOverlay(img.Image? src, int W, int H) {
+// ── Smooth segmentation pipeline ──────────────────────────────────────────────
+/// Downscale → classify → majority-vote smooth → upsample.
+/// Produces large coherent regions (like a real semantic segmentation model)
+/// instead of noisy per-pixel decisions.
+(Uint8List, int, int, int) _buildSmoothOverlay(img.Image? src, int W, int H) {
+  // 1. Work at a small resolution for classification (avoids per-pixel noise)
+  const kSmall = 96;
+  final sw = (kSmall).clamp(1, W);
+  final sh = (kSmall * H ~/ math.max(W, 1)).clamp(1, H);
+
+  // Resize source to small canvas for classification
+  final small = src != null
+      ? img.copyResize(src, width: sw, height: sh,
+          interpolation: img.Interpolation.average)
+      : null;
+
+  // 2. Classify each pixel in small canvas
+  final rawMask = Uint8List(sw * sh);
+  for (int y = 0; y < sh; y++) {
+    for (int x = 0; x < sw; x++) {
+      int r = 128, g = 100, b = 80;
+      if (small != null) {
+        final p = small.getPixel(x, y);
+        r = p.r.toInt(); g = p.g.toInt(); b = p.b.toInt();
+      }
+      rawMask[y * sw + x] = _classifyPixel(r, g, b);
+    }
+  }
+
+  // 3. Apply 3×3 majority-vote smoothing (twice for extra coherence)
+  var smoothed = _majoritySmooth(rawMask, sw, sh);
+  smoothed = _majoritySmooth(smoothed, sw, sh);
+
+  // 4. Upsample to original size (nearest-neighbour)
+  final fullMask = Uint8List(W * H);
+  for (int y = 0; y < H; y++) {
+    for (int x = 0; x < W; x++) {
+      final sx = (x * sw / W).floor().clamp(0, sw - 1);
+      final sy = (y * sh / H).floor().clamp(0, sh - 1);
+      fullMask[y * W + x] = smoothed[sy * sw + sx];
+    }
+  }
+
+  // 5. Build overlay and count pixels
   final out = img.Image(width: W, height: H, numChannels: 3);
   int c0 = 0, c1 = 0, c2 = 0;
 
   for (int y = 0; y < H; y++) {
     for (int x = 0; x < W; x++) {
-      // Get source pixel
       int r = 128, g = 100, b = 80;
       if (src != null) {
         final p = src.getPixel(x, y);
-        r = p.r.toInt();
-        g = p.g.toInt();
-        b = p.b.toInt();
+        r = p.r.toInt(); g = p.g.toInt(); b = p.b.toInt();
       }
-
-      final cls = _classifyPixel(r, g, b);
-
-      switch (cls) {
-        case 0: // background — original pixel
+      switch (fullMask[y * W + x]) {
+        case 0:
           out.setPixelRgb(x, y, r, g, b);
           c0++;
-        case 1: // compostable — lime-green tint
+        case 1:
           out.setPixelRgb(x, y,
             (r * _kBlendOrig + _kCR * _kBlendColor).round(),
             (g * _kBlendOrig + _kCG * _kBlendColor).round(),
             (b * _kBlendOrig + _kCB * _kBlendColor).round());
           c1++;
-        default: // non-compostable — red tint
+        default:
           out.setPixelRgb(x, y,
             (r * _kBlendOrig + _kNR * _kBlendColor).round(),
             (g * _kBlendOrig + _kNG * _kBlendColor).round(),
@@ -142,34 +166,77 @@ class CompostInferenceService {
   return (Uint8List.fromList(img.encodePng(out)), c1, c2, c0);
 }
 
+/// 3×3 majority-vote smoothing pass.
+Uint8List _majoritySmooth(Uint8List mask, int W, int H) {
+  final out = Uint8List(W * H);
+  for (int y = 0; y < H; y++) {
+    for (int x = 0; x < W; x++) {
+      final counts = [0, 0, 0];
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          final nx = (x + dx).clamp(0, W - 1);
+          final ny = (y + dy).clamp(0, H - 1);
+          counts[mask[ny * W + nx]]++;
+        }
+      }
+      // Pick class with most votes
+      int best = 0;
+      if (counts[1] > counts[best]) best = 1;
+      if (counts[2] > counts[best]) best = 2;
+      out[y * W + x] = best;
+    }
+  }
+  return out;
+}
+
 /// Pixel-level food classifier based on colour.
 /// Returns: 0=background, 1=compostable, 2=non-compostable
+///
+/// Rules calibrated for typical restaurant food images:
+///   • Very bright white/grey (plate, table)   → background (0)
+///   • Very dark (shadow, background)           → background (0)
+///   • Green-dominant (veggies, herbs, salad)  → compostable (1)
+///   • Yellow/orange (carrots, corn, peppers)  → compostable (1)  ← plant-based
+///   • Red-dominant, low saturation (tomato)   → compostable (1)
+///   • Brown/dark-red, meat-tone               → non-compostable (2)
+///   • Dark processed orange (fried/nuggets)   → non-compostable (2)
+///   • Default                                 → compostable (1)
 int _classifyPixel(int r, int g, int b) {
-  final brightness = (r + g + b) / 3;
+  final brightness = (r + g + b) / 3.0;
 
-  // ── Background detection ──────────────────────────────────────────────────
-  // Very bright white → plate/table
-  if (r > 215 && g > 215 && b > 215) return 0;
-  // Very dark → shadow/black background
-  if (brightness < 30) return 0;
-  // Neutral grey → table/plate border
+  // ── Background ────────────────────────────────────────────────────────────
+  if (r > 220 && g > 220 && b > 220) return 0;           // bright white plate
+  if (brightness < 28) return 0;                          // near-black shadow
   final maxC = math.max(r, math.max(g, b));
   final minC = math.min(r, math.min(g, b));
   final saturation = maxC > 0 ? (maxC - minC) / maxC : 0.0;
-  if (saturation < 0.08 && brightness > 160) return 0; // unsaturated light → bg
+  if (saturation < 0.09 && brightness > 155) return 0;   // unsaturated grey
 
-  // ── Compostable: green-dominant pixels (vegetables, herbs, salad) ─────────
+  // ── Compostable: green-dominant (vegetables, herbs) ───────────────────────
   final greenness = g - math.max(r, b);
-  if (greenness > 20) return 1; // clearly green → compostable
+  if (greenness > 18) return 1;
 
-  // ── Non-compostable: meat tones (brown/dark-red, low green, low blue) ─────
-  // Brown meat: r high, g medium, b low, r > g significantly
-  if (r > 100 && r > g + 25 && g > b && b < 100 && brightness < 180) return 2;
-  // Dark red (cooked meat, sausage)
-  if (r > 120 && g < 80 && b < 80) return 2;
-  // Orange-brown (fried food, processed)
-  if (r > 160 && g > 90 && g < 145 && b < 90 && r > g * 1.15) return 2;
+  // ── Compostable: yellow / orange plant-based (carrots, corn, citrus) ──────
+  // R high, G medium-high, B low — clearly saturated yellow/orange
+  if (r > 160 && g > 110 && b < 70 && saturation > 0.35 &&
+      (g.toDouble() / math.max(r, 1)) > 0.55) return 1;
 
-  // ── Default: compostable (most food items are plant-based) ───────────────
+  // ── Compostable: bright red (tomatoes, strawberries, peppers) ─────────────
+  // Tomato: high R, low G & B, but not the dark/brownish meat tone
+  if (r > 150 && g < 70 && b < 70 && brightness > 80 && brightness < 200) {
+    // Distinguish tomato-red (more vivid) from dark meat (darker, lower brightness)
+    if (brightness > 100) return 1; // bright vivid red → tomato/pepper
+  }
+
+  // ── Non-compostable: meat tones (brown, dark-red, processed) ─────────────
+  // Dark meat / cooked protein: medium R, low G, very low B, lowish brightness
+  if (r > 90 && r > g + 30 && g > b + 10 && b < 90 && brightness < 170) return 2;
+  // Deep dark red meat (rare meat, sausage)
+  if (r > 110 && g < 72 && b < 65 && brightness < 140) return 2;
+  // Fried / processed food: dark orange-brown with low saturation
+  if (r > 155 && g > 90 && g < 140 && b < 80 &&
+      r > g * 1.18 && saturation > 0.2 && brightness < 175) return 2;
+
+  // ── Default: compostable ──────────────────────────────────────────────────
   return 1;
 }

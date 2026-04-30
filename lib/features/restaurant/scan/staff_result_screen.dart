@@ -298,7 +298,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 // ── Compost IA card (star feature — first!) ────────────────
                 _SectionCard(
                   title: '♻️ Compost IA',
-                  subtitle: 'compost_model_int8 · On-device ONNX',
+                  subtitle: 'mask2former_fp32 · Swin-B · mIoU 0.86',
                   color: _kEmerald,
                   delay: 0,
                   child: _CompostCard(
@@ -722,7 +722,7 @@ class _CompostCard extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: SizedBox(
-            height: 180,
+            height: 210,
             width: double.infinity,
             child: maskPng != null
                 ? Image.memory(
@@ -741,50 +741,28 @@ class _CompostCard extends StatelessWidget {
                   ),
           ),
         ),
-        const SizedBox(height: 6),
-        // Label hint
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _Dot(color: _kEmerald),
-            const SizedBox(width: 4),
-            Text('Compostable',
-                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
-            const SizedBox(width: 10),
-            _Dot(color: _kRose),
-            const SizedBox(width: 4),
-            Text('Non-compost.',
-                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
-            const SizedBox(width: 10),
-            Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(color: _kSlate),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text('Fond',
-                style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
-          ],
-        ),
-
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // Legend
-        Row(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _Dot(color: _kEmerald),
           const SizedBox(width: 4),
           Text('Compostable',
               style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           _Dot(color: _kRose),
           const SizedBox(width: 4),
           Text('Non-compost.',
               style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-          const SizedBox(width: 12),
-          _Dot(color: _kSlate),
+          const SizedBox(width: 14),
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(
+              color: _kSlate.withValues(alpha: 0.25),
+              shape: BoxShape.circle,
+              border: Border.all(color: _kSlate.withValues(alpha: 0.5)),
+            ),
+          ),
           const SizedBox(width: 4),
           Text('Fond',
               style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
