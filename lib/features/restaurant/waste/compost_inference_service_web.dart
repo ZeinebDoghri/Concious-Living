@@ -1,52 +1,28 @@
-import 'dart:math' as math;
+/// compost_inference_service_web.dart
+/// Web implementation — calls FastAPI backend on HuggingFace Spaces.
+/// Returns exact SegFormer-B3 results (same as notebook).
+library;
+
+import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:image/image.dart' as img;
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
-// Web stub — no dart:ffi, no onnxruntime.
-//
-// Mimics the real Mask2Former output using a FoodSeg103-aware colour heuristic.
-//
-// ── Class mapping (EPA/WRAP rules — exact from notebook CELL 4) ───────────────
-//   NON-COMPOST: meats (steak, pork, chicken, sausage, lamb, fried meat),
-//                fish/seafood, dairy (cheese, butter, milk, egg, ice cream),
-//                sweets (cake, chocolate, candy, biscuit), liquids (coffee, juice, wine),
-//                processed dishes (pizza, burger, soup, hanamaki, wonton, pie, salad)
-//   COMPOSTABLE: ALL individual fruits/veg (incl. tomato, strawberry, cherry…),
-//                grains (bread, rice, pasta, corn), nuts, legumes, mushrooms, tofu, herbs
-//
-// ── Colour rules based on FoodSeg103 visual statistics ───────────────────────
-//   Very vivid red (tomato, strawberry, cherry, pepper) → COMPOSTABLE
-//   Green dominant  (vegetables, herbs)                 → COMPOSTABLE
-//   Orange/yellow, high saturation (carrot, corn, citrus) → COMPOSTABLE
-//   Brown/muted-red (steak, pork, fried meat)           → NON-COMPOSTABLE
-//   White/neutral grey (plate, table, background)        → BACKGROUND
-//
-// ── Preprocessing pipeline (matches notebook predict_image exactly) ───────────
-//   1. Downsample to 80px classification canvas (fast heuristic)
-//   2. Classify each pixel with colour rules
-//   3. 3×3 majority-vote smoothing (×2) → large coherent regions
-//   4. Nearest-neighbour upsample → original W×H
-//   5. Build overlay: 0.55 × PALETTE[class] + 0.45 × original_pixel
-//
-// ── Exact palette (notebook CELL 4) ──────────────────────────────────────────
-//   class 0 background  → original pixel
-//   class 1 compostable → RGB(60, 200, 80)  lime-green
-//   class 2 non-compost → RGB(220, 60, 60)  bright red
-const _kCR = 60;  const _kCG = 200; const _kCB = 80;
-const _kNR = 220; const _kNG = 60;  const _kNB = 60;
-const double _kBlendColor = 0.55;   // same as notebook: 0.55*color + 0.45*original
-const double _kBlendOrig  = 0.45;
+// ── API config ────────────────────────────────────────────────────────────────
+const _kApiBase    = 'https://touuuuuuuuuuta-compost-api.hf.space';
+const _kSegmentUrl = '$_kApiBase/segment';
+const _kHealthUrl  = '$_kApiBase/health';
 
-// ── Result (mirrors native) ────────────────────────────────────────────────────
+// ── Result (mirrors native service exactly) ───────────────────────────────────
 class CompostInferenceResult {
   final Uint8List maskPng;
-  final double compostablePct;
-  final double nonCompostablePct;
-  final double backgroundPct;
-  final int inferenceTimeMs;
-  final int originalWidth;
-  final int originalHeight;
+  final double    compostablePct;
+  final double    nonCompostablePct;
+  final double    backgroundPct;
+  final int       inferenceTimeMs;
+  final int       originalWidth;
+  final int       originalHeight;
 
   const CompostInferenceResult({
     required this.maskPng,
@@ -59,237 +35,75 @@ class CompostInferenceResult {
   });
 
   CompostInferenceResult copyWithTime(int ms) => CompostInferenceResult(
-        maskPng: maskPng,
-        compostablePct: compostablePct,
+        maskPng:           maskPng,
+        compostablePct:    compostablePct,
         nonCompostablePct: nonCompostablePct,
-        backgroundPct: backgroundPct,
-        inferenceTimeMs: ms,
-        originalWidth: originalWidth,
-        originalHeight: originalHeight,
+        backgroundPct:     backgroundPct,
+        inferenceTimeMs:   ms,
+        originalWidth:     originalWidth,
+        originalHeight:    originalHeight,
       );
 
   Map<String, dynamic> toMap() => {
-        'compostablePct': compostablePct,
+        'compostablePct':    compostablePct,
         'nonCompostablePct': nonCompostablePct,
-        'backgroundPct': backgroundPct,
-        'inferenceTimeMs': inferenceTimeMs,
-        'maskPng': maskPng,
-        'originalWidth': originalWidth,
-        'originalHeight': originalHeight,
+        'backgroundPct':     backgroundPct,
+        'inferenceTimeMs':   inferenceTimeMs,
+        'maskPng':           maskPng,
+        'originalWidth':     originalWidth,
+        'originalHeight':    originalHeight,
       };
 }
 
-// ── Web stub service ───────────────────────────────────────────────────────────
+// ── Service ───────────────────────────────────────────────────────────────────
 class CompostInferenceService {
-  bool get isModelLoaded => false;
+  bool _apiReachable = false;
+  bool get isModelLoaded => _apiReachable;
 
-  Future<bool> init() async => false;
+  /// Ping the API health endpoint. Returns true if reachable.
+  Future<bool> init() async {
+    try {
+      final resp = await http
+          .get(Uri.parse(_kHealthUrl))
+          .timeout(const Duration(seconds: 8));
+      _apiReachable = resp.statusCode == 200;
+      debugPrint('[Compost-Web] API reachable: $_apiReachable');
+    } catch (e) {
+      debugPrint('[Compost-Web] API unreachable: $e');
+      _apiReachable = false;
+    }
+    return _apiReachable;
+  }
 
+  /// Send image to FastAPI /segment → get real SegFormer-B3 result.
   Future<CompostInferenceResult> classify(Uint8List imageBytes) async {
-    await Future.delayed(const Duration(milliseconds: 920));
+    final request = http.MultipartRequest('POST', Uri.parse(_kSegmentUrl))
+      ..files.add(http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'image.jpg',
+      ));
 
-    final src = img.decodeImage(imageBytes);
-    final W   = src?.width  ?? 320;
-    final H   = src?.height ?? 240;
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final resp     = await http.Response.fromStream(streamed);
 
-    final (overlay, c1, c2, c0) = _buildSmoothOverlay(src, W, H);
-    final total = W * H;
+    if (resp.statusCode != 200) {
+      throw Exception('[Compost-Web] API error ${resp.statusCode}: ${resp.body}');
+    }
+
+    final json    = jsonDecode(resp.body) as Map<String, dynamic>;
+    final maskPng = base64Decode(json['mask_png_b64'] as String);
 
     return CompostInferenceResult(
-      maskPng: overlay,
-      compostablePct:    c1 / total * 100,
-      nonCompostablePct: c2 / total * 100,
-      backgroundPct:     c0 / total * 100,
-      inferenceTimeMs: 920,
-      originalWidth:  W,
-      originalHeight: H,
+      maskPng:           maskPng,
+      compostablePct:    (json['compostable_pct'] as num).toDouble(),
+      nonCompostablePct: (json['non_compost_pct']  as num).toDouble(),
+      backgroundPct:     (json['background_pct']   as num).toDouble(),
+      inferenceTimeMs:   json['inference_ms'] as int,
+      originalWidth:     json['original_width']  as int,
+      originalHeight:    json['original_height'] as int,
     );
   }
 
   void dispose() {}
-}
-
-// ── Smooth segmentation pipeline ──────────────────────────────────────────────
-/// Downscale → classify → majority-vote smooth → upsample.
-/// Produces large coherent food regions that match real Mask2Former output.
-(Uint8List, int, int, int) _buildSmoothOverlay(img.Image? src, int W, int H) {
-  // Work at 160px wide for better small-object preservation.
-  // (80px made cherry tomatoes ~6px → smoothing erased them; 160px → ~12px → survive)
-  const kSmall = 160;
-  final sw = kSmall.clamp(1, W);
-  final sh = (kSmall * H ~/ math.max(W, 1)).clamp(1, H);
-
-  // Downsample with averaging for better colour representation
-  final small = src != null
-      ? img.copyResize(src, width: sw, height: sh,
-          interpolation: img.Interpolation.average)
-      : null;
-
-  // Classify each pixel in the canvas
-  final rawMask = Uint8List(sw * sh);
-  for (int y = 0; y < sh; y++) {
-    for (int x = 0; x < sw; x++) {
-      int r = 128, g = 100, b = 80;
-      if (small != null) {
-        final p = small.getPixel(x, y);
-        r = p.r.toInt(); g = p.g.toInt(); b = p.b.toInt();
-      }
-      rawMask[y * sw + x] = _classifyPixel(r, g, b);
-    }
-  }
-
-  // Single 3×3 majority-vote pass — smooths noise without eating small objects
-  final smoothed = _majoritySmooth(rawMask, sw, sh);
-
-  // Nearest-neighbour upsample to original size
-  final fullMask = Uint8List(W * H);
-  for (int y = 0; y < H; y++) {
-    for (int x = 0; x < W; x++) {
-      final sx = (x * sw / W).floor().clamp(0, sw - 1);
-      final sy = (y * sh / H).floor().clamp(0, sh - 1);
-      fullMask[y * W + x] = smoothed[sy * sw + sx];
-    }
-  }
-
-  // Build overlay and count pixels
-  final out = img.Image(width: W, height: H, numChannels: 3);
-  int c0 = 0, c1 = 0, c2 = 0;
-
-  for (int y = 0; y < H; y++) {
-    for (int x = 0; x < W; x++) {
-      int r = 128, g = 100, b = 80;
-      if (src != null) {
-        final p = src.getPixel(x, y);
-        r = p.r.toInt(); g = p.g.toInt(); b = p.b.toInt();
-      }
-      switch (fullMask[y * W + x]) {
-        case 0:
-          out.setPixelRgb(x, y, r, g, b);
-          c0++;
-        case 1: // compostable — lime-green tint
-          out.setPixelRgb(x, y,
-            (r * _kBlendOrig + _kCR * _kBlendColor).round(),
-            (g * _kBlendOrig + _kCG * _kBlendColor).round(),
-            (b * _kBlendOrig + _kCB * _kBlendColor).round());
-          c1++;
-        default: // non-compostable — red tint
-          out.setPixelRgb(x, y,
-            (r * _kBlendOrig + _kNR * _kBlendColor).round(),
-            (g * _kBlendOrig + _kNG * _kBlendColor).round(),
-            (b * _kBlendOrig + _kNB * _kBlendColor).round());
-          c2++;
-      }
-    }
-  }
-
-  return (Uint8List.fromList(img.encodePng(out)), c1, c2, c0);
-}
-
-/// 3×3 majority-vote smoothing — produces smooth region boundaries.
-Uint8List _majoritySmooth(Uint8List mask, int W, int H) {
-  final out = Uint8List(W * H);
-  for (int y = 0; y < H; y++) {
-    for (int x = 0; x < W; x++) {
-      final votes = [0, 0, 0];
-      for (int dy = -1; dy <= 1; dy++) {
-        for (int dx = -1; dx <= 1; dx++) {
-          final nx = (x + dx).clamp(0, W - 1);
-          final ny = (y + dy).clamp(0, H - 1);
-          votes[mask[ny * W + nx]]++;
-        }
-      }
-      int best = 0;
-      if (votes[1] > votes[best]) best = 1;
-      if (votes[2] > votes[best]) best = 2;
-      out[y * W + x] = best;
-    }
-  }
-  return out;
-}
-
-// ── FoodSeg103-aware colour classifier ────────────────────────────────────────
-/// Returns: 0=background, 1=compostable, 2=non-compostable
-///
-/// Based on the exact EPA/WRAP class mapping from notebook CELL 4:
-///
-/// NON-COMPOSTABLE (class 2) visual colours:
-///   • Meat (steak/pork/lamb): warm brown  R>G>B, R>120, G:50-110, B<90
-///   • Fried/processed meat: golden-brown  R>150, G:90-145, B<90
-///   • Dark sausage/cooked: dark reddish-brown, low brightness
-///   • Pale yellow (egg, cream, cheese butter): R≈G>B, low saturation
-///
-/// COMPOSTABLE (class 1) visual colours — KEY: vivid red = COMPOSTABLE:
-///   • Tomato/strawberry/cherry/pepper: very VIVID pure red,  saturation > 0.55
-///     → R>160, G<80, B<80, saturation > 0.55, R > G*2.5
-///   • Green veg/herbs: G-dominant, greenness > 15
-///   • Yellow/orange plant-based (carrot, corn, citrus, mango):
-///     R>155, G>100, B<90, G/R>0.55, saturation>0.35
-///   • Purple/blue fruits (blueberry, grape): B≈R>G, low overall
-///
-/// BACKGROUND (class 0):
-///   • Bright white plate: all channels > 222
-///   • Near-black shadow/bg: brightness < 25
-///   • Neutral grey (unsaturated + bright): saturation < 0.09 + brightness > 150
-int _classifyPixel(int r, int g, int b) {
-  final brightness = (r + g + b) / 3.0;
-  final maxC = math.max(r, math.max(g, b));
-  final minC = math.min(r, math.min(g, b));
-  final saturation = maxC > 0 ? (maxC - minC) / maxC : 0.0;
-
-  // ══ BACKGROUND ═══════════════════════════════════════════════════════════
-  if (r > 222 && g > 222 && b > 222) return 0;           // bright white plate
-  if (brightness < 25) return 0;                          // near-black shadow
-  if (saturation < 0.09 && brightness > 150) return 0;   // neutral grey (table)
-
-  // ══ COMPOSTABLE: green-dominant (vegetables, herbs, lettuce, broccoli) ══
-  final greenness = g - math.max(r, b);
-  if (greenness > 15) return 1;
-
-  // ══ COMPOSTABLE: VIVID RED (tomato, strawberry, cherry, red pepper) ═════
-  // After downscale-averaging, tomato pixels lose some saturation but stay red-dominant.
-  // Key distinction from meat: G and B are BOTH very low AND R/G ratio is high.
-  // Meat has G typically 60-110 (warmer/brownish) → R/G < 1.8.
-  // Tomato: G < 90, B < 90, R/G > 1.85, saturation > 0.42.
-  if (r > 140 && g < 95 && b < 95 && saturation > 0.42 &&
-      r.toDouble() / math.max(g + 1, 1) > 1.85) {
-    return 1; // vivid red = tomato / strawberry / red pepper → COMPOSTABLE
-  }
-
-  // ══ COMPOSTABLE: orange/yellow plant-based (carrot, corn, citrus, mango) ═
-  // G must be a reasonable fraction of R (not too brownish)
-  if (r > 155 && g > 100 && b < 90 && saturation > 0.35 &&
-      g.toDouble() / math.max(r, 1) > 0.55) return 1;
-
-  // ══ COMPOSTABLE: bright yellow (corn, banana, lemon) ═════════════════════
-  if (r > 180 && g > 160 && b < 80 && saturation > 0.3) return 1;
-
-  // ══ COMPOSTABLE: purple/dark blue fruits (blueberry, grape, blackberry) ══
-  if (b > r && b > g && b > 80 && r < 130) return 1;
-
-  // ══ COMPOSTABLE: pink fruits (peach, raspberry — pinkish tone) ═══════════
-  if (r > 180 && g > 100 && g < 170 && b > 120 && saturation < 0.35) return 1;
-
-  // ══ NON-COMPOST: classic meat (steak, pork, lamb) ════════════════════════
-  // Warm brown: R>G>B, R clearly dominant, G must be reasonably high (≥ 55)
-  // to separate from tomato (which has G < 95 but meat has G ≥ 55 typically).
-  if (r > 90 && g >= 55 && r > g * 1.22 && g > b * 1.05 && b < 110 &&
-      brightness < 185 && saturation > 0.12) return 2;
-
-  // ══ NON-COMPOST: dark cooked meat / sausage ══════════════════════════════
-  // Dark reddish-brown — but G must be >= 40 to not catch very dark red fruits.
-  if (r > 100 && g >= 40 && g < 85 && b < 75 && brightness < 140 &&
-      saturation > 0.15 && r.toDouble() / math.max(g + 1, 1) < 2.0) return 2;
-
-  // ══ NON-COMPOST: golden-fried / processed (nuggets, fried chicken, pastry)
-  if (r > 155 && g > 95 && g < 155 && b < 85 &&
-      r.toDouble() / math.max(g, 1) > 1.15 && saturation > 0.18 &&
-      brightness < 195) return 2;
-
-  // ══ NON-COMPOST: pale egg / cream / cheese (yellow-white, low saturation) =
-  if (r > 190 && g > 165 && b < 140 && saturation > 0.08 && saturation < 0.32 &&
-      brightness > 160) return 2;
-
-  // ══ DEFAULT: compostable ══════════════════════════════════════════════════
-  // Most unclassified food pixels are plant-based (grains, tofu, legumes, etc.)
-  return 1;
 }

@@ -166,7 +166,7 @@ class _CompostHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        kIsWeb ? 'Web démo' : (isLoaded ? 'Hors ligne ✓' : 'Démo'),
+                        kIsWeb ? (isLoaded ? 'API ✓' : 'API…') : (isLoaded ? 'Hors ligne ✓' : 'Démo'),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1079,7 +1079,7 @@ class _ResultSection extends StatelessWidget {
             ),
             child: Text(
               kIsWeb
-                  ? '🌐 Démo web — heuristique couleur'
+                  ? '🌐 SegFormer-B3 via API · ${result.inferenceTimeMs} ms'
                   : '⚡ On-device ONNX · ${result.inferenceTimeMs} ms',
               style: GoogleFonts.inter(
                 fontSize: 11,

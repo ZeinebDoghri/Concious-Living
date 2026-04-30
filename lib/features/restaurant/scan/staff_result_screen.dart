@@ -797,7 +797,7 @@ class _CompostCard extends StatelessWidget {
               ),
               child: Text(
                 kIsWeb
-                    ? '🌐 Démo web — heuristique couleur'
+                    ? '🌐 SegFormer-B3 via API · $ms ms'
                     : '⚡ On-device ONNX · $ms ms',
                 style: GoogleFonts.inter(
                   fontSize: 11,
