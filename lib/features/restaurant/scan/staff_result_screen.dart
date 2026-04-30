@@ -1,6 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -43,22 +47,151 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
   }
 
   File? _imageFile() {
+    if (kIsWeb) return null;
     final raw = widget.args['imageFile'];
     if (raw is File) return raw;
-
     final path = widget.args['imagePath'];
-    if (path is String && path.trim().isNotEmpty) {
-      return File(path);
-    }
-
+    if (path is String && path.trim().isNotEmpty) return File(path);
     return null;
   }
 
+  Uint8List? _imageBytes() {
+    final raw = widget.args['imageBytes'];
+    if (raw is Uint8List) return raw;
+    return null;
+  }
+
+  bool get _isFusion =>
+      widget.args['isFusion'] == true &&
+      widget.args.containsKey('freshnessResult');
+
   @override
   Widget build(BuildContext context) {
-    final mode = _scanMode();
-    final result = _result();
+    if (_isFusion) return _buildFusionView(context);
+    return _buildLegacyView(context);
+  }
+
+  // ── Fusion view — unified results ──────────────────────────────────────────
+  Widget _buildFusionView(BuildContext context) {
+    final freshnessResult =
+        (widget.args['freshnessResult'] as Map<String, dynamic>?) ?? {};
+    final wasteResult =
+        (widget.args['wasteResult'] as Map<String, dynamic>?) ?? {};
+    final compostResult =
+        (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
+    final imageBytes = _imageBytes();
+    final imageFile  = _imageFile();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: CustomScrollView(
+        slivers: [
+          _FusionSliverHeader(
+            imageBytes: imageBytes,
+            imageFile: imageFile,
+            onBack: () => context.pop(),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 16),
+                // ── AI summary banner ──────────────────────────────────────
+                _AISummaryBanner(
+                  freshness: freshnessResult,
+                  waste: wasteResult,
+                  compost: compostResult,
+                ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 16),
+                // ── Freshness card ─────────────────────────────────────────
+                _FusionCard(
+                  title: '🌡️ Analyse Fraîcheur',
+                  color: const Color(0xFF8B1A1F),
+                  child: _FreshnessResult(
+                    result: freshnessResult,
+                    onUpdateInventory: () async =>
+                        context.go(AppRoutes.restaurantInventory),
+                    onLogRemoval: () async =>
+                        _logRemovalFromInventory(freshnessResult),
+                  ),
+                ).animate().fadeIn(duration: 400.ms, delay: 80.ms)
+                  .slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 12),
+                // ── Waste card ─────────────────────────────────────────────
+                _FusionCard(
+                  title: '🗑️ Gaspillage détecté',
+                  color: const Color(0xFFD97706),
+                  child: _WasteResult(
+                    result: wasteResult,
+                    onLogWaste: () async => _logWasteItems(wasteResult),
+                    onViewWasteReport: () =>
+                        context.go(AppRoutes.restaurantWaste),
+                  ),
+                ).animate().fadeIn(duration: 400.ms, delay: 160.ms)
+                  .slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 12),
+                // ── Compost card ───────────────────────────────────────────
+                _FusionCard(
+                  title: '🌱 Segmentation Compost IA',
+                  color: const Color(0xFF059669),
+                  child: _CompostFusionResult(data: compostResult),
+                ).animate().fadeIn(duration: 400.ms, delay: 240.ms)
+                  .slideY(begin: 0.1, end: 0),
+                const SizedBox(height: 20),
+                // ── Scan again button ──────────────────────────────────────
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    context.pop();
+                  },
+                  child: Container(
+                    height: 54,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF059669), Color(0xFF10B981)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          blurRadius: 16, offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt_rounded,
+                              color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Nouveau scan',
+                            style: GoogleFonts.sora(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(duration: 350.ms, delay: 320.ms),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Legacy single-mode view (backward compat) ─────────────────────────────
+  Widget _buildLegacyView(BuildContext context) {
+    final mode      = _scanMode();
+    final result    = _result();
     final imageFile = _imageFile();
+    final imgBytes  = _imageBytes();
 
     return Scaffold(
       backgroundColor: AppColors.oat,
@@ -66,11 +199,8 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
         child: Column(
           children: [
             const OliveHeader(
-              title: 'Scan result',
-              subtitle: null,
-              showBack: true,
-              height: 170,
-            ),
+                title: 'Scan result', subtitle: null,
+                showBack: true, height: 170),
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -86,20 +216,23 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (imageFile != null) ...[
-                        Hero(
-                          tag: 'scan_image',
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(AppRadii.screenCard),
-                            child: SizedBox(
-                              height: 200,
-                              width: double.infinity,
-                              child: Image.file(
-                                imageFile,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                      if (imgBytes != null) ...[
+                        ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.screenCard),
+                          child: SizedBox(
+                            height: 200, width: double.infinity,
+                            child: Image.memory(imgBytes, fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ] else if (!kIsWeb && imageFile != null) ...[
+                        ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.screenCard),
+                          child: SizedBox(
+                            height: 200, width: double.infinity,
+                            child: Image.file(imageFile, fit: BoxFit.cover),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -107,9 +240,8 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
                       if (mode == 'freshness')
                         _FreshnessResult(
                           result: result,
-                          onUpdateInventory: () async {
-                            context.go(AppRoutes.restaurantInventory);
-                          },
+                          onUpdateInventory: () async =>
+                              context.go(AppRoutes.restaurantInventory),
                           onLogRemoval: () async =>
                               _logRemovalFromInventory(result),
                         )
@@ -128,9 +260,8 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
                       else
                         _FreshnessResult(
                           result: result,
-                          onUpdateInventory: () async {
-                            context.go(AppRoutes.restaurantInventory);
-                          },
+                          onUpdateInventory: () async =>
+                              context.go(AppRoutes.restaurantInventory),
                           onLogRemoval: () async =>
                               _logRemovalFromInventory(result),
                         ),
@@ -153,7 +284,7 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -270,6 +401,334 @@ class _StaffResultScreenState extends State<StaffResultScreen> {
     }
   }
 }
+
+// ── Fusion-specific widgets ───────────────────────────────────────────────────
+
+class _FusionSliverHeader extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final File? imageFile;
+  final VoidCallback onBack;
+  const _FusionSliverHeader(
+      {required this.imageBytes,
+      required this.imageFile,
+      required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 240,
+      pinned: true,
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFF0A0F1E),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageBytes != null)
+              Image.memory(imageBytes!, fit: BoxFit.cover)
+            else if (!kIsWeb && imageFile != null)
+              Image.file(imageFile!, fit: BoxFit.cover)
+            else
+              Container(
+                color: const Color(0xFF0D1524),
+                child: const Icon(Icons.image_outlined,
+                    size: 60, color: Colors.white24),
+              ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xCC0A0F1E)],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 16, left: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Smart Scan — Résultats',
+                    style: GoogleFonts.sora(
+                      fontSize: 18, fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '3 analyses IA fusionnées',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      leading: GestureDetector(
+        onTap: onBack,
+        child: Container(
+          margin: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.arrow_back_ios_new,
+              color: Colors.white, size: 16),
+        ),
+      ),
+    );
+  }
+}
+
+class _AISummaryBanner extends StatelessWidget {
+  final Map<String, dynamic> freshness;
+  final Map<String, dynamic> waste;
+  final Map<String, dynamic> compost;
+  const _AISummaryBanner(
+      {required this.freshness, required this.waste, required this.compost});
+
+  @override
+  Widget build(BuildContext context) {
+    final status       = (freshness['status'] as String? ?? 'fresh').toLowerCase();
+    final compostPct   = (compost['compostablePct'] as num?)?.toDouble() ?? 0.0;
+    final detectedItems = (waste['detectedItems'] as List?)?.length ?? 0;
+
+    String headline;
+    Color  headlineColor;
+    if (status == 'spoiled') {
+      headline      = '⚠️ Article périmé détecté — retrait immédiat recommandé';
+      headlineColor = const Color(0xFFDC2626);
+    } else if (compostPct > 60) {
+      headline      = '✅ Majoritairement compostable — bonne gestion des déchets';
+      headlineColor = const Color(0xFF059669);
+    } else if (detectedItems > 0) {
+      headline      = '📊 $detectedItems article(s) gaspillé(s) identifié(s)';
+      headlineColor = const Color(0xFFD97706);
+    } else {
+      headline      = '🔍 Analyse complète — voir le détail ci-dessous';
+      headlineColor = const Color(0xFF6366F1);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: headlineColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: headlineColor.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 4, height: 48,
+            decoration: BoxDecoration(
+              color: headlineColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              headline,
+              style: GoogleFonts.inter(
+                fontSize: 13, fontWeight: FontWeight.w600,
+                color: headlineColor, height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FusionCard extends StatelessWidget {
+  final String title;
+  final Color  color;
+  final Widget child;
+  const _FusionCard(
+      {required this.title, required this.color, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8EDF2), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12, offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header stripe
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+              border: Border(
+                bottom: BorderSide(
+                    color: color.withValues(alpha: 0.15), width: 0.8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 4, height: 18,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: GoogleFonts.sora(
+                    fontSize: 14, fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompostFusionResult extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _CompostFusionResult({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final compostPct    = (data['compostablePct']    as num?)?.toDouble() ?? 0.0;
+    final nonCompostPct = (data['nonCompostablePct'] as num?)?.toDouble() ?? 0.0;
+    final bgPct         = (data['backgroundPct']     as num?)?.toDouble() ?? 0.0;
+    final ms            = (data['inferenceTimeMs']   as num?)?.toInt() ?? 0;
+    final maskPng       = data['maskPng'] as Uint8List?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Mask preview
+        if (maskPng != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 140, width: double.infinity,
+              child: Image.memory(maskPng, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Stats row
+        Row(
+          children: [
+            _CompostMiniStat(
+              label: 'Compostable',
+              value: compostPct,
+              color: const Color(0xFF10B981),
+              bg: const Color(0xFFD1FAE5),
+            ),
+            const SizedBox(width: 8),
+            _CompostMiniStat(
+              label: 'Non-compost.',
+              value: nonCompostPct,
+              color: const Color(0xFFEF4444),
+              bg: const Color(0xFFFEE2E2),
+            ),
+            const SizedBox(width: 8),
+            _CompostMiniStat(
+              label: 'Fond',
+              value: bgPct,
+              color: const Color(0xFF64748B),
+              bg: const Color(0xFFF1F5F9),
+            ),
+          ],
+        ),
+        if (ms > 0) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '⚡ On-device ONNX · $ms ms',
+                style: GoogleFonts.inter(
+                  fontSize: 10, fontWeight: FontWeight.w600,
+                  color: const Color(0xFF92400E),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CompostMiniStat extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color  color;
+  final Color  bg;
+  const _CompostMiniStat(
+      {required this.label, required this.value,
+       required this.color, required this.bg});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '${value.toStringAsFixed(1)}%',
+              style: GoogleFonts.sora(
+                fontSize: 16, fontWeight: FontWeight.w800, color: color,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 9, fontWeight: FontWeight.w600,
+                color: color.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Legacy widgets (kept for backward compat) ─────────────────────────────────
 
 class _FreshnessResult extends StatelessWidget {
   final Map<String, dynamic> result;
