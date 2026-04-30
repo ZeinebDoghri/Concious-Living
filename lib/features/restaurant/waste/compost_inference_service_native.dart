@@ -26,9 +26,10 @@ const int _kC      = 3;    // number of classes
 const _mean = [0.485, 0.456, 0.406];
 const _std  = [0.229, 0.224, 0.225];
 
-// Overlay blend weights (original : colour = 0.40 : 0.60)
-const double _blendOrig  = 0.42;
-const double _blendColor = 0.58;
+// Overlay blend weights: 25 % original texture + 75 % vivid class colour
+// → matches the Kaggle-notebook Segmentation visualisation
+const double _blendOrig  = 0.25;
+const double _blendColor = 0.75;
 
 // ── Result ─────────────────────────────────────────────────────────────────────
 class CompostInferenceResult {
@@ -275,11 +276,18 @@ CompostInferenceResult _classify(
 }
 
 // ── Overlay builder ────────────────────────────────────────────────────────────
-/// Blends original pixels with class colour — identical look to Kaggle notebook.
-/// class 0 (background)      → original pixel unchanged
-/// class 1 (compostable)     → emerald tint  (16, 185, 129)
-/// class 2 (non-compostable) → rose tint     (239, 68, 68)
+/// Builds a coloured segmentation overlay identical to the Kaggle notebook.
+///
+/// class 0 (background)      → original pixel (plate, table…)
+/// class 1 (compostable)     → vivid lime-green  (RGB 50, 210, 50)
+/// class 2 (non-compostable) → vivid bright-red  (RGB 220, 30,  30)
+///
+/// Blend: 25 % original texture + 75 % pure class colour → vivid but the
+/// food texture is still faintly visible (matches Kaggle "Segmentation" column).
 Uint8List _buildOverlay(img.Image src, Uint8List mask, int W, int H) {
+  const cr = 50;  const cg = 210; const cb = 50;  // compostable — lime green
+  const nr = 220; const ng = 30;  const nb = 30;  // non-compostable — red
+
   final out = img.Image(width: W, height: H, numChannels: 3);
   for (int i = 0; i < W * H; i++) {
     final x = i % W;
@@ -289,17 +297,17 @@ Uint8List _buildOverlay(img.Image src, Uint8List mask, int W, int H) {
     final g = p.g.toInt();
     final b = p.b.toInt();
     switch (mask[i]) {
-      case 1: // compostable — emerald
+      case 1: // compostable — lime green
         out.setPixelRgb(x, y,
-          (r * _blendOrig + 16  * _blendColor).round(),
-          (g * _blendOrig + 185 * _blendColor).round(),
-          (b * _blendOrig + 129 * _blendColor).round());
-      case 2: // non-compostable — rose
+          (r * _blendOrig + cr * _blendColor).round(),
+          (g * _blendOrig + cg * _blendColor).round(),
+          (b * _blendOrig + cb * _blendColor).round());
+      case 2: // non-compostable — red
         out.setPixelRgb(x, y,
-          (r * _blendOrig + 239 * _blendColor).round(),
-          (g * _blendOrig + 68  * _blendColor).round(),
-          (b * _blendOrig + 68  * _blendColor).round());
-      default: // background — untouched
+          (r * _blendOrig + nr * _blendColor).round(),
+          (g * _blendOrig + ng * _blendColor).round(),
+          (b * _blendOrig + nb * _blendColor).round());
+      default: // background — original pixel untouched
         out.setPixelRgb(x, y, r, g, b);
     }
   }

@@ -86,24 +86,29 @@ class CompostInferenceService {
 }
 
 // ── Realistic overlay mock ─────────────────────────────────────────────────────
-/// Applies a fake segmentation overlay on the real image:
-///   • Centre area  → compostable (emerald tint)  — e.g. vegetables/salad
-///   • Right region → non-compostable (rose tint) — e.g. meat
-///   • Edges        → background (original pixels)
+/// Applies a segmentation overlay matching the Kaggle notebook output:
+///   • Plate centre left  → compostable (vivid lime-green)  — vegetables/salad
+///   • Plate centre right → non-compostable (vivid red)     — meat/processed
+///   • Edges/background   → original pixel (plate, table…)
+///
+/// Uses 25 % original texture + 75 % pure class colour — same as native service.
 Uint8List _buildMockOverlay(img.Image? src, int W, int H) {
-  const blendOrig  = 0.42;
-  const blendColor = 0.58;
+  // Class colours — identical to native service
+  const cr = 50;  const cg = 210; const cb = 50;  // compostable lime-green
+  const nr = 220; const ng = 30;  const nb = 30;  // non-compostable red
+  const blendOrig  = 0.25;
+  const blendColor = 0.75;
 
   final out = img.Image(width: W, height: H, numChannels: 3);
-  final rng = math.Random(42); // fixed seed for deterministic look
+  final rng = math.Random(42); // fixed seed → deterministic organic edge
 
   for (int y = 0; y < H; y++) {
     for (int x = 0; x < W; x++) {
       final nx = x / W;
       final ny = y / H;
 
-      // Get original pixel (or grey if no image)
-      int r = 120, g = 120, b = 120;
+      // Original pixel (grey fallback if no image)
+      int r = 130, g = 110, b = 90;
       if (src != null) {
         final p = src.getPixel(x, y);
         r = p.r.toInt();
@@ -111,26 +116,26 @@ Uint8List _buildMockOverlay(img.Image? src, int W, int H) {
         b = p.b.toInt();
       }
 
-      // Smooth noise for organic-looking edges
-      final noise = (rng.nextDouble() - 0.5) * 0.08;
-      final dist = math.sqrt(
-          math.pow(nx - 0.5, 2) + math.pow(ny - 0.48, 2));
+      // Organic noise to soften the boundary (like a real segmentation model)
+      final noise = (rng.nextDouble() - 0.5) * 0.07;
+      final dist  = math.sqrt(
+          math.pow(nx - 0.50, 2) + math.pow(ny - 0.47, 2));
 
-      if (dist > 0.44 + noise) {
-        // Background — original pixel
+      if (dist > 0.43 + noise) {
+        // Background — original pixel (plate border, table…)
         out.setPixelRgb(x, y, r, g, b);
-      } else if (nx < 0.50 + noise) {
-        // Compostable — emerald tint
+      } else if (nx < 0.52 + noise * 0.5) {
+        // Compostable — vivid lime-green (matches Kaggle green)
         out.setPixelRgb(x, y,
-          (r * blendOrig + 16  * blendColor).round(),
-          (g * blendOrig + 185 * blendColor).round(),
-          (b * blendOrig + 129 * blendColor).round());
+          (r * blendOrig + cr * blendColor).round(),
+          (g * blendOrig + cg * blendColor).round(),
+          (b * blendOrig + cb * blendColor).round());
       } else {
-        // Non-compostable — rose tint
+        // Non-compostable — vivid red (matches Kaggle red)
         out.setPixelRgb(x, y,
-          (r * blendOrig + 239 * blendColor).round(),
-          (g * blendOrig + 68  * blendColor).round(),
-          (b * blendOrig + 68  * blendColor).round());
+          (r * blendOrig + nr * blendColor).round(),
+          (g * blendOrig + ng * blendColor).round(),
+          (b * blendOrig + nb * blendColor).round());
       }
     }
   }
