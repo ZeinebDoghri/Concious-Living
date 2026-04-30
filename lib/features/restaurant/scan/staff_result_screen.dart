@@ -796,7 +796,9 @@ class _CompostCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '⚡ On-device ONNX · $ms ms',
+                kIsWeb
+                    ? '🌐 Démo web — heuristique couleur'
+                    : '⚡ On-device ONNX · $ms ms',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,

@@ -166,7 +166,7 @@ class _CompostHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        isLoaded ? 'Hors ligne ✓' : 'Démo',
+                        kIsWeb ? 'Web démo' : (isLoaded ? 'Hors ligne ✓' : 'Démo'),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1078,7 +1078,9 @@ class _ResultSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '⚡ Inférence en ${result.inferenceTimeMs} ms',
+              kIsWeb
+                  ? '🌐 Démo web — heuristique couleur'
+                  : '⚡ On-device ONNX · ${result.inferenceTimeMs} ms',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
