@@ -32,6 +32,16 @@ class CompostInferenceResult {
         originalWidth: originalWidth,
         originalHeight: originalHeight,
       );
+
+  Map<String, dynamic> toMap() => {
+        'compostablePct': compostablePct,
+        'nonCompostablePct': nonCompostablePct,
+        'backgroundPct': backgroundPct,
+        'inferenceTimeMs': inferenceTimeMs,
+        'maskPng': maskPng,
+        'originalWidth': originalWidth,
+        'originalHeight': originalHeight,
+      };
 }
 
 class CompostInferenceService {
