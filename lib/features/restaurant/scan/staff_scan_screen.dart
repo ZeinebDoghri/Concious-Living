@@ -45,8 +45,8 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    // Load ONNX in background (native only)
-    if (!kIsWeb) _compostService.init();
+    // Ping API in background (all platforms use FastAPI backend)
+    _compostService.init();
   }
 
   @override
@@ -92,16 +92,19 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 .catchError((_) => <String, dynamic>{'detectedItems': [], 'confidence': 0.0})
             : Future.value({'detectedItems': [], 'confidence': 0.0}),
 
-        // Compost segmentation ONNX (on-device)
+        // Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
         _compostService
             .classify(imageBytes)
             .then((r) => r.toMap())
-            .catchError((_) => <String, dynamic>{
-                  'compostablePct': 0.0,
-                  'nonCompostablePct': 0.0,
-                  'backgroundPct': 100.0,
-                  'inferenceTimeMs': 0,
-                }),
+            .catchError((e) {
+              debugPrint('[Scan] Compost API error: $e');
+              return <String, dynamic>{
+                'compostablePct':    0.0,
+                'nonCompostablePct': 0.0,
+                'backgroundPct':     100.0,
+                'inferenceTimeMs':   0,
+              };
+            }),
       ]);
 
       if (!mounted) return;

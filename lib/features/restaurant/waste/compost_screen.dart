@@ -166,7 +166,7 @@ class _CompostHeader extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        kIsWeb ? (isLoaded ? 'API ✓' : 'API…') : (isLoaded ? 'Hors ligne ✓' : 'Démo'),
+                        isLoaded ? 'API ✓' : 'API…',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1078,9 +1078,7 @@ class _ResultSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              kIsWeb
-                  ? '🌐 SegFormer-B3 via API · ${result.inferenceTimeMs} ms'
-                  : '⚡ On-device ONNX · ${result.inferenceTimeMs} ms',
+              '🌐 SegFormer-B3 via API · ${result.inferenceTimeMs} ms',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
