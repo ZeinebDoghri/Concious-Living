@@ -113,8 +113,9 @@ class CompostInferenceService {
 /// Downscale → classify → majority-vote smooth → upsample.
 /// Produces large coherent food regions that match real Mask2Former output.
 (Uint8List, int, int, int) _buildSmoothOverlay(img.Image? src, int W, int H) {
-  // Work at small resolution for coherent regions (avoids per-pixel noise)
-  const kSmall = 80;
+  // Work at 160px wide for better small-object preservation.
+  // (80px made cherry tomatoes ~6px → smoothing erased them; 160px → ~12px → survive)
+  const kSmall = 160;
   final sw = kSmall.clamp(1, W);
   final sh = (kSmall * H ~/ math.max(W, 1)).clamp(1, H);
 
@@ -124,7 +125,7 @@ class CompostInferenceService {
           interpolation: img.Interpolation.average)
       : null;
 
-  // Classify each pixel in the small canvas
+  // Classify each pixel in the canvas
   final rawMask = Uint8List(sw * sh);
   for (int y = 0; y < sh; y++) {
     for (int x = 0; x < sw; x++) {
@@ -137,9 +138,8 @@ class CompostInferenceService {
     }
   }
 
-  // Two passes of 3×3 majority-vote smoothing → large coherent regions
-  var smoothed = _majoritySmooth(rawMask, sw, sh);
-  smoothed     = _majoritySmooth(smoothed, sw, sh);
+  // Single 3×3 majority-vote pass — smooths noise without eating small objects
+  final smoothed = _majoritySmooth(rawMask, sw, sh);
 
   // Nearest-neighbour upsample to original size
   final fullMask = Uint8List(W * H);
@@ -246,9 +246,12 @@ int _classifyPixel(int r, int g, int b) {
   if (greenness > 15) return 1;
 
   // ══ COMPOSTABLE: VIVID RED (tomato, strawberry, cherry, red pepper) ═════
-  // KEY FIX: tomatoes have very HIGH saturation pure red — not the brownish meat tone
-  // R dominates strongly over G and B, G and B both very low
-  if (r > 155 && g < 90 && b < 90 && saturation > 0.50 && r.toDouble() / math.max(g + 1, 1) > 2.2) {
+  // After downscale-averaging, tomato pixels lose some saturation but stay red-dominant.
+  // Key distinction from meat: G and B are BOTH very low AND R/G ratio is high.
+  // Meat has G typically 60-110 (warmer/brownish) → R/G < 1.8.
+  // Tomato: G < 90, B < 90, R/G > 1.85, saturation > 0.42.
+  if (r > 140 && g < 95 && b < 95 && saturation > 0.42 &&
+      r.toDouble() / math.max(g + 1, 1) > 1.85) {
     return 1; // vivid red = tomato / strawberry / red pepper → COMPOSTABLE
   }
 
@@ -267,13 +270,15 @@ int _classifyPixel(int r, int g, int b) {
   if (r > 180 && g > 100 && g < 170 && b > 120 && saturation < 0.35) return 1;
 
   // ══ NON-COMPOST: classic meat (steak, pork, lamb) ════════════════════════
-  // Warm brown: R>G>B, R clearly dominant, medium-low brightness
-  if (r > 90 && r > g * 1.22 && g > b * 1.05 && b < 110 &&
+  // Warm brown: R>G>B, R clearly dominant, G must be reasonably high (≥ 55)
+  // to separate from tomato (which has G < 95 but meat has G ≥ 55 typically).
+  if (r > 90 && g >= 55 && r > g * 1.22 && g > b * 1.05 && b < 110 &&
       brightness < 185 && saturation > 0.12) return 2;
 
   // ══ NON-COMPOST: dark cooked meat / sausage ══════════════════════════════
-  // Dark reddish-brown (not vivid enough for tomato):
-  if (r > 100 && g < 85 && b < 75 && brightness < 145 && saturation > 0.15) return 2;
+  // Dark reddish-brown — but G must be >= 40 to not catch very dark red fruits.
+  if (r > 100 && g >= 40 && g < 85 && b < 75 && brightness < 140 &&
+      saturation > 0.15 && r.toDouble() / math.max(g + 1, 1) < 2.0) return 2;
 
   // ══ NON-COMPOST: golden-fried / processed (nuggets, fried chicken, pastry)
   if (r > 155 && g > 95 && g < 155 && b < 85 &&
