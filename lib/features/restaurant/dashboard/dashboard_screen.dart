@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +16,17 @@ import '../../../providers/inventory_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/venue_type_provider.dart';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const _kCherry   = Color(0xFF8B1A1F);
+const _kOlive    = Color(0xFF5A7A18);
+const _kAmber    = Color(0xFFD97706);
+const _kIndigo   = Color(0xFF3B5BB5);
+const _kEmerald  = Color(0xFF10B981);
+const _kSurface  = Color(0xFFF8FAFC);
+const _kCard     = Colors.white;
+const _kBorder   = Color(0xFFE2E8F0);
+const _kSlate    = Color(0xFF64748B);
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _enterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
@@ -42,612 +55,256 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  String _greetingForHour(int hour) {
-    if (hour < 12) return 'Good morning,';
-    if (hour < 18) return 'Good afternoon,';
-    return 'Good evening,';
+  // ── Utility helpers ──────────────────────────────────────────────────────────
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Bonjour 👋';
+    if (h < 18) return 'Bon après-midi 👋';
+    return 'Bonsoir 👋';
   }
 
-  String _serviceLabel(DateTime now) {
-    final hour = now.hour;
-    if (hour < 11) return 'Breakfast';
-    if (hour < 15) return 'Lunch';
-    if (hour < 18) return 'Snack';
-    return 'Dinner';
+  String _serviceLabel() {
+    final h = DateTime.now().hour;
+    if (h < 11) return '🥐 Petit-déjeuner';
+    if (h < 15) return '🍽 Déjeuner';
+    if (h < 18) return '☕ Goûter';
+    return '🌙 Dîner';
   }
 
-  Color _venueColor(bool isHotel) => isHotel ? AppColors.cherry : AppColors.olive;
-
-  Color _venueTint(bool isHotel) => isHotel ? const Color(0xFFF5C0C2) : const Color(0xFFD4E8A8);
-
-  String _formatVenueTitle(UserProvider userProvider, bool isHotel) {
-    final user = userProvider.currentUser;
-    final name = isHotel ? user?.hotelName : user?.restaurantName;
-    final trimmed = (name ?? '').trim();
-    return trimmed.isEmpty ? AppStrings.appName : trimmed;
+  String _venueName(UserProvider u, bool isHotel) {
+    final n = isHotel ? u.currentUser?.hotelName : u.currentUser?.restaurantName;
+    final t = (n ?? '').trim();
+    return t.isEmpty ? AppStrings.appName : t;
   }
 
-  String _formatVenueSubtitle(UserProvider userProvider, bool isHotel) {
-    final user = userProvider.currentUser;
+  String _venueSubtitle(UserProvider u, bool isHotel) {
     if (isHotel) {
-      final category = (user?.hotelType ?? '').trim();
-      final rooms = user?.rooms ?? 0;
-      final categoryText = category.isEmpty ? 'Hotel' : category;
-      return '$categoryText · $rooms rooms';
+      final cat = (u.currentUser?.hotelType ?? '').trim();
+      final rooms = u.currentUser?.rooms ?? 0;
+      return '${cat.isEmpty ? 'Hôtel' : cat} · $rooms chambres';
     }
-
-    final cuisine = (user?.cuisineType ?? '').trim();
-    final covers = user?.covers ?? 0;
-    final cuisineText = cuisine.isEmpty ? 'Restaurant' : cuisine;
-    return '$cuisineText · $covers covers';
+    final cuisine = (u.currentUser?.cuisineType ?? '').trim();
+    final covers = u.currentUser?.covers ?? 0;
+    return '${cuisine.isEmpty ? 'Restaurant' : cuisine} · $covers couverts';
   }
 
-  int _hotelOutletsCount(UserProvider userProvider) {
-    final rooms = userProvider.currentUser?.rooms ?? 0;
-    if (rooms <= 0) return 1;
-    return max(1, (rooms / 10).round());
-  }
+  int _expiringSoon(InventoryProvider p) =>
+      p.items.where((i) => i.isExpiringSoon).length;
 
-  int _expiringSoonCount(InventoryProvider inventoryProvider) {
-    return inventoryProvider.items.where((item) => item.isExpiringSoon).length;
-  }
+  int _wasteEst(int alerts, int expiring, int scans) =>
+      max(1, alerts * 2 + expiring * 3 + max(2, scans ~/ 2));
 
-  int _wasteEstimateKg({
-    required int alertsCount,
-    required int expiringSoonCount,
-    required int scanCount,
-  }) {
-    return max(1, (alertsCount * 2 + expiringSoonCount * 3 + max(2, scanCount ~/ 2)));
-  }
+  double _freshnessScore(int alerts, int expiring) =>
+      (100 - min(24, alerts * 3 + expiring * 2)).clamp(0, 100).toDouble();
 
-  double _freshnessScore({
-    required int alertsCount,
-    required int expiringSoonCount,
-  }) {
-    final deductions = min(24, alertsCount * 3 + expiringSoonCount * 2);
-    return (100 - deductions).clamp(0, 100).toDouble();
-  }
-
-  double _roomServiceOrders(UserProvider userProvider, ScanHistoryProvider scanProvider) {
-    final rooms = userProvider.currentUser?.rooms ?? 0;
-    final seed = rooms > 0 ? rooms / 12 : 4;
-    final scans = scanProvider.items.length / 4;
-    return max(1, (seed + scans).round()).toDouble();
-  }
-
-  List<_TipData> _restaurantTips() {
-    return const [
-      _TipData(
-        title: 'Log waste before the rush ends',
-        body: 'FIFO storage works best when the team records waste as soon as it appears.',
-      ),
-      _TipData(
-        title: 'Label allergens at prep time',
-        body: 'A quick label on the station prevents cross-contact when service gets busy.',
-      ),
-      _TipData(
-        title: 'Keep portions consistent',
-        body: 'When portions are predictable, your scans are easier to compare and your waste drops.',
-      ),
-      _TipData(
-        title: 'Check temperatures twice',
-        body: 'Cold items and hot holding both stay safer when the team verifies them on schedule.',
-      ),
-      _TipData(
-        title: 'Use the first-in, first-out shelf',
-        body: 'Pull the older stock forward so it moves through service before it expires.',
-      ),
-      _TipData(
-        title: 'Keep hands and surfaces ready',
-        body: 'A short hygiene reset between batches prevents mistakes when orders stack up.',
-      ),
-    ];
-  }
-
-  List<_TipData> _hotelTips() {
-    return const [
-      _TipData(
-        title: 'Time room service around peaks',
-        body: 'Batch deliveries so hot food reaches guests quickly and stays within safe temperature range.',
-      ),
-      _TipData(
-        title: 'Confirm allergy notes early',
-        body: 'A quick guest check-in on dietary needs saves time and avoids awkward remakes later.',
-      ),
-      _TipData(
-        title: 'Refresh buffet items in small batches',
-        body: 'Smaller replenishments keep food looking fresh while reducing end-of-service waste.',
-      ),
-      _TipData(
-        title: 'Separate shared prep surfaces',
-        body: 'Cross-contamination is easier to avoid when tools and trays are grouped by use.',
-      ),
-      _TipData(
-        title: 'Label room-service allergens clearly',
-        body: 'Visible labeling keeps housekeeping and kitchen teams aligned when orders move fast.',
-      ),
-      _TipData(
-        title: 'Keep guest requests visible',
-        body: 'A simple handoff note reduces missed instructions and keeps service personal.',
-      ),
-    ];
-  }
-
-  List<double> _wasteSeries({
-    required int alertsCount,
-    required int expiringSoonCount,
-    required int scanCount,
-    required bool isHotel,
-  }) {
-    final base = max(4, alertsCount + expiringSoonCount + max(2, scanCount ~/ 3));
-    return List<double>.generate(5, (index) {
-      final wobble = isHotel ? [1, -1, 2, 0, 1][index] : [0, 2, -1, 1, -1][index];
-      return max(2, base + index + wobble).toDouble();
+  List<double> _wasteSeries(int alerts, int expiring, int scans, bool isHotel) {
+    final base = max(4, alerts + expiring + max(2, scans ~/ 3));
+    return List.generate(5, (i) {
+      final wobble = isHotel ? [1, -1, 2, 0, 1][i] : [0, 2, -1, 1, -1][i];
+      return max(2, base + i + wobble).toDouble();
     });
   }
 
-  String _topWasteLabel(bool isHotel) => isHotel ? 'Buffet' : 'Bread';
-
-  List<AlertModel> _sortedAlerts(AlertsProvider alertsProvider) {
-    final items = alertsProvider.alerts.toList();
-    items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    return items;
+  List<AlertModel> _recentAlerts(AlertsProvider p) {
+    final list = p.alerts.toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return list.take(3).toList();
   }
+
+  List<_Tip> _tips(bool isHotel) => isHotel ? [
+    _Tip('Servir en petites fournées', 'Réduisez le gaspillage buffet grâce aux réassorts fractionnés.'),
+    _Tip('Confirmation allergènes', 'Vérifiez les restrictions alimentaires des hôtes à l\'arrivée.'),
+    _Tip('Températures de maintien', 'Contrôlez deux fois pour maintenir la sécurité alimentaire.'),
+  ] : [
+    _Tip('FIFO dès maintenant', 'Placez les anciens stocks devant pour les utiliser en premier.'),
+    _Tip('Étiquetez les allergènes', 'Une étiquette rapide à la préparation évite la contamination croisée.'),
+    _Tip('Portions régulières', 'Des portions prévisibles facilitent la comparaison des scans.'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _kSurface,
       body: Consumer<VenueTypeProvider>(
-        builder: (context, venueProvider, _) {
-          final isHotel = venueProvider.venueType == 'hotel';
-          final venueColor = _venueColor(isHotel);
-          final venueTint = _venueTint(isHotel);
-          final alertsProvider = context.watch<AlertsProvider>();
-          final inventoryProvider = context.watch<InventoryProvider>();
-          final userProvider = context.watch<UserProvider>();
-          final scanProvider = context.watch<ScanHistoryProvider>();
-          final user = userProvider.currentUser;
+        builder: (ctx, venueP, _) {
+          final isHotel = venueP.venueType == 'hotel';
+          final alertsP   = ctx.watch<AlertsProvider>();
+          final invP      = ctx.watch<InventoryProvider>();
+          final userP     = ctx.watch<UserProvider>();
+          final scanP     = ctx.watch<ScanHistoryProvider>();
 
-          final venueName = _formatVenueTitle(userProvider, isHotel);
-          final venueSubtitle = _formatVenueSubtitle(userProvider, isHotel);
-          final now = DateTime.now();
-          final greeting = _greetingForHour(now.hour);
-          final serviceChip = _serviceLabel(now);
+          final name      = _venueName(userP, isHotel);
+          final subtitle  = _venueSubtitle(userP, isHotel);
+          final pending   = alertsP.pendingCount;
+          final expiring  = _expiringSoon(invP);
+          final scans     = scanP.items.length;
+          final wasteKg   = _wasteEst(pending, expiring, scans);
+          final freshness = _freshnessScore(pending, expiring).round();
+          final series    = _wasteSeries(pending, expiring, scans, isHotel);
+          final recentA   = _recentAlerts(alertsP);
+          final tips      = _tips(isHotel);
+          final tip       = tips[DateTime.now().day % tips.length];
 
-          final pendingAlerts = alertsProvider.pendingCount;
-          final expiringSoonCount = _expiringSoonCount(inventoryProvider);
-          final scanCount = scanProvider.items.length;
-          final wasteKg = _wasteEstimateKg(
-            alertsCount: pendingAlerts,
-            expiringSoonCount: expiringSoonCount,
-            scanCount: scanCount,
-          );
-          final freshnessScore = _freshnessScore(
-            alertsCount: pendingAlerts,
-            expiringSoonCount: expiringSoonCount,
-          ).round();
-          final roomServiceOrders = _roomServiceOrders(userProvider, scanProvider).round();
-          final outletsCount = _hotelOutletsCount(userProvider);
-          final wasteSeries = _wasteSeries(
-            alertsCount: pendingAlerts,
-            expiringSoonCount: expiringSoonCount,
-            scanCount: scanCount,
-            isHotel: isHotel,
-          );
-          final alertsSorted = _sortedAlerts(alertsProvider);
-          final recentAlerts = alertsSorted.take(3).toList(growable: false);
-          final inventoryAlertCount = expiringSoonCount;
-          final tipData = isHotel ? _hotelTips() : _restaurantTips();
-          final tip = tipData[now.day % tipData.length];
-          final topWasteLabel = _topWasteLabel(isHotel);
+          final headerGradient = isHotel
+              ? const LinearGradient(
+                  colors: [Color(0xFF8B1A1F), Color(0xFF5A0000)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFF2D5016), Color(0xFF1A3009)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                );
 
-          final headerStats = isHotel
-              ? <String>[
-                  '🚨 $pendingAlerts alerts',
-                  '🛎 $outletsCount outlets',
-                  '♻ ${wasteKg}kg waste',
-                ]
-              : <String>[
-                  '🚨 $pendingAlerts alerts',
-                  '📦 $expiringSoonCount expiring',
-                  '♻ ${wasteKg}kg waste',
-                ];
+          final accentColor = isHotel ? _kCherry : _kOlive;
 
-          final performanceTiles = <_KpiTileData>[
-            _KpiTileData(
-              value: '$pendingAlerts',
-              label: 'Allergen alerts',
-              valueColor: AppColors.cherry,
-              trendColor: AppColors.cherry,
-              trendText: '↑ ${max(1, pendingAlerts)} active',
-              trendArrow: '↑',
-            ),
-            _KpiTileData(
-              value: isHotel ? '$roomServiceOrders' : '$expiringSoonCount',
-              label: isHotel ? 'Room service orders' : 'Expiring soon',
-              valueColor: const Color(0xFF7A5E00),
-              trendColor: AppColors.cherry,
-              trendText: isHotel ? '↑ Guest requests' : '↑ Check soon',
-              trendArrow: '↑',
-            ),
-            _KpiTileData(
-              value: '$wasteKg kg',
-              label: 'Waste today',
-              valueColor: AppColors.olive,
-              trendColor: AppColors.olive,
-              trendText: '↓ ${max(1, 8 - min(5, pendingAlerts))}% vs last week',
-              trendArrow: '↓',
-            ),
-            _KpiTileData(
-              value: '$freshnessScore%',
-              label: 'Freshness score',
-              valueColor: AppColors.olive,
-              trendColor: AppColors.olive,
-              trendText: freshnessScore >= 90 ? '↓ Stable' : '↓ Improving',
-              trendArrow: '↓',
-            ),
-          ];
-
-          final activeAlertBanner = pendingAlerts > 0;
-          final inventoryWarningVisible = inventoryAlertCount > 0;
-          final activeIcon = isHotel ? Icons.apartment : Icons.restaurant;
-          final activeHeaderColor = venueColor;
-          final statTextColor = venueTint;
-          final detailSubtitle = venueSubtitle;
-
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: 200,
-                  width: double.infinity,
-                  child: Container(
-                    color: activeHeaderColor,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    greeting,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                      color: statTextColor,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    venueName,
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.butter,
-                                      height: 1.1,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    detailSubtitle,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: statTextColor,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.butter.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      serviceChip,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.butter,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: headerStats
-                                        .map(
-                                          (stat) => Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.butter.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              stat,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColors.butter,
-                                                height: 1.2,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                        .toList(growable: false),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.butter.withValues(alpha: 0.15),
-                                  border: Border.all(
-                                    color: AppColors.butter.withValues(alpha: 0.35),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: _VenueAvatar(
-                                  user: user,
-                                  isHotel: isHotel,
-                                  fallbackIcon: activeIcon,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ── Premium gradient header ────────────────────────────────────
+              SliverPersistentHeader(
+                pinned: false,
+                delegate: _HeaderDelegate(
+                  minH: 0,
+                  maxH: 220,
+                  gradient: headerGradient,
+                  greeting: _greeting(),
+                  name: name,
+                  subtitle: subtitle,
+                  serviceChip: _serviceLabel(),
+                  pendingAlerts: pending,
+                  wasteKg: wasteKg,
+                  expiring: expiring,
+                  isHotel: isHotel,
+                  user: userP.currentUser,
                 ),
-                Transform.translate(
-                  offset: const Offset(0, -24),
+              ),
+
+              SliverToBoxAdapter(
+                child: Transform.translate(
+                  offset: const Offset(0, -28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _SectionTitle(
-                        title: ' ',
-                        actionLabel: ' ',
-                        actionColor: AppColors.olive,
-                        onTap: () => context.go(AppRoutes.restaurantWaste),
-                        topPadding: 0,
-                      ),
-                      _CardShell(
-                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Today\'s performance',
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.espresso,
-                                  ),
-                                ),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () => context.go(AppRoutes.restaurantWaste),
-                                  child: Text(
-                                    'Full report',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.olive,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 1.0,
-                              children: [
-                                for (final tile in performanceTiles)
-                                  _KpiTile(data: tile),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (activeAlertBanner)
-                        _ActiveAlertsBanner(
-                          count: pendingAlerts,
-                          onTap: () => context.go(AppRoutes.restaurantAlerts),
-                        ),
-                      _SectionTitle(
-                        title: 'Quick actions',
-                        actionLabel: null,
-                        onTap: null,
-                      ),
+
+                      // ── KPI tiles ──────────────────────────────────────────
+                      _Section(title: 'Performance du jour'),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _QuickAction(
-                                icon: Icons.notifications_active_outlined,
-                                iconColor: AppColors.cherry,
-                                label: 'Alerts',
-                                onTap: () => context.go(AppRoutes.restaurantAlerts),
-                              ),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                        child: _KpiGrid(
+                          tiles: [
+                            _KpiData(
+                              value: '$pending',
+                              label: 'Alertes allergens',
+                              icon: Icons.warning_amber_rounded,
+                              color: _kCherry,
+                              trend: '↑ $pending actives',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _QuickAction(
-                                icon: Icons.inventory_2_outlined,
-                                iconColor: const Color(0xFF7A5E00),
-                                label: isHotel ? 'Inventory' : 'Inventory',
-                                onTap: () => context.go(AppRoutes.restaurantInventory),
-                              ),
+                            _KpiData(
+                              value: isHotel ? '${(userP.currentUser?.rooms ?? 0) ~/ 10 + 1}' : '$expiring',
+                              label: isHotel ? 'Services actifs' : 'Expirent bientôt',
+                              icon: isHotel ? Icons.room_service_rounded : Icons.inventory_2_rounded,
+                              color: _kAmber,
+                              trend: isHotel ? '↑ En cours' : '↑ À vérifier',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _QuickAction(
-                                icon: Icons.delete_outline,
-                                iconColor: AppColors.olive,
-                                label: 'Waste',
-                                onTap: () => context.go(AppRoutes.restaurantWaste),
-                              ),
+                            _KpiData(
+                              value: '${wasteKg}kg',
+                              label: 'Déchets aujourd\'hui',
+                              icon: Icons.delete_outline_rounded,
+                              color: _kOlive,
+                              trend: '↓ 8% vs semaine',
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _QuickAction(
-                                icon: Icons.document_scanner_outlined,
-                                iconColor: AppColors.olive,
-                                label: 'Scan food item',
-                                subtitle: 'Freshness · Compost check',
-                                onTap: () => context.go(AppRoutes.restaurantScan),
-                              ),
+                            _KpiData(
+                              value: '$freshness%',
+                              label: 'Score fraîcheur',
+                              icon: Icons.eco_rounded,
+                              color: _kEmerald,
+                              trend: freshness >= 90 ? '✓ Excellent' : '↑ En progrès',
                             ),
                           ],
+                          enterController: _enterController,
                         ),
                       ),
-                      _SectionTitle(
-                        title: '',
-                        actionLabel: ' ',
-                        actionColor: AppColors.olive,
-                        onTap: () => context.go(AppRoutes.restaurantWaste),
+
+                      const SizedBox(height: 16),
+
+                      // ── Alert banner ───────────────────────────────────────
+                      if (pending > 0)
+                        _AlertBanner(
+                          count: pending,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            context.go(AppRoutes.restaurantAlerts);
+                          },
+                        ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+
+                      // ── Quick actions ──────────────────────────────────────
+                      _Section(title: 'Actions rapides'),
+                      _QuickActions(
+                        isHotel: isHotel,
+                        accentColor: accentColor,
                       ),
-                      _CardShell(
-                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Waste this week',
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.espresso,
-                                  ),
-                                ),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () => context.go(AppRoutes.restaurantWaste),
-                                  child: Text(
-                                    'Full report',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.olive,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 120,
-                              child: _WasteChart(
-                                values: wasteSeries,
-                                onTouchIndexChanged: (index) {
-                                  setState(() => _touchedBarIndex = index);
-                                },
-                                touchedIndex: _touchedBarIndex,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _MiniPill(
-                                    text: '↓ 8% vs last week',
-                                    background: AppColors.oliveMist,
-                                    color: AppColors.olive,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _MiniPill(
-                                    text: '$topWasteLabel — top waste',
-                                    background: AppColors.cherryBlush,
-                                    color: AppColors.cherry,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+
+                      // ── Compost AI teaser ──────────────────────────────────
+                      _CompostTeaser(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          context.go(AppRoutes.restaurantCompost);
+                        },
+                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.08, end: 0),
+
+                      // ── Waste chart ────────────────────────────────────────
+                      _Section(title: 'Déchets cette semaine'),
+                      _WasteCard(
+                        series: series,
+                        touchedIndex: _touchedBarIndex,
+                        onTouch: (i) => setState(() => _touchedBarIndex = i),
+                        isHotel: isHotel,
+                      ).animate().fadeIn(delay: 500.ms),
+
+                      // ── Inventory warning ──────────────────────────────────
+                      if (expiring > 0)
+                        _InventoryBanner(
+                          count: expiring,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            context.go(AppRoutes.restaurantInventory);
+                          },
+                        ).animate().fadeIn(delay: 550.ms),
+
+                      // ── Daily tip ──────────────────────────────────────────
+                      _Section(title: 'Conseil du jour'),
+                      _TipCard(tip: tip, accent: accentColor)
+                          .animate()
+                          .fadeIn(delay: 600.ms),
+
+                      // ── Recent alerts ──────────────────────────────────────
+                      if (recentA.isNotEmpty) ...[
+                        _Section(
+                          title: 'Alertes récentes',
+                          action: 'Tout voir',
+                          onAction: () => context.go(AppRoutes.restaurantAlerts),
                         ),
-                      ),
-                      if (inventoryWarningVisible)
-                        _InventoryAlertCard(
-                          count: inventoryAlertCount,
-                          onTap: () => context.go(AppRoutes.restaurantInventory),
-                        ),
-                      _SectionTitle(
-                        title: "Today's tip",
-                        actionLabel: null,
-                        onTap: null,
-                      ),
-                      _TipCard(
-                        title: tip.title,
-                        body: tip.body,
-                        chipText: 'Tip',
-                      ),
-                      _SectionTitle(
-                        title: 'Recent alerts',
-                        actionLabel: 'See all',
-                        actionColor: AppColors.cherry,
-                        onTap: () => context.go(AppRoutes.restaurantAlerts),
-                      ),
-                      if (recentAlerts.isEmpty)
-                        _CardShell(
-                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Text(
-                            'No recent alerts',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: AppColors.cocoa,
+                        ...recentA.asMap().entries.map(
+                          (e) => _AlertRow(
+                            alert: e.value,
+                            onTap: () => context.go(
+                              AppRoutes.restaurantAlertDetail(e.value.id),
                             ),
-                          ),
-                        )
-                      else
-                        Column(
-                          children: List.generate(recentAlerts.length, (index) {
-                            final alert = recentAlerts[index];
-                            return _StaggerIn(
-                              controller: _enterController,
-                              index: index,
-                              child: _RecentAlertCard(
-                                alert: alert,
-                                onTap: () => context.go(AppRoutes.restaurantAlertDetail(alert.id)),
-                              ),
-                            );
-                          }),
+                          )
+                              .animate()
+                              .fadeIn(delay: Duration(milliseconds: 650 + e.key * 80))
+                              .slideY(begin: 0.06, end: 0),
                         ),
-                      const SizedBox(height: 24),
+                      ],
+
+                      const SizedBox(height: 120), // bottom nav clearance
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -655,115 +312,263 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 }
 
-class _VenueAvatar extends StatelessWidget {
-  final dynamic user;
+// ── Header delegate ────────────────────────────────────────────────────────────
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minH;
+  final double maxH;
+  final Gradient gradient;
+  final String greeting;
+  final String name;
+  final String subtitle;
+  final String serviceChip;
+  final int pendingAlerts;
+  final int wasteKg;
+  final int expiring;
   final bool isHotel;
-  final IconData fallbackIcon;
+  final dynamic user;
 
-  const _VenueAvatar({
-    required this.user,
+  _HeaderDelegate({
+    required this.minH,
+    required this.maxH,
+    required this.gradient,
+    required this.greeting,
+    required this.name,
+    required this.subtitle,
+    required this.serviceChip,
+    required this.pendingAlerts,
+    required this.wasteKg,
+    required this.expiring,
     required this.isHotel,
-    required this.fallbackIcon,
+    required this.user,
   });
 
-  String _initials(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) return '?';
-    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    final first = parts.first.substring(0, 1).toUpperCase();
-    final second = parts.length > 1 ? parts[1].substring(0, 1).toUpperCase() : '';
-    return (first + second).trim();
+  @override
+  double get minExtent => minH;
+  @override
+  double get maxExtent => maxH;
+
+  @override
+  Widget build(BuildContext ctx, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      decoration: BoxDecoration(gradient: gradient),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Decorative circles
+          Positioned(
+            top: -40,
+            right: -40,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            left: -30,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.03),
+              ),
+            ),
+          ),
+
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              greeting,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.65),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              name,
+                              style: GoogleFonts.sora(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _Avatar(user: user, isHotel: isHotel),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Stats row
+                  Row(
+                    children: [
+                      _HeaderStat(
+                        label: serviceChip,
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                      const SizedBox(width: 8),
+                      _HeaderStat(
+                        label: '🚨 $pendingAlerts alertes',
+                        color: pendingAlerts > 0
+                            ? Colors.red.withValues(alpha: 0.3)
+                            : Colors.white.withValues(alpha: 0.10),
+                      ),
+                      const SizedBox(width: 8),
+                      _HeaderStat(
+                        label: '♻️ ${wasteKg}kg',
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
+  bool shouldRebuild(_HeaderDelegate old) => true;
+}
+
+class _HeaderStat extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _HeaderStat({required this.label, required this.color});
+
+  @override
   Widget build(BuildContext context) {
-    final logo = (user?.avatarPath ?? '').toString().trim();
-    final venueName = isHotel ? (user?.hotelName ?? '').toString() : (user?.restaurantName ?? '').toString();
-    final initials = _initials(venueName);
-
-    if (logo.isNotEmpty) {
-      return Image.network(
-        logo,
-        width: 48,
-        height: 48,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            width: 48,
-            height: 48,
-            color: AppColors.butter.withValues(alpha: 0.15),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.butter,
-              ),
-            ),
-          );
-        },
-      );
-    }
-
     return Container(
-      width: 48,
-      height: 48,
-      alignment: Alignment.center,
-      color: AppColors.butter.withValues(alpha: 0.15),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Text(
-        initials,
+        label,
         style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: AppColors.butter,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
         ),
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onTap;
-  final Color? actionColor;
-  final double topPadding;
+// ── Avatar ────────────────────────────────────────────────────────────────────
+class _Avatar extends StatelessWidget {
+  final dynamic user;
+  final bool isHotel;
+  const _Avatar({required this.user, required this.isHotel});
 
-  const _SectionTitle({
-    required this.title,
-    required this.actionLabel,
-    required this.onTap,
-    this.actionColor,
-    this.topPadding = 20,
-  });
+  String _initials() {
+    final n = (isHotel
+        ? user?.hotelName
+        : user?.restaurantName) ?? '';
+    final parts = n.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    final a = parts.first.substring(0, 1).toUpperCase();
+    final b = parts.length > 1 ? parts[1].substring(0, 1).toUpperCase() : '';
+    return a + b;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = (user?.avatarPath ?? '').toString().trim();
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.15),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+      ),
+      child: logo.isNotEmpty
+          ? ClipOval(
+              child: Image.network(
+                logo,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _initText(),
+              ),
+            )
+          : _initText(),
+    );
+  }
+
+  Widget _initText() => Center(
+        child: Text(
+          _initials(),
+          style: GoogleFonts.sora(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      );
+}
+
+// ── Section header ─────────────────────────────────────────────────────────────
+class _Section extends StatelessWidget {
+  final String title;
+  final String? action;
+  final VoidCallback? onAction;
+
+  const _Section({required this.title, this.action, this.onAction});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, topPadding, 16, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.dmSerifDisplay(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.espresso,
-              ),
+          Text(
+            title,
+            style: GoogleFonts.sora(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1E293B),
+              letterSpacing: -0.2,
             ),
           ),
-          if (actionLabel != null && onTap != null)
+          const Spacer(),
+          if (action != null)
             GestureDetector(
-              onTap: onTap,
+              onTap: onAction,
               child: Text(
-                actionLabel!,
+                action!,
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: actionColor ?? AppColors.cherry,
+                  color: _kCherry,
                 ),
               ),
             ),
@@ -773,49 +578,55 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _CardShell extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry margin;
+// ── KPI Grid ───────────────────────────────────────────────────────────────────
+class _KpiData {
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String trend;
+  const _KpiData({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.trend,
+  });
+}
 
-  const _CardShell({required this.child, required this.margin});
+class _KpiGrid extends StatelessWidget {
+  final List<_KpiData> tiles;
+  final AnimationController enterController;
+
+  const _KpiGrid({required this.tiles, required this.enterController});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: margin,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sand, width: 0.5),
-      ),
-      child: child,
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.35,
+      children: tiles.asMap().entries.map((e) {
+        return _KpiTile(data: e.value)
+            .animate()
+            .fadeIn(delay: Duration(milliseconds: 100 + e.key * 80), duration: 500.ms)
+            .slideY(
+              begin: 0.12,
+              end: 0,
+              delay: Duration(milliseconds: 100 + e.key * 80),
+              duration: 500.ms,
+              curve: Curves.easeOutCubic,
+            );
+      }).toList(),
     );
   }
 }
 
-class _KpiTileData {
-  final String value;
-  final String label;
-  final Color valueColor;
-  final Color trendColor;
-  final String trendArrow;
-  final String trendText;
-
-  const _KpiTileData({
-    required this.value,
-    required this.label,
-    required this.valueColor,
-    required this.trendColor,
-    required this.trendArrow,
-    required this.trendText,
-  });
-}
-
 class _KpiTile extends StatelessWidget {
-  final _KpiTileData data;
-
+  final _KpiData data;
   const _KpiTile({required this.data});
 
   @override
@@ -823,56 +634,68 @@ class _KpiTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.oat,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: _kCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            data.value,
-            style: GoogleFonts.dmSerifDisplay(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: data.valueColor,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            data.label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.cocoa,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                data.trendArrow,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: data.trendColor,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(data.icon, color: data.color, size: 18),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  data.trend,
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: data.color,
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  data.trendText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: data.trendColor,
-                  ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.value,
+                style: GoogleFonts.sora(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: data.color,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                data.label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: _kSlate,
                 ),
               ),
             ],
@@ -883,127 +706,56 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
-class _ActiveAlertsBanner extends StatelessWidget {
+// ── Alert banner ───────────────────────────────────────────────────────────────
+class _AlertBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
-
-  const _ActiveAlertsBanner({required this.count, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.cherryBlush,
-        borderRadius: BorderRadius.circular(14),
-        border: const Border(
-          left: BorderSide(color: AppColors.cherry, width: 4),
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              const Icon(Icons.notifications_active, color: AppColors.cherry, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$count allergen alert${count == 1 ? '' : 's'} need attention',
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.cherry,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tap to review and resolve',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.cherryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.cherry),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  const _QuickAction({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    this.subtitle,
-    required this.onTap,
-  });
+  const _AlertBanner({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.parchment,
+          color: _kCherry.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.sand, width: 0.5),
+          border: Border.all(color: _kCherry.withValues(alpha: 0.2)),
         ),
-        child: Column(
+        child: Row(
           children: [
             Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.oliveMist,
-                borderRadius: BorderRadius.circular(12),
+                color: _kCherry.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: const Icon(Icons.notifications_active_rounded, color: _kCherry, size: 20),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.cocoa,
-                height: 1.15,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$count alerte${count == 1 ? '' : 's'} nécessitent votre attention',
+                    style: GoogleFonts.sora(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _kCherry,
+                    ),
+                  ),
+                  Text(
+                    'Appuyez pour examiner et résoudre',
+                    style: GoogleFonts.inter(fontSize: 11, color: _kCherry.withValues(alpha: 0.7)),
+                  ),
+                ],
               ),
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.fog,
-                  height: 1.2,
-                ),
-              ),
-            ],
+            const Icon(Icons.chevron_right_rounded, color: _kCherry, size: 20),
           ],
         ),
       ),
@@ -1011,192 +763,405 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _WasteChart extends StatelessWidget {
-  final List<double> values;
-  final ValueChanged<int?> onTouchIndexChanged;
-  final int? touchedIndex;
+// ── Quick actions ──────────────────────────────────────────────────────────────
+class _QuickActions extends StatelessWidget {
+  final bool isHotel;
+  final Color accentColor;
+  const _QuickActions({required this.isHotel, required this.accentColor});
 
-  const _WasteChart({
-    required this.values,
-    required this.onTouchIndexChanged,
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      _QA(icon: Icons.document_scanner_rounded, color: _kCherry, label: 'Scanner', route: AppRoutes.restaurantScan),
+      _QA(icon: Icons.notifications_rounded, color: _kAmber, label: 'Alertes', route: AppRoutes.restaurantAlerts),
+      _QA(icon: Icons.delete_outline_rounded, color: _kSlate, label: 'Déchets', route: AppRoutes.restaurantWaste),
+      _QA(icon: Icons.eco_rounded, color: _kEmerald, label: 'Compost', route: AppRoutes.restaurantCompost),
+      _QA(icon: Icons.inventory_2_rounded, color: _kIndigo, label: 'Stocks', route: AppRoutes.restaurantInventory),
+    ];
+
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: actions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final a = actions[i];
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              context.go(a.route);
+            },
+            child: Container(
+              width: 72,
+              decoration: BoxDecoration(
+                color: _kCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _kBorder, width: 0.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: a.color.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(a.icon, color: a.color, size: 20),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    a.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: _kSlate,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+              .animate()
+              .fadeIn(delay: Duration(milliseconds: 200 + i * 60), duration: 400.ms)
+              .slideX(begin: 0.1, end: 0, delay: Duration(milliseconds: 200 + i * 60), duration: 400.ms);
+        },
+      ),
+    );
+  }
+}
+
+class _QA {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String route;
+  const _QA({required this.icon, required this.color, required this.label, required this.route});
+}
+
+// ── Compost AI teaser card ─────────────────────────────────────────────────────
+class _CompostTeaser extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CompostTeaser({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: _kEmerald.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _kEmerald.withValues(alpha: 0.2),
+                border: Border.all(color: _kEmerald.withValues(alpha: 0.4)),
+              ),
+              child: const Center(
+                child: Text('♻️', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _kEmerald.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '⭐ IA COMPOST',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: _kEmerald,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Analysez vos déchets\npar segmentation IA',
+                    style: GoogleFonts.sora(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Mask2Former INT8 · On-device',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white38,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Waste chart card ───────────────────────────────────────────────────────────
+class _WasteCard extends StatelessWidget {
+  final List<double> series;
+  final int? touchedIndex;
+  final ValueChanged<int?> onTouch;
+  final bool isHotel;
+  const _WasteCard({
+    required this.series,
     required this.touchedIndex,
+    required this.onTouch,
+    required this.isHotel,
   });
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = values.isEmpty ? 10.0 : values.reduce(max) + 2;
+    final maxV = series.isEmpty ? 10.0 : series.reduce(max) + 2;
+    const days = ['L', 'M', 'M', 'J', 'V'];
 
-    return BarChart(
-      BarChartData(
-        maxY: maxValue,
-        alignment: BarChartAlignment.spaceAround,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 2,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: AppColors.oatDeep,
-            strokeWidth: 1,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kBorder, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
-        ),
-        titlesData: const FlTitlesData(show: false),
-        borderData: FlBorderData(show: false),
-        barGroups: values.asMap().entries.map((entry) {
-          final index = entry.key;
-          final value = entry.value;
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: value,
-                width: 16,
-                borderRadius: BorderRadius.circular(6),
-                color: AppColors.cherry,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 130,
+            child: BarChart(
+              BarChartData(
+                maxY: maxV,
+                alignment: BarChartAlignment.spaceAround,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 4,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: _kBorder,
+                    strokeWidth: 0.8,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (v, _) => Text(
+                        days[v.toInt().clamp(0, 4)],
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: _kSlate,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: series.asMap().entries.map((e) {
+                  final active = e.key == touchedIndex;
+                  return BarChartGroupData(
+                    x: e.key,
+                    barRods: [
+                      BarChartRodData(
+                        toY: e.value,
+                        width: 18,
+                        borderRadius: BorderRadius.circular(6),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: active
+                              ? [_kOlive, _kOlive.withValues(alpha: 0.6)]
+                              : [_kOlive.withValues(alpha: 0.5), _kOlive.withValues(alpha: 0.3)],
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchCallback: (event, response) =>
+                      onTouch(response?.spot?.touchedBarGroupIndex),
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                      '${rod.toY.toStringAsFixed(1)} kg',
+                      GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    tooltipRoundedRadius: 8,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _Pill(text: '↓ 8% vs semaine', bg: _kOlive.withValues(alpha: 0.10), color: _kOlive),
+              const SizedBox(width: 8),
+              _Pill(
+                text: '${isHotel ? 'Buffet' : 'Pain'} — top gaspillage',
+                bg: _kCherry.withValues(alpha: 0.08),
+                color: _kCherry,
               ),
             ],
-          );
-        }).toList(growable: false),
-        barTouchData: BarTouchData(
-          enabled: true,
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                '${rod.toY.toStringAsFixed(1)} kg',
-                GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.parchment,
-                ),
-              );
-            },
           ),
-          touchCallback: (event, response) {
-            final touched = response?.spot?.touchedBarGroupIndex;
-            onTouchIndexChanged(touched);
-          },
-        ),
+        ],
       ),
     );
   }
 }
 
-class _MiniPill extends StatelessWidget {
+class _Pill extends StatelessWidget {
   final String text;
-  final Color background;
+  final Color bg;
   final Color color;
-
-  const _MiniPill({
-    required this.text,
-    required this.background,
-    required this.color,
-  });
+  const _Pill({required this.text, required this.bg, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: color),
         ),
       ),
     );
   }
 }
 
-class _InventoryAlertCard extends StatelessWidget {
+// ── Inventory banner ───────────────────────────────────────────────────────────
+class _InventoryBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
-
-  const _InventoryAlertCard({required this.count, required this.onTap});
+  const _InventoryBanner({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.butter,
-        borderRadius: BorderRadius.circular(14),
-        border: const Border(
-          left: BorderSide(color: Color(0xFF7A5E00), width: 4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kAmber.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _kAmber.withValues(alpha: 0.25)),
         ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              const Icon(Icons.inventory_2_outlined, color: Color(0xFF7A5E00), size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$count items expiring within 3 days',
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF7A5E00),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Check inventory to prevent spoilage',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xFF7A5E00),
-                      ),
-                    ),
-                  ],
+        child: Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: _kAmber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.inventory_2_outlined, color: _kAmber, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '$count produit${count == 1 ? '' : 's'} expirent dans 3 jours',
+                style: GoogleFonts.sora(
+                  fontSize: 13, fontWeight: FontWeight.w700, color: _kAmber,
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Color(0xFF7A5E00)),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _kAmber, size: 18),
+          ],
         ),
       ),
     );
   }
 }
 
-class _TipData {
+// ── Tip card ───────────────────────────────────────────────────────────────────
+class _Tip {
   final String title;
   final String body;
-
-  const _TipData({required this.title, required this.body});
+  const _Tip(this.title, this.body);
 }
 
 class _TipCard extends StatelessWidget {
-  final String title;
-  final String body;
-  final String chipText;
-
-  const _TipCard({
-    required this.title,
-    required this.body,
-    required this.chipText,
-  });
+  final _Tip tip;
+  final Color accent;
+  const _TipCard({required this.tip, required this.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.oliveMist,
-        borderRadius: BorderRadius.circular(16),
+        color: _kCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kBorder, width: 0.8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1204,54 +1169,46 @@ class _TipCard extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.olive,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [accent, accent.withValues(alpha: 0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lightbulb_outline, color: AppColors.butter, size: 24),
+            child: const Icon(Icons.lightbulb_outline_rounded, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.cherryBlush,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      chipText,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.olive,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'CONSEIL DU JOUR',
+                    style: GoogleFonts.inter(
+                      fontSize: 9, fontWeight: FontWeight.w700, color: accent, letterSpacing: 1,
                     ),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  title,
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
+                  tip.title,
+                  style: GoogleFonts.sora(
+                    fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  body,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  tip.body,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.cocoa,
-                    height: 1.4,
+                    fontSize: 12, color: _kSlate, height: 1.5,
                   ),
                 ),
               ],
@@ -1263,174 +1220,104 @@ class _TipCard extends StatelessWidget {
   }
 }
 
-class _RecentAlertCard extends StatelessWidget {
+// ── Recent alert row ───────────────────────────────────────────────────────────
+class _AlertRow extends StatelessWidget {
   final AlertModel alert;
   final VoidCallback onTap;
+  const _AlertRow({required this.alert, required this.onTap});
 
-  const _RecentAlertCard({required this.alert, required this.onTap});
-
-  String _initials(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return '?';
-
-    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-
-    String firstChar(String value) {
-      final text = value.trim();
-      if (text.isEmpty) return '';
-      return text.substring(0, 1).toUpperCase();
-    }
-
-    final first = firstChar(parts.first);
-    final second = parts.length > 1 ? firstChar(parts[1]) : '';
-    return (first + second).trim();
+  String _timeAgo() {
+    final d = DateTime.now().difference(alert.timestamp);
+    if (d.inSeconds < 45) return 'À l\'instant';
+    if (d.inMinutes < 60) return '${d.inMinutes}min';
+    if (d.inHours < 24) return '${d.inHours}h';
+    return DateFormat('dd MMM').format(alert.timestamp);
   }
 
-  Color _statusColor() => alert.status == 'resolved' ? AppColors.olive : AppColors.cherry;
-
-  String _statusText() => alert.status == 'resolved' ? 'Resolved' : 'Pending';
-
-  String _timeAgo(DateTime timestamp) {
-    final diff = DateTime.now().difference(timestamp);
-    if (diff.inSeconds < 45) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return DateFormat('dd MMM').format(timestamp);
+  String _initials() {
+    final parts = alert.customerName.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty) return '?';
+    final a = parts.first.isEmpty ? '?' : parts.first[0].toUpperCase();
+    final b = parts.length > 1 && parts[1].isNotEmpty ? parts[1][0].toUpperCase() : '';
+    return a + b;
   }
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _statusColor();
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sand, width: 0.5),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border(left: BorderSide(color: statusColor, width: 4)),
+    final isResolved = alert.status == 'resolved';
+    final color = isResolved ? _kOlive : _kCherry;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border(
+            left: BorderSide(color: color, width: 3),
+            top: BorderSide(color: _kBorder, width: 0.5),
+            right: BorderSide(color: _kBorder, width: 0.5),
+            bottom: BorderSide(color: _kBorder, width: 0.5),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: statusColor,
-                child: Text(
-                  _initials(alert.customerName),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.butter,
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: color.withValues(alpha: 0.15),
+              child: Text(
+                _initials(),
+                style: GoogleFonts.sora(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: color,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    alert.customerName,
+                    style: GoogleFonts.inter(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B),
+                    ),
+                  ),
+                  Text(
+                    '⚠ ${alert.allergen} · ${alert.dishName}',
+                    style: GoogleFonts.inter(fontSize: 11, color: _kCherry),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _timeAgo(),
+                  style: GoogleFonts.inter(fontSize: 10, color: _kSlate),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isResolved ? 'Résolu' : 'En cours',
+                    style: GoogleFonts.inter(
+                      fontSize: 10, fontWeight: FontWeight.w700, color: color,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      alert.customerName,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.espresso,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '⚠ ${alert.allergen} detected in ${alert.dishName}',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.cherry,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _timeAgo(alert.timestamp),
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.fog,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              _StatusChip(text: _statusText(), color: statusColor),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String text;
-  final Color color;
-
-  const _StatusChip({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _StaggerIn extends StatelessWidget {
-  final AnimationController controller;
-  final int index;
-  final Widget child;
-
-  const _StaggerIn({
-    required this.controller,
-    required this.index,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final start = (0.06 * index).clamp(0.0, 0.8);
-    final curve = CurvedAnimation(
-      parent: controller,
-      curve: Interval(start, 1, curve: Curves.easeOutCubic),
-    );
-
-    final offset = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(curve);
-
-    return FadeTransition(
-      opacity: curve,
-      child: SlideTransition(position: offset, child: child),
     );
   }
 }
