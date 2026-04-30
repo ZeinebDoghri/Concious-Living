@@ -77,10 +77,14 @@ env/
 *.pt
 *.pth
 *.pkl
-*.onnx
 *.tflite
 *.bin
 *.h5
+# Large ONNX models (>100 MB) — excluded
+assets/models/compost_model_int8.onnx
+assets/models/mask2former_compost_int8.onnx
+# Small ONNX models (<100 MB) — included in git
+# assets/models/mask2former_fp32.onnx  (12 MB — committed)
 
 # ─── Environment & secrets ───────────────────────────────
 .env

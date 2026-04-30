@@ -4,12 +4,25 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 // Web stub — no dart:ffi, no onnxruntime.
-// Decodes the real image and applies a realistic segmentation overlay using
-// the pure-Dart image package (safe on web — no dart:ffi).
+//
+// Generates a realistic segmentation overlay using the EXACT same
+// palette and blend formula as the real Mask2Former model (CELL C):
+//
+//   PALETTE: 0=bg(original)  1=compostable(60,200,80)  2=non-compost(220,60,60)
+//   Blend  : overlay[fg] = 0.55 * PALETTE[class] + 0.45 * original_pixel
+//
+// The mock segmentation uses pixel-colour analysis (green → compost,
+// brown/red → non-compost, white/dark → background) so the coloured
+// zones actually follow the food content of the image.
 
-// ── Result (mirrors native version) ───────────────────────────────────────────
+// ── Exact palette from notebook CELL 4 ────────────────────────────────────────
+const _kCR = 60;  const _kCG = 200; const _kCB = 80;   // compostable lime-green
+const _kNR = 220; const _kNG = 60;  const _kNB = 60;   // non-compostable red
+const double _kBlendColor = 0.55;
+const double _kBlendOrig  = 0.45;
+
+// ── Result (mirrors native) ────────────────────────────────────────────────────
 class CompostInferenceResult {
-  /// PNG = original image with coloured segmentation overlay
   final Uint8List maskPng;
   final double compostablePct;
   final double nonCompostablePct;
@@ -56,28 +69,22 @@ class CompostInferenceService {
   Future<bool> init() async => false;
 
   Future<CompostInferenceResult> classify(Uint8List imageBytes) async {
-    // Simulate inference latency
     await Future.delayed(const Duration(milliseconds: 920));
 
-    final rng        = math.Random();
-    final compost    = 38.0 + rng.nextDouble() * 32;
-    final nonCompost = 18.0 + rng.nextDouble() * 22;
-    final bg         = 100.0 - compost - nonCompost;
-
-    // Decode the actual image so the overlay looks realistic
     final src = img.decodeImage(imageBytes);
-    final int W = src?.width  ?? 320;
-    final int H = src?.height ?? 240;
+    final W   = src?.width  ?? 320;
+    final H   = src?.height ?? 240;
 
-    final overlayPng = _buildMockOverlay(src, W, H);
+    final (overlay, c1, c2, c0) = _buildSmartOverlay(src, W, H);
+    final total = W * H;
 
     return CompostInferenceResult(
-      maskPng: overlayPng,
-      compostablePct: compost,
-      nonCompostablePct: nonCompost,
-      backgroundPct: bg,
+      maskPng: overlay,
+      compostablePct:    c1 / total * 100,
+      nonCompostablePct: c2 / total * 100,
+      backgroundPct:     c0 / total * 100,
       inferenceTimeMs: 920,
-      originalWidth: W,
+      originalWidth:  W,
       originalHeight: H,
     );
   }
@@ -85,30 +92,24 @@ class CompostInferenceService {
   void dispose() {}
 }
 
-// ── Realistic overlay mock ─────────────────────────────────────────────────────
-/// Applies a segmentation overlay matching the Kaggle notebook output:
-///   • Plate centre left  → compostable (vivid lime-green)  — vegetables/salad
-///   • Plate centre right → non-compostable (vivid red)     — meat/processed
-///   • Edges/background   → original pixel (plate, table…)
+// ── Smart colour-heuristic overlay ────────────────────────────────────────────
+/// Classifies each pixel using colour analysis — produces realistic-looking
+/// segmentation that follows the actual food content of the image.
 ///
-/// Uses 25 % original texture + 75 % pure class colour — same as native service.
-Uint8List _buildMockOverlay(img.Image? src, int W, int H) {
-  // Class colours — identical to native service
-  const cr = 50;  const cg = 210; const cb = 50;  // compostable lime-green
-  const nr = 220; const ng = 30;  const nb = 30;  // non-compostable red
-  const blendOrig  = 0.25;
-  const blendColor = 0.75;
-
+/// Rules (simplified FoodSeg103 → compost/non-compost mapping):
+///   • Very bright (plate, white table)      → background (0)
+///   • Very dark (shadow, dark background)   → background (0)
+///   • Green-dominant (veggies, herbs, salad)→ compostable (1)
+///   • Red/brown dominant + meat-like saturation → non-compostable (2)
+///   • Otherwise → compostable (1)   (most food is compostable)
+(Uint8List, int, int, int) _buildSmartOverlay(img.Image? src, int W, int H) {
   final out = img.Image(width: W, height: H, numChannels: 3);
-  final rng = math.Random(42); // fixed seed → deterministic organic edge
+  int c0 = 0, c1 = 0, c2 = 0;
 
   for (int y = 0; y < H; y++) {
     for (int x = 0; x < W; x++) {
-      final nx = x / W;
-      final ny = y / H;
-
-      // Original pixel (grey fallback if no image)
-      int r = 130, g = 110, b = 90;
+      // Get source pixel
+      int r = 128, g = 100, b = 80;
       if (src != null) {
         final p = src.getPixel(x, y);
         r = p.r.toInt();
@@ -116,28 +117,59 @@ Uint8List _buildMockOverlay(img.Image? src, int W, int H) {
         b = p.b.toInt();
       }
 
-      // Organic noise to soften the boundary (like a real segmentation model)
-      final noise = (rng.nextDouble() - 0.5) * 0.07;
-      final dist  = math.sqrt(
-          math.pow(nx - 0.50, 2) + math.pow(ny - 0.47, 2));
+      final cls = _classifyPixel(r, g, b);
 
-      if (dist > 0.43 + noise) {
-        // Background — original pixel (plate border, table…)
-        out.setPixelRgb(x, y, r, g, b);
-      } else if (nx < 0.52 + noise * 0.5) {
-        // Compostable — vivid lime-green (matches Kaggle green)
-        out.setPixelRgb(x, y,
-          (r * blendOrig + cr * blendColor).round(),
-          (g * blendOrig + cg * blendColor).round(),
-          (b * blendOrig + cb * blendColor).round());
-      } else {
-        // Non-compostable — vivid red (matches Kaggle red)
-        out.setPixelRgb(x, y,
-          (r * blendOrig + nr * blendColor).round(),
-          (g * blendOrig + ng * blendColor).round(),
-          (b * blendOrig + nb * blendColor).round());
+      switch (cls) {
+        case 0: // background — original pixel
+          out.setPixelRgb(x, y, r, g, b);
+          c0++;
+        case 1: // compostable — lime-green tint
+          out.setPixelRgb(x, y,
+            (r * _kBlendOrig + _kCR * _kBlendColor).round(),
+            (g * _kBlendOrig + _kCG * _kBlendColor).round(),
+            (b * _kBlendOrig + _kCB * _kBlendColor).round());
+          c1++;
+        default: // non-compostable — red tint
+          out.setPixelRgb(x, y,
+            (r * _kBlendOrig + _kNR * _kBlendColor).round(),
+            (g * _kBlendOrig + _kNG * _kBlendColor).round(),
+            (b * _kBlendOrig + _kNB * _kBlendColor).round());
+          c2++;
       }
     }
   }
-  return Uint8List.fromList(img.encodePng(out));
+
+  return (Uint8List.fromList(img.encodePng(out)), c1, c2, c0);
+}
+
+/// Pixel-level food classifier based on colour.
+/// Returns: 0=background, 1=compostable, 2=non-compostable
+int _classifyPixel(int r, int g, int b) {
+  final brightness = (r + g + b) / 3;
+
+  // ── Background detection ──────────────────────────────────────────────────
+  // Very bright white → plate/table
+  if (r > 215 && g > 215 && b > 215) return 0;
+  // Very dark → shadow/black background
+  if (brightness < 30) return 0;
+  // Neutral grey → table/plate border
+  final maxC = math.max(r, math.max(g, b));
+  final minC = math.min(r, math.min(g, b));
+  final saturation = maxC > 0 ? (maxC - minC) / maxC : 0.0;
+  if (saturation < 0.08 && brightness > 160) return 0; // unsaturated light → bg
+
+  // ── Compostable: green-dominant pixels (vegetables, herbs, salad) ─────────
+  final greenness = g - math.max(r, b);
+  if (greenness > 20) return 1; // clearly green → compostable
+
+  // ── Non-compostable: meat tones (brown/dark-red, low green, low blue) ─────
+  // Brown meat: r high, g medium, b low, r > g significantly
+  if (r > 100 && r > g + 25 && g > b && b < 100 && brightness < 180) return 2;
+  // Dark red (cooked meat, sausage)
+  if (r > 120 && g < 80 && b < 80) return 2;
+  // Orange-brown (fried food, processed)
+  if (r > 160 && g > 90 && g < 145 && b < 90 && r > g * 1.15) return 2;
+
+  // ── Default: compostable (most food items are plant-based) ───────────────
+  return 1;
 }
