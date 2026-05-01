@@ -10,6 +10,9 @@ import '../../../core/constants.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+//import 'dart:typed_data';
+
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
@@ -48,37 +51,39 @@ class _ScanScreenState extends State<ScanScreen>
   }
 
   Future<void> _pick(ImageSource source) async {
-    if (_isAnalysing) return;
+  if (_isAnalysing) return;
 
-    try {
-      final file = await _picker.pickImage(source: source, imageQuality: 90);
-      if (file == null) return;
-      if (!mounted) return;
+  try {
+    final file = await _picker.pickImage(source: source, imageQuality: 90);
+    if (file == null) return;
+    if (!mounted) return;
 
-      setState(() {
-        _selected = file;
-        _isAnalysing = true;
-      });
+    setState(() {
+      _selected = file;
+      _isAnalysing = true;
+    });
 
-      final result = await ApiService.predictNutrients(File(file.path));
-      if (!mounted) return;
+    final imageBytes = await file.readAsBytes();  // works on both web and mobile
+    final result = await ApiService.predictNutrients(imageBytes);
+    if (!mounted) return;
 
-      setState(() => _isAnalysing = false);
+    setState(() => _isAnalysing = false);
 
-      context.go(
-        AppRoutes.customerResult,
-        extra: <String, dynamic>{
-          'dishName': 'Dish',
-          'imagePath': file.path,
-          'result': result.toJson(),
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isAnalysing = false);
-      _snack(e.toString());
-    }
+    context.go(
+      AppRoutes.customerResult,
+      extra: <String, dynamic>{
+        'dishName': 'Dish',
+        'imagePath': kIsWeb ? null : file.path,  // null on web
+        'imageBytes': imageBytes,                 // always passed
+        'result': result.toJson(),
+      },
+    );
+  } catch (e) {
+    if (!mounted) return;
+    setState(() => _isAnalysing = false);
+    _snack(e.toString());
   }
+}
 
   @override
   Widget build(BuildContext context) {

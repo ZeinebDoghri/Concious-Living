@@ -50,7 +50,7 @@ class NutrientResult {
   Map<String, dynamic> toJson() {
     return {
       'cholesterol': cholesterol.toJson(),
-      'saturatedFat': saturatedFat.toJson(),
+      'fat': saturatedFat.toJson(),
       'sodium': sodium.toJson(),
       'sugar': sugar.toJson(),
       'overallRisk': overallRisk,
@@ -58,16 +58,33 @@ class NutrientResult {
     };
   }
 
-  factory NutrientResult.fromJson(Map<String, dynamic> json) {
+  /* factory NutrientResult.fromJson(Map<String, dynamic> json) {
     return NutrientResult(
       cholesterol:
           NutrientValue.fromJson((json['cholesterol'] ?? {}) as Map<String, dynamic>),
       saturatedFat: NutrientValue.fromJson(
-          (json['saturatedFat'] ?? {}) as Map<String, dynamic>),
+          (json['fat'] ?? {}) as Map<String, dynamic>),
       sodium: NutrientValue.fromJson((json['sodium'] ?? {}) as Map<String, dynamic>),
       sugar: NutrientValue.fromJson((json['sugar'] ?? {}) as Map<String, dynamic>),
       overallRisk: (json['overallRisk'] ?? 'low') as String,
       message: (json['message'] ?? '') as String,
+    );
+  } */
+
+    factory NutrientResult.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic> _toMap(dynamic raw) {
+      if (raw is Map<String, dynamic>) return raw;
+      if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v));
+      return {};
+    }
+
+    return NutrientResult(
+      cholesterol:  NutrientValue.fromJson(_toMap(json['cholesterol'])),
+      saturatedFat: NutrientValue.fromJson(_toMap(json['fat'])),
+      sodium:       NutrientValue.fromJson(_toMap(json['sodium'])),
+      sugar:        NutrientValue.fromJson(_toMap(json['sugar'])),
+      overallRisk:  (json['overallRisk'] ?? 'low') as String,
+      message:      (json['message'] ?? '') as String,
     );
   }
 }

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-import 'constants.dart';
+//import 'constants.dart';
 import 'models/nutrient_result.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -18,15 +20,30 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static Future<NutrientResult> predictNutrients(File image) async {
-    final uri = Uri.parse('$apiBaseUrl/predict/nutrients');
+  /* static Future<NutrientResult> predictNutrients(File image) async {
+    final uri = Uri.parse('https://zeinebzino-nutrients-model.hf.space/predict');
 
     final request = http.MultipartRequest('POST', uri);
-    request.files.add(await http.MultipartFile.fromPath('image', image.path));
+    request.files.add(await http.MultipartFile.fromPath(
+      'image',
+      image.path,
+      contentType: MediaType('image', 'jpeg'),
+    )); */
+
+  static Future<NutrientResult> predictNutrients(Uint8List imageBytes) async {
+    final uri = Uri.parse('https://zeinebzino-nutrients-model.hf.space/predict');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(http.MultipartFile.fromBytes(
+        'image',
+        imageBytes,
+        filename: 'image.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
 
     http.StreamedResponse streamed;
     try {
-      streamed = await request.send().timeout(const Duration(seconds: 30));
+      streamed = await request.send().timeout(const Duration(seconds: 90));
     } on TimeoutException {
       throw ApiException('Request timed out. Please try again.');
     } on SocketException {
@@ -50,12 +67,7 @@ class ApiService {
     }
 
     return NutrientResult.fromJson(decoded);
-  }
-
-
-
-
-
+}
 
 
 

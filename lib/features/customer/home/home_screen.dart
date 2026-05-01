@@ -13,6 +13,7 @@ import '../../../providers/alerts_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const _kBg      = Color(0xFF0A0F1E);
 const _kCard    = Color(0xFF111827);
@@ -230,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen>
     final goalsMet           = progresses.where((v) => v <= 100).length;
     final averageRisk        = _averageRiskLabel(overall);
     final healthScore        = (100 - (overall - 60).clamp(0, 40)).round();
-    final allergens          = user?.allergens ?? [];
+    final allergens = user?.conditions ?? [];
 
     final headerStats = [
       '${scanProvider.items.length} scans',
@@ -704,7 +705,7 @@ class _DarkSectionTitle extends StatelessWidget {
   final String title;
   final String? actionLabel;
   final VoidCallback? onTap;
-  final double topPadding;
+  //final double topPadding;
 
   const _DarkSectionTitle({
     required this.title,
@@ -715,7 +716,7 @@ class _DarkSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, topPadding, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
           Expanded(

@@ -52,6 +52,7 @@ dependencies:
   flutter_animate: ^4.5.0
   onnxruntime: ^1.4.1
   image: ^4.1.7
+  http_parser: ^4.0.2
 
 dev_dependencies:
   flutter_test:

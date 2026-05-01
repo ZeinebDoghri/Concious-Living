@@ -14,6 +14,9 @@ import '../../../shared/widgets/cherry_header.dart';
 import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
 
+//import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
+
 class ResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
 
@@ -91,7 +94,7 @@ class _ResultScreenState extends State<ResultScreen>
 
   @override
   Widget build(BuildContext context) {
-    final imagePath = (widget.args['imagePath'] as String?)?.trim();
+    //final imagePath = (widget.args['imagePath'] as String?)?.trim();
     final result = _parseResult();
 
     final riskColor = NutrientCard.riskColor(result.overallRisk);
@@ -122,12 +125,11 @@ class _ResultScreenState extends State<ResultScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (imagePath != null && imagePath.isNotEmpty) ...[
+                      /* if (imagePath != null && imagePath.isNotEmpty) ...[
                         Hero(
                           tag: 'scan_image',
                           child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(AppRadii.screenCard),
+                            borderRadius: BorderRadius.circular(AppRadii.screenCard),
                             child: AspectRatio(
                               aspectRatio: 16 / 10,
                               child: Image.file(
@@ -138,7 +140,30 @@ class _ResultScreenState extends State<ResultScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
-                      ],
+                      ], */
+                      Builder(builder: (_) {
+                        final imageBytes = widget.args['imageBytes'] as Uint8List?;
+                        final imagePath = (widget.args['imagePath'] as String?)?.trim();
+                        final hasImage = imageBytes != null || (imagePath != null && imagePath.isNotEmpty);
+                        if (!hasImage) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            Hero(
+                              tag: 'scan_image',
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(AppRadii.screenCard),
+                                child: AspectRatio(
+                                  aspectRatio: 16 / 10,
+                                  child: imageBytes != null
+                                      ? Image.memory(imageBytes, fit: BoxFit.cover)
+                                      : Image.file(File(imagePath!), fit: BoxFit.cover),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+                        );
+                      }),
                       TextField(
                         controller: _dishNameController,
                         decoration: const InputDecoration(
