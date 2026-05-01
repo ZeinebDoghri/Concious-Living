@@ -24,6 +24,8 @@ import 'features/customer/profile/edit_profile_screen.dart';
 import 'features/customer/profile/profile_screen.dart';
 import 'features/customer/scan/result_screen.dart';
 import 'features/customer/scan/scan_screen.dart';
+import 'features/hotel/dashboard/hotel_dashboard_screen.dart';
+import 'features/hotel/hotel_shell.dart';
 import 'features/hotel/profile/edit_hotel_profile_screen.dart';
 import 'features/hotel/profile/hotel_profile_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -104,9 +106,55 @@ GoRouter createAppRouter() {
         path: AppRoutes.restaurantProfileEdit,
         pageBuilder: (context, state) => slidePage(child: const EditRestaurantProfileScreen()),
       ),
-      GoRoute(
-        path: AppRoutes.hotelProfileEdit,
-        pageBuilder: (context, state) => slidePage(child: const EditHotelProfileScreen()),
+      // ── Hotel shell ─────────────────────────────────────────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return HotelShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelDashboard,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelDashboardScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelScan,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const StaffScanScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelScanResult,
+                pageBuilder: (context, state) {
+                  final extra = state.extra;
+                  final args = extra is Map<String, dynamic>
+                      ? extra
+                      : <String, dynamic>{};
+                  return slidePage(child: StaffResultScreen(args: args));
+                },
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelProfile,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelProfileScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelProfileEdit,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const EditHotelProfileScreen()),
+              ),
+            ],
+          ),
+        ],
       ),
 
       GoRoute(
@@ -332,11 +380,6 @@ GoRouter createAppRouter() {
                 path: AppRoutes.restaurantProfile,
                 pageBuilder: (context, state) =>
                     slidePage(child: const RestaurantProfileScreen()),
-              ),
-              GoRoute(
-                path: AppRoutes.hotelProfile,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const HotelProfileScreen()),
               ),
             ],
           ),

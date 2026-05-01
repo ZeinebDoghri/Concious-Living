@@ -373,10 +373,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _modeIndicator(Icons.thermostat_rounded,
-                    'Fraîcheur', const Color(0xFFEF4444)),
+                    'Freshness', const Color(0xFFEF4444)),
                 const SizedBox(width: 8),
                 _modeIndicator(Icons.delete_rounded,
-                    'Gaspillage', const Color(0xFFD97706)),
+                    'Waste', const Color(0xFFD97706)),
                 const SizedBox(width: 8),
                 _modeIndicator(Icons.eco_rounded,
                     'Compost', const Color(0xFF10B981)),
@@ -549,9 +549,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _MiniLoader('Fraîcheur', const Color(0xFFEF4444)),
+                  _MiniLoader('Freshness', const Color(0xFFEF4444)),
                   const SizedBox(width: 16),
-                  _MiniLoader('Déchets', const Color(0xFFD97706)),
+                  _MiniLoader('Waste', const Color(0xFFD97706)),
                   const SizedBox(width: 16),
                   _MiniLoader('Compost', const Color(0xFF10B981)),
                 ],

@@ -11,24 +11,25 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/models/alert_model.dart';
+import '../../../core/venue_alert_service.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/venue_type_provider.dart';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const _kCherry   = Color(0xFFFF6B6B);
-const _kOlive    = Color(0xFF00C896);
-const _kAmber    = Color(0xFFF59E0B);
-const _kIndigo   = Color(0xFF818CF8);
-const _kEmerald  = Color(0xFF00C896);
-const _kSurface  = Color(0xFF0A1628);   // dark navy
-const _kCard     = Color(0xFF111D2E);   // dark card
-const _kBorder   = Color(0xFF1E2D3D);   // dark border
-const _kSlate    = Color(0xFF64748B);
-const _kTextPrimary   = Colors.white;
-const _kTextSecondary = Color(0xFF94A3B8);
+// ── Brand palette ─────────────────────────────────────────────────────────────
+const _kCherry   = Color(0xFF75070C);   // Cherry
+const _kOlive    = Color(0xFF4F6815);   // Olive
+const _kAmber    = Color(0xFFE8C84A);   // Butter Deep
+const _kIndigo   = Color(0xFF185FA5);   // Info Blue
+const _kEmerald  = Color(0xFF4F6815);   // Olive = success
+const _kSurface  = Color(0xFFEDE0D3);   // warm oat
+const _kCard     = Color(0xFFFAF5EE);   // parchment
+const _kBorder   = Color(0xFFD9C9B4);   // sand
+const _kSlate    = Color(0xFF8C7B7C);   // fog
+const _kTextPrimary   = Color(0xFF2C1A1B);   // espresso
+const _kTextSecondary = Color(0xFF5C3D3F);   // cocoa
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -60,17 +61,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── Utility helpers ──────────────────────────────────────────────────────────
   String _greeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Bonjour 👋';
-    if (h < 18) return 'Bon après-midi 👋';
-    return 'Bonsoir 👋';
+    if (h < 12) return 'Good morning 👋';
+    if (h < 18) return 'Good afternoon 👋';
+    return 'Good evening 👋';
   }
 
   String _serviceLabel() {
     final h = DateTime.now().hour;
-    if (h < 11) return '🥐 Petit-déjeuner';
-    if (h < 15) return '🍽 Déjeuner';
-    if (h < 18) return '☕ Goûter';
-    return '🌙 Dîner';
+    if (h < 11) return '🥐 Breakfast';
+    if (h < 15) return '🍽 Lunch';
+    if (h < 18) return '☕ Afternoon';
+    return '🌙 Dinner';
   }
 
   String _venueName(UserProvider u, bool isHotel) {
@@ -83,11 +84,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (isHotel) {
       final cat = (u.currentUser?.hotelType ?? '').trim();
       final rooms = u.currentUser?.rooms ?? 0;
-      return '${cat.isEmpty ? 'Hôtel' : cat} · $rooms chambres';
+      return '${cat.isEmpty ? 'Hotel' : cat} · $rooms rooms';
     }
     final cuisine = (u.currentUser?.cuisineType ?? '').trim();
     final covers = u.currentUser?.covers ?? 0;
-    return '${cuisine.isEmpty ? 'Restaurant' : cuisine} · $covers couverts';
+    return '${cuisine.isEmpty ? 'Restaurant' : cuisine} · $covers covers';
   }
 
   int _expiringSoon(InventoryProvider p) =>
@@ -114,13 +115,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   List<_Tip> _tips(bool isHotel) => isHotel ? [
-    _Tip('Servir en petites fournées', 'Réduisez le gaspillage buffet grâce aux réassorts fractionnés.'),
-    _Tip('Confirmation allergènes', 'Vérifiez les restrictions alimentaires des hôtes à l\'arrivée.'),
-    _Tip('Températures de maintien', 'Contrôlez deux fois pour maintenir la sécurité alimentaire.'),
+    _Tip('Serve in small batches', 'Reduce buffet waste with fractional restocking.'),
+    _Tip('Allergen confirmation', 'Verify guest dietary restrictions at check-in.'),
+    _Tip('Holding temperatures', 'Double-check to maintain food safety standards.'),
   ] : [
-    _Tip('FIFO dès maintenant', 'Placez les anciens stocks devant pour les utiliser en premier.'),
-    _Tip('Étiquetez les allergènes', 'Une étiquette rapide à la préparation évite la contamination croisée.'),
-    _Tip('Portions régulières', 'Des portions prévisibles facilitent la comparaison des scans.'),
+    _Tip('FIFO now', 'Place older stock at the front to use it first.'),
+    _Tip('Label allergens', 'A quick label at prep time prevents cross-contamination.'),
+    _Tip('Consistent portions', 'Predictable portions make scan comparisons easier.'),
   ];
 
   @override
@@ -191,38 +192,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
 
                       // ── KPI tiles ──────────────────────────────────────────
-                      _Section(title: 'Performance du jour'),
+                      _Section(title: "Today's Performance"),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                         child: _KpiGrid(
                           tiles: [
                             _KpiData(
                               value: '$pending',
-                              label: 'Alertes allergens',
+                              label: 'Allergen Alerts',
                               icon: Icons.warning_amber_rounded,
                               color: _kCherry,
-                              trend: '↑ $pending actives',
+                              trend: '↑ $pending active',
                             ),
                             _KpiData(
                               value: isHotel ? '${(userP.currentUser?.rooms ?? 0) ~/ 10 + 1}' : '$expiring',
-                              label: isHotel ? 'Services actifs' : 'Expirent bientôt',
+                              label: isHotel ? 'Active Services' : 'Expiring Soon',
                               icon: isHotel ? Icons.room_service_rounded : Icons.inventory_2_rounded,
                               color: _kAmber,
-                              trend: isHotel ? '↑ En cours' : '↑ À vérifier',
+                              trend: isHotel ? '↑ In progress' : '↑ Check now',
                             ),
                             _KpiData(
                               value: '${wasteKg}kg',
-                              label: 'Déchets aujourd\'hui',
+                              label: 'Waste Today',
                               icon: Icons.delete_outline_rounded,
                               color: _kOlive,
-                              trend: '↓ 8% vs semaine',
+                              trend: '↓ 8% vs last week',
                             ),
                             _KpiData(
                               value: '$freshness%',
-                              label: 'Score fraîcheur',
+                              label: 'Freshness Score',
                               icon: Icons.eco_rounded,
                               color: _kEmerald,
-                              trend: freshness >= 90 ? '✓ Excellent' : '↑ En progrès',
+                              trend: freshness >= 90 ? '✓ Excellent' : '↑ Improving',
                             ),
                           ],
                           enterController: _enterController,
@@ -230,6 +231,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
 
                       const SizedBox(height: 16),
+
+                      // ── 🔔 Live customer allergen alerts ───────────────────
+                      if (userP.currentUser?.id != null)
+                        _LiveVenueAlerts(venueId: userP.currentUser!.id)
+                            .animate()
+                            .fadeIn(delay: 280.ms)
+                            .slideY(begin: 0.08, end: 0),
 
                       // ── Alert banner ───────────────────────────────────────
                       if (pending > 0)
@@ -242,7 +250,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
 
                       // ── Quick actions ──────────────────────────────────────
-                      _Section(title: 'Actions rapides'),
+                      _Section(title: 'Quick Actions'),
                       _QuickActions(
                         isHotel: isHotel,
                         accentColor: accentColor,
@@ -264,7 +272,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.08, end: 0),
 
                       // ── Waste chart ────────────────────────────────────────
-                      _Section(title: 'Déchets cette semaine'),
+                      _Section(title: 'Waste This Week'),
                       _WasteCard(
                         series: series,
                         touchedIndex: _touchedBarIndex,
@@ -283,7 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ).animate().fadeIn(delay: 550.ms),
 
                       // ── Daily tip ──────────────────────────────────────────
-                      _Section(title: 'Conseil du jour'),
+                      _Section(title: 'Tip of the Day'),
                       _TipCard(tip: tip, accent: accentColor)
                           .animate()
                           .fadeIn(delay: 600.ms),
@@ -291,8 +299,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       // ── Recent alerts ──────────────────────────────────────
                       if (recentA.isNotEmpty) ...[
                         _Section(
-                          title: 'Alertes récentes',
-                          action: 'Tout voir',
+                          title: 'Recent Alerts',
+                          action: 'View all',
                           onAction: () => context.go(AppRoutes.restaurantAlerts),
                         ),
                         ...recentA.asMap().entries.map(
@@ -443,7 +451,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                       const SizedBox(width: 8),
                       _HeaderStat(
-                        label: '🚨 $pendingAlerts alertes',
+                        label: '🚨 $pendingAlerts alerts',
                         color: pendingAlerts > 0
                             ? Colors.red.withValues(alpha: 0.3)
                             : Colors.white.withValues(alpha: 0.10),
@@ -750,7 +758,7 @@ class _AlertBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$count alerte${count == 1 ? '' : 's'} nécessitent votre attention',
+                    '$count alert${count == 1 ? '' : 's'} need your attention',
                     style: GoogleFonts.sora(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -758,7 +766,7 @@ class _AlertBanner extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Appuyez pour examiner et résoudre',
+                    'Tap to review and resolve',
                     style: GoogleFonts.inter(fontSize: 11, color: _kCherry.withValues(alpha: 0.7)),
                   ),
                 ],
@@ -781,11 +789,11 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _QA(icon: Icons.document_scanner_rounded, color: _kCherry, label: 'Scanner', route: AppRoutes.restaurantScan),
-      _QA(icon: Icons.notifications_rounded, color: _kAmber, label: 'Alertes', route: AppRoutes.restaurantAlerts),
-      _QA(icon: Icons.delete_outline_rounded, color: _kSlate, label: 'Déchets', route: AppRoutes.restaurantWaste),
+      _QA(icon: Icons.document_scanner_rounded, color: _kCherry, label: 'Scan', route: AppRoutes.restaurantScan),
+      _QA(icon: Icons.notifications_rounded, color: _kAmber, label: 'Alerts', route: AppRoutes.restaurantAlerts),
+      _QA(icon: Icons.delete_outline_rounded, color: _kSlate, label: 'Waste', route: AppRoutes.restaurantWaste),
       _QA(icon: Icons.eco_rounded, color: _kEmerald, label: 'Compost', route: AppRoutes.restaurantCompost),
-      _QA(icon: Icons.inventory_2_rounded, color: _kIndigo, label: 'Stocks', route: AppRoutes.restaurantInventory),
+      _QA(icon: Icons.inventory_2_rounded, color: _kIndigo, label: 'Inventory', route: AppRoutes.restaurantInventory),
     ];
 
     return SizedBox(
@@ -1068,10 +1076,10 @@ class _WasteCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _Pill(text: '↓ 8% vs semaine', bg: _kOlive.withValues(alpha: 0.10), color: _kOlive),
+              _Pill(text: '↓ 8% vs last week', bg: _kOlive.withValues(alpha: 0.10), color: _kOlive),
               const SizedBox(width: 8),
               _Pill(
-                text: '${isHotel ? 'Buffet' : 'Pain'} — top gaspillage',
+                text: '${isHotel ? 'Buffet' : 'Bread'} — top waste',
                 bg: _kCherry.withValues(alpha: 0.08),
                 color: _kCherry,
               ),
@@ -1136,7 +1144,7 @@ class _InventoryBanner extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '$count produit${count == 1 ? '' : 's'} expirent dans 3 jours',
+                '$count item${count == 1 ? '' : 's'} expiring within 3 days',
                 style: GoogleFonts.sora(
                   fontSize: 13, fontWeight: FontWeight.w700, color: _kAmber,
                 ),
@@ -1316,7 +1324,7 @@ class _AlertRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    isResolved ? 'Résolu' : 'En cours',
+                    isResolved ? 'Resolved' : 'Pending',
                     style: GoogleFonts.inter(
                       fontSize: 10, fontWeight: FontWeight.w700, color: color,
                     ),
@@ -1348,7 +1356,7 @@ class _ImpactRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🌍 Impact environnemental aujourd\'hui',
+            '🌍 Environmental Impact Today',
             style: GoogleFonts.sora(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1358,11 +1366,11 @@ class _ImpactRow extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _ImpactChip(emoji: '♻️', value: '${wasteKg}kg', label: 'évités', color: _kOlive),
+              _ImpactChip(emoji: '♻️', value: '${wasteKg}kg', label: 'avoided', color: _kOlive),
               const SizedBox(width: 8),
               _ImpactChip(emoji: '💨', value: '${co2}kg', label: 'CO₂', color: _kIndigo),
               const SizedBox(width: 8),
-              _ImpactChip(emoji: '🍽', value: '$meals', label: 'repas', color: _kAmber),
+              _ImpactChip(emoji: '🍽', value: '$meals', label: 'meals', color: _kAmber),
             ],
           ),
         ],
@@ -1412,6 +1420,194 @@ class _ImpactChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── 🔔 Live Customer Allergen Alert Stream ─────────────────────────────────────
+/// Displayed on the staff dashboard. Shows real-time alerts when a customer
+/// with allergens has been seen at this venue (via VenueAlertService).
+class _LiveVenueAlerts extends StatefulWidget {
+  final String venueId;
+  const _LiveVenueAlerts({required this.venueId});
+
+  @override
+  State<_LiveVenueAlerts> createState() => _LiveVenueAlertsState();
+}
+
+class _LiveVenueAlertsState extends State<_LiveVenueAlerts>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: VenueAlertService.alertsStream(widget.venueId),
+      builder: (context, snap) {
+        if (!snap.hasData || snap.data!.docs.isEmpty) return const SizedBox.shrink();
+
+        final docs = snap.data!.docs;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: _kCherry.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _kCherry.withValues(alpha: 0.25), width: 1.2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                  child: Row(
+                    children: [
+                      AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (_, __) => Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _kCherry.withValues(alpha: 0.5 + _pulse.value * 0.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '🚨 Live Allergen Alerts — ${docs.length} active',
+                          style: GoogleFonts.sora(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: _kCherry,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => VenueAlertService.resolveAll(widget.venueId),
+                        style: TextButton.styleFrom(
+                          foregroundColor: _kCherry,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Clear all',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Alert tiles
+                ...docs.map((doc) {
+                  final d = doc.data() as Map<String, dynamic>;
+                  final name      = d['customerName'] as String? ?? 'Guest';
+                  final allergens = List<String>.from(d['allergens'] as List? ?? []);
+                  final product   = d['productName'] as String? ?? '';
+                  final risk      = d['riskLevel'] as String? ?? 'moderate';
+                  final riskColor = risk == 'high' ? _kCherry : risk == 'low' ? _kOlive : _kAmber;
+
+                  return Container(
+                    margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _kCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: riskColor.withValues(alpha: 0.30), width: 0.8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: riskColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.person_rounded, size: 18, color: riskColor),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: GoogleFonts.sora(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kTextPrimary,
+                                ),
+                              ),
+                              if (product.isNotEmpty)
+                                Text(
+                                  'Scanned: $product',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: _kTextSecondary,
+                                  ),
+                                ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: allergens.map((a) => Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: riskColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: riskColor.withValues(alpha: 0.30)),
+                                  ),
+                                  child: Text(
+                                    a,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: riskColor,
+                                    ),
+                                  ),
+                                )).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => VenueAlertService.resolve(doc.id),
+                          child: Icon(Icons.check_circle_outline_rounded,
+                              size: 20, color: _kOlive),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1508,7 +1704,7 @@ class _ScanAllCardState extends State<_ScanAllCard>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Fraîcheur · Compost · Déchets',
+                    'Freshness · Compost · Waste',
                     style: GoogleFonts.sora(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -1518,7 +1714,7 @@ class _ScanAllCardState extends State<_ScanAllCard>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'IA simultanée · Résultat en 2 secondes',
+                    'AI-powered · Results in 2 seconds',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.75),

@@ -4,43 +4,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/constants.dart';
 
-// ── Design tokens ──────────────────────────────────────────────────────────────
-const _kDark     = Color(0xFF0A1628);
-const _kEmerald  = Color(0xFF00C896);
-const _kAmber    = Color(0xFFF59E0B);
-const _kRose     = Color(0xFFFF6B6B);
-const _kSlate    = Color(0xFF94A3B8);
+// ── Brand tokens ───────────────────────────────────────────────────────────────
+const _kOat      = Color(0xFFEDE0D3);
+const _kCherry   = Color(0xFF75070C);
+const _kOlive    = Color(0xFF4F6815);
+const _kButterD  = Color(0xFFE8C84A);
+const _kEspresso = Color(0xFF2C1A1B);
 
-// Branch mapping: visual index → StatefulShellRoute branch index
-// Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Déchets 4=Compost 5=Stocks 6=Profil
-// New nav: 0=Dashboard  1=Scan  2=Profil
-const _branchMap = [0, 1, 6];
+// Hotel nav: 0=Dashboard  1=Scan  2=Profile
+// Router branch indices must match StatefulShellRoute branches order:
+//   branch 0 = hotel/dashboard
+//   branch 1 = hotel/scan
+//   branch 2 = hotel/profile
+const _branchMap = [0, 1, 2];
 
 class _Item {
   final IconData icon;
-  final String   label;
-  final Color    color;
+  final String label;
+  final Color color;
   const _Item(this.icon, this.label, this.color);
 }
 
 const _items = [
-  _Item(Icons.dashboard_rounded,        'Dashboard', _kEmerald),
-  _Item(Icons.document_scanner_rounded, 'Scan',      _kAmber),
-  _Item(Icons.person_rounded,           'Profile',   _kSlate),
+  _Item(Icons.hotel_rounded,             'Dashboard', _kCherry),
+  _Item(Icons.document_scanner_rounded,  'Scan',      _kButterD),
+  _Item(Icons.person_rounded,            'Profile',   _kOlive),
 ];
 
-class RestaurantShell extends StatefulWidget {
+// ── Shell widget ───────────────────────────────────────────────────────────────
+class HotelShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
-  const RestaurantShell({super.key, required this.navigationShell});
+  const HotelShell({super.key, required this.navigationShell});
 
   @override
-  State<RestaurantShell> createState() => _RestaurantShellState();
+  State<HotelShell> createState() => _HotelShellState();
 }
 
-class _RestaurantShellState extends State<RestaurantShell>
-    with TickerProviderStateMixin {
+class _HotelShellState extends State<HotelShell> with TickerProviderStateMixin {
   late final AnimationController _pageAnim;
 
   @override
@@ -67,8 +70,8 @@ class _RestaurantShellState extends State<RestaurantShell>
   void _onTap(int visualIndex) {
     HapticFeedback.selectionClick();
     final branchIndex = _branchMap[visualIndex];
-    if (branchIndex == 6) {
-      context.go(AppRoutes.restaurantProfile);
+    if (branchIndex == 2) {
+      context.go(AppRoutes.hotelProfile);
       return;
     }
     widget.navigationShell.goBranch(
@@ -84,7 +87,7 @@ class _RestaurantShellState extends State<RestaurantShell>
     final vi     = _visualIndex;
 
     return Scaffold(
-      backgroundColor: _kDark,
+      backgroundColor: _kOat,
       extendBody: true,
       body: AnimatedBuilder(
         animation: _pageAnim,
@@ -103,7 +106,7 @@ class _RestaurantShellState extends State<RestaurantShell>
           child: widget.navigationShell,
         ),
       ),
-      bottomNavigationBar: _FloatingNav(
+      bottomNavigationBar: _HotelFloatingNav(
         currentIndex: vi,
         bottomPad: bottom,
         onTap: _onTap,
@@ -113,22 +116,22 @@ class _RestaurantShellState extends State<RestaurantShell>
 }
 
 // ── Floating Nav ───────────────────────────────────────────────────────────────
-class _FloatingNav extends StatefulWidget {
+class _HotelFloatingNav extends StatefulWidget {
   final int currentIndex;
   final double bottomPad;
   final ValueChanged<int> onTap;
 
-  const _FloatingNav({
+  const _HotelFloatingNav({
     required this.currentIndex,
     required this.bottomPad,
     required this.onTap,
   });
 
   @override
-  State<_FloatingNav> createState() => _FloatingNavState();
+  State<_HotelFloatingNav> createState() => _HotelFloatingNavState();
 }
 
-class _FloatingNavState extends State<_FloatingNav>
+class _HotelFloatingNavState extends State<_HotelFloatingNav>
     with TickerProviderStateMixin {
   late final List<AnimationController> _controllers;
   late final List<Animation<double>>   _scales;
@@ -150,7 +153,7 @@ class _FloatingNavState extends State<_FloatingNav>
   }
 
   @override
-  void didUpdateWidget(_FloatingNav old) {
+  void didUpdateWidget(_HotelFloatingNav old) {
     super.didUpdateWidget(old);
     if (old.currentIndex != widget.currentIndex) {
       _controllers[old.currentIndex].reverse();
@@ -179,23 +182,23 @@ class _FloatingNavState extends State<_FloatingNav>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF1E2D3D).withValues(alpha: 0.95),
-                  const Color(0xFF0A1628).withValues(alpha: 0.98),
+                  _kEspresso.withValues(alpha: 0.92),
+                  const Color(0xFF1A0C0D).withValues(alpha: 0.97),
                 ],
               ),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: _kCherry.withValues(alpha: 0.20),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withValues(alpha: 0.35),
                   blurRadius: 40,
                   offset: const Offset(0, 10),
                 ),
                 BoxShadow(
-                  color: _kEmerald.withValues(alpha: 0.05),
+                  color: _kCherry.withValues(alpha: 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -216,7 +219,7 @@ class _FloatingNavState extends State<_FloatingNav>
                   scale: _scales[1],
                   onTap: () => widget.onTap(1),
                 ),
-                // Profil
+                // Profile
                 _NavTile(
                   item: _items[2],
                   isActive: widget.currentIndex == 2,
@@ -264,12 +267,12 @@ class _NavTile extends StatelessWidget {
                 height: isActive ? 36 : 28,
                 decoration: isActive
                     ? BoxDecoration(
-                        color: item.color.withValues(alpha: 0.15),
+                        color: item.color.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: item.color.withValues(alpha: 0.3),
-                            blurRadius: 12,
+                            color: item.color.withValues(alpha: 0.35),
+                            blurRadius: 14,
                           ),
                         ],
                       )
@@ -367,18 +370,18 @@ class _ScanCenterButtonState extends State<_ScanCenterButton>
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFFF9A3C), Color(0xFFF59E0B)],
+                    colors: [Color(0xFFFFD966), Color(0xFFE8C84A)],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: _kAmber.withValues(
+                      color: _kButterD.withValues(
                         alpha: widget.isActive
-                            ? 0.55 + _pulse.value * 0.25
-                            : 0.25 + _pulse.value * 0.15,
+                            ? 0.60 + _pulse.value * 0.25
+                            : 0.28 + _pulse.value * 0.15,
                       ),
                       blurRadius: widget.isActive
-                          ? 20 + _pulse.value * 12
+                          ? 22 + _pulse.value * 12
                           : 10 + _pulse.value * 6,
                       spreadRadius: widget.isActive ? 2 : 0,
                     ),
@@ -390,12 +393,12 @@ class _ScanCenterButtonState extends State<_ScanCenterButton>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.document_scanner_rounded,
-                      color: Colors.white, size: 22),
+                      color: Color(0xFF2C1A1B), size: 22),
                   SizedBox(height: 2),
                   Text(
                     'SCAN',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Color(0xFF2C1A1B),
                       fontSize: 8,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,

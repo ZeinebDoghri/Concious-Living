@@ -164,7 +164,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                       ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
                       const SizedBox(height: 6),
                       Text(
-                        'Gérez votre cuisine, vos déchets et votre sécurité',
+                        'Manage your kitchen, waste and food safety',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
@@ -346,7 +346,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                                   ),
                                   children: [
                                     TextSpan(
-                                      text: 'Créer un compte',
+                                      text: 'Create an account',
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,

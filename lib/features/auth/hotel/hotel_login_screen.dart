@@ -90,7 +90,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
             role: 'hotel',
           );
       if (!mounted) return;
-      context.go(AppRoutes.restaurantDashboard);
+      context.go(AppRoutes.hotelDashboard);
     } catch (e) {
       _snack(_readableError(e));
     } finally {
