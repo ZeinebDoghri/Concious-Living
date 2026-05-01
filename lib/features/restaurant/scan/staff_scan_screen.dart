@@ -400,6 +400,47 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            // Additional buttons for expiry and freshness checks
+            Column(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => context.go(AppRoutes.restaurantExpiryDate),
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  label: const Text('Check Expiry Date'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.butter,
+                    side: BorderSide(
+                      color: AppColors.butter.withValues(alpha: 0.45),
+                      width: 1,
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.input),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => context.go(AppRoutes.restaurantFreshnessCheck),
+                  icon: const Icon(Icons.favorite_outline),
+                  label: const Text('Freshness Check'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.butter,
+                    side: BorderSide(
+                      color: AppColors.butter.withValues(alpha: 0.45),
+                      width: 1,
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.input),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
