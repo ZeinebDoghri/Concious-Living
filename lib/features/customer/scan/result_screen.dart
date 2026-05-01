@@ -80,7 +80,7 @@ class _ResultScreenState extends State<ResultScreen>
             customerName: user?.name ?? 'Customer',
             allergens:    conditions,
             productName:  dishName,
-            riskLevel:    result.riskLevel,
+            riskLevel:    result.overallRisk,
           );
         }
       }
