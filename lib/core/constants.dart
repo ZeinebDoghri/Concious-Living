@@ -115,6 +115,8 @@ class AppRoutes {
   static const restaurantAlerts = '/restaurant/alerts';
   static const restaurantWaste = '/restaurant/waste';
   static const restaurantCompost = '/restaurant/compost';
+  static const restaurantExpiryDate = '/expiry-date';
+  static const restaurantFreshnessCheck = '/freshness-check';
   static const restaurantInventory = '/restaurant/inventory';
   static const restaurantProfile = '/restaurant/profile';
   static const restaurantProfileEdit = '/restaurant/profile/edit';

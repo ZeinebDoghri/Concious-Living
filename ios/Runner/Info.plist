@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to capture expiry date images</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access is required to select images for expiry date detection</string>
 </dict>
 </plist>

@@ -38,6 +38,8 @@ import 'features/restaurant/restaurant_shell.dart';
 import 'features/restaurant/scan/staff_result_screen.dart';
 import 'features/restaurant/scan/staff_scan_screen.dart';
 import 'features/restaurant/waste/compost_screen.dart';
+import 'features/restaurant/expiry_date.dart';
+import 'features/freshness/freshness_check.dart';
 import 'features/restaurant/waste/waste_screen.dart';
 import 'features/role_selector/role_selector_screen.dart';
 import 'features/splash/splash_screen.dart';
@@ -302,6 +304,16 @@ GoRouter createAppRouter() {
                 path: AppRoutes.restaurantCompost,
                 pageBuilder: (context, state) =>
                     slidePage(child: const CompostScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantExpiryDate,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const ExpiryDatePage()),
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantFreshnessCheck,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const FreshnessCheckPage()),
               ),
             ],
           ),
