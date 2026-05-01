@@ -279,7 +279,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               if (!_isAnalysing)
                 AnimatedBuilder(
                   animation: _scanLine,
-                  builder: (_, __) {
+                  builder: (_, _) {
                     final t = _scanLine.value;
                     return Positioned(
                       top: t * (double.infinity < 0

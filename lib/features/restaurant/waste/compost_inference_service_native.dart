@@ -227,7 +227,9 @@ CompostInferenceResult _doInference(
 
   // ── 4. Argmax [1, 3, 512, 512] → class mask [512, 512] ────────────────────
   final flat = _toFloat32(outputs[0]!.value);
-  for (final o in outputs) o?.release();
+  for (final o in outputs) {
+    o?.release();
+  }
 
   final maskPad = Uint8List(_kImgSize * _kImgSize);
   for (int i = 0; i < _kImgSize * _kImgSize; i++) {
@@ -261,8 +263,9 @@ CompostInferenceResult _doInference(
   // ── 7. Count pixels ────────────────────────────────────────────────────────
   int c1 = 0, c2 = 0, c0 = 0;
   for (final v in maskFull) {
-    if (v == 1) c1++;
-    else if (v == 2) c2++;
+    if (v == 1) {
+      c1++;
+    } else if (v == 2) c2++;
     else c0++;
   }
   final total = W * H;
@@ -317,8 +320,11 @@ Float32List _toFloat32(dynamic raw) {
   if (raw is Float32List) return raw;
   final buf = <double>[];
   void walk(dynamic v) {
-    if (v is num) buf.add(v.toDouble());
-    else if (v is List) for (final e in v) walk(e);
+    if (v is num) {
+      buf.add(v.toDouble());
+    } else if (v is List) for (final e in v) {
+      walk(e);
+    }
   }
   walk(raw);
   return Float32List.fromList(buf);

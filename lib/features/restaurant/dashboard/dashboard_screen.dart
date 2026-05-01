@@ -526,7 +526,7 @@ class _Avatar extends StatelessWidget {
               child: Image.network(
                 logo,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _initText(),
+                errorBuilder: (_, _, _) => _initText(),
               ),
             )
           : _initText(),
@@ -794,7 +794,7 @@ class _QuickActions extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: actions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           final a = actions[i];
           return GestureDetector(
@@ -1051,7 +1051,7 @@ class _WasteCard extends StatelessWidget {
                   touchCallback: (event, response) =>
                       onTouch(response?.spot?.touchedBarGroupIndex),
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                    getTooltipItem: (group, _, rod, _) => BarTooltipItem(
                       '${rod.toY.toStringAsFixed(1)} kg',
                       GoogleFonts.inter(
                         fontSize: 11,

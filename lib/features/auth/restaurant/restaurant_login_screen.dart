@@ -97,7 +97,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
           // ── Animated background ────────────────────────────────────────────
           AnimatedBuilder(
             animation: _bgAnim,
-            builder: (_, __) => CustomPaint(
+            builder: (_, _) => CustomPaint(
               painter: _LoginBgPainter(_bgAnim.value),
             ),
           ),

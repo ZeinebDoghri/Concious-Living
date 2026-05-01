@@ -468,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen>
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: alertCards.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) => _DarkAlertCard(data: alertCards[index]),
                 ),
               ),
@@ -710,7 +710,6 @@ class _DarkSectionTitle extends StatelessWidget {
     required this.title,
     required this.actionLabel,
     required this.onTap,
-    this.topPadding = 20,
   });
 
   @override
