@@ -10,36 +10,30 @@ import '../../core/constants.dart';
 import '../../providers/venue_type_provider.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
-const _kOlive   = Color(0xFF5A7A18);
-const _kCherry  = Color(0xFF8B1A1F);
-const _kEmerald = Color(0xFF059669);
-const _kEmeraldGlow = Color(0xFF10B981);
-const _kCocoa   = Color(0xFF7C5C48);
+const _kDark     = Color(0xFF0A1628);
+const _kEmerald  = Color(0xFF00C896);
+const _kAmber    = Color(0xFFF59E0B);
+const _kRose     = Color(0xFFFF6B6B);
+const _kSlate    = Color(0xFF94A3B8);
 
-// ── Branch mapping: visual index → StatefulShellRoute branch index ─────────────
+// Branch mapping: visual index → StatefulShellRoute branch index
 // Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Déchets 4=Compost 5=Stocks 6=Profil
-// We show only 4 tabs:           0=Dashboard   1=Scan   2=Compost   3=Profil
-const _branchMap = [0, 1, 4, 6];
+// New nav: 0=Dashboard  1=Scan  2=Profil
+const _branchMap = [0, 1, 6];
 
-// ── Nav item meta ──────────────────────────────────────────────────────────────
 class _Item {
-  final IconData iconOff;
-  final IconData iconOn;
+  final IconData icon;
   final String   label;
   final Color    color;
-  final bool     isSpecial;
-  const _Item(this.iconOff, this.iconOn, this.label, this.color,
-      {this.isSpecial = false});
+  const _Item(this.icon, this.label, this.color);
 }
 
 const _items = [
-  _Item(Icons.dashboard_outlined,        Icons.dashboard_rounded,       'Dashboard', _kOlive),
-  _Item(Icons.document_scanner_outlined, Icons.document_scanner_rounded,'Scan',      _kCherry),
-  _Item(Icons.eco_outlined,              Icons.eco_rounded,             'Compost',   _kEmerald, isSpecial: true),
-  _Item(Icons.person_outline_rounded,    Icons.person_rounded,          'Profil',    _kCocoa),
+  _Item(Icons.dashboard_rounded,        'Dashboard', _kEmerald),
+  _Item(Icons.document_scanner_rounded, 'Scan',      _kAmber),
+  _Item(Icons.person_rounded,           'Profil',    _kSlate),
 ];
 
-// ── Shell ──────────────────────────────────────────────────────────────────────
 class RestaurantShell extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
   const RestaurantShell({super.key, required this.navigationShell});
@@ -57,7 +51,7 @@ class _RestaurantShellState extends State<RestaurantShell>
     super.initState();
     _pageAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 320),
     )..forward();
   }
 
@@ -67,7 +61,6 @@ class _RestaurantShellState extends State<RestaurantShell>
     super.dispose();
   }
 
-  /// Returns the visual tab index (0–3) for the current branch index.
   int get _visualIndex {
     final bi = widget.navigationShell.currentIndex;
     final vi = _branchMap.indexOf(bi);
@@ -77,7 +70,6 @@ class _RestaurantShellState extends State<RestaurantShell>
   void _onTap(int visualIndex) {
     HapticFeedback.selectionClick();
     final branchIndex = _branchMap[visualIndex];
-    // Profile tab — route differs for hotel vs restaurant
     if (branchIndex == 6) {
       final vt = context.read<VenueTypeProvider>().venueType;
       context.go(vt == 'hotel'
@@ -89,7 +81,6 @@ class _RestaurantShellState extends State<RestaurantShell>
       branchIndex,
       initialLocation: branchIndex == widget.navigationShell.currentIndex,
     );
-    // Restart page entrance animation
     _pageAnim.forward(from: 0);
   }
 
@@ -99,7 +90,7 @@ class _RestaurantShellState extends State<RestaurantShell>
     final vi     = _visualIndex;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F0),
+      backgroundColor: _kDark,
       extendBody: true,
       body: AnimatedBuilder(
         animation: _pageAnim,
@@ -107,11 +98,9 @@ class _RestaurantShellState extends State<RestaurantShell>
           opacity: CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut),
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: const Offset(0, 0.016),
+              begin: const Offset(0, 0.012),
               end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: _pageAnim, curve: Curves.easeOutCubic),
-            ),
+            ).animate(CurvedAnimation(parent: _pageAnim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
@@ -120,7 +109,7 @@ class _RestaurantShellState extends State<RestaurantShell>
           child: widget.navigationShell,
         ),
       ),
-      bottomNavigationBar: _GlassNav(
+      bottomNavigationBar: _FloatingNav(
         currentIndex: vi,
         bottomPad: bottom,
         onTap: _onTap,
@@ -129,105 +118,118 @@ class _RestaurantShellState extends State<RestaurantShell>
   }
 }
 
-// ── Glassmorphism nav bar ──────────────────────────────────────────────────────
-class _GlassNav extends StatefulWidget {
+// ── Floating Nav ───────────────────────────────────────────────────────────────
+class _FloatingNav extends StatefulWidget {
   final int currentIndex;
   final double bottomPad;
   final ValueChanged<int> onTap;
 
-  const _GlassNav({
+  const _FloatingNav({
     required this.currentIndex,
     required this.bottomPad,
     required this.onTap,
   });
 
   @override
-  State<_GlassNav> createState() => _GlassNavState();
+  State<_FloatingNav> createState() => _FloatingNavState();
 }
 
-class _GlassNavState extends State<_GlassNav> with TickerProviderStateMixin {
-  late final List<AnimationController> _bounce;
-  late final List<Animation<double>>   _scale;
+class _FloatingNavState extends State<_FloatingNav>
+    with TickerProviderStateMixin {
+  late final List<AnimationController> _controllers;
+  late final List<Animation<double>>   _scales;
 
   @override
   void initState() {
     super.initState();
-    _bounce = List.generate(_items.length, (i) {
-      final ctrl = AnimationController(
+    _controllers = List.generate(_items.length, (i) {
+      return AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 320),
+        duration: const Duration(milliseconds: 300),
         value: i == widget.currentIndex ? 1.0 : 0.0,
       );
-      return ctrl;
     });
-    _scale = _bounce.map((c) =>
-      Tween<double>(begin: 1.0, end: 1.18)
+    _scales = _controllers.map((c) =>
+      Tween<double>(begin: 1.0, end: 1.15)
           .animate(CurvedAnimation(parent: c, curve: Curves.easeOutBack)),
     ).toList();
   }
 
   @override
-  void didUpdateWidget(_GlassNav old) {
+  void didUpdateWidget(_FloatingNav old) {
     super.didUpdateWidget(old);
     if (old.currentIndex != widget.currentIndex) {
-      _bounce[old.currentIndex].reverse();
-      _bounce[widget.currentIndex].forward();
+      _controllers[old.currentIndex].reverse();
+      _controllers[widget.currentIndex].forward();
     }
   }
 
   @override
   void dispose() {
-    for (final c in _bounce) c.dispose();
+    for (final c in _controllers) c.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(14, 0, 14, widget.bottomPad + 12),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, widget.bottomPad + 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
           child: Container(
-            height: 66,
+            height: 70,
             decoration: BoxDecoration(
-              color: const Color(0xFF1A2310).withValues(alpha: 0.88),
-              borderRadius: BorderRadius.circular(30),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1E2D3D).withValues(alpha: 0.95),
+                  const Color(0xFF0A1628).withValues(alpha: 0.98),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.10),
-                width: 0.8,
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 32,
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 40,
                   offset: const Offset(0, 10),
                 ),
                 BoxShadow(
-                  color: _kEmeraldGlow.withValues(alpha: 0.06),
+                  color: _kEmerald.withValues(alpha: 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
               ],
             ),
             child: Row(
-              children: List.generate(_items.length, (i) {
-                final item = _items[i];
-                if (item.isSpecial) {
-                  return _CompostTile(
-                    isActive: widget.currentIndex == i,
-                    scale: _scale[i],
-                    onTap: () => widget.onTap(i),
-                  );
-                }
-                return _Tile(
-                  item: item,
-                  isActive: widget.currentIndex == i,
-                  scale: _scale[i],
-                  onTap: () => widget.onTap(i),
-                );
-              }),
+              children: [
+                // Dashboard
+                _NavTile(
+                  item: _items[0],
+                  isActive: widget.currentIndex == 0,
+                  scale: _scales[0],
+                  onTap: () => widget.onTap(0),
+                ),
+                // Scan — centre special
+                _ScanCenterButton(
+                  isActive: widget.currentIndex == 1,
+                  scale: _scales[1],
+                  onTap: () => widget.onTap(1),
+                ),
+                // Profil
+                _NavTile(
+                  item: _items[2],
+                  isActive: widget.currentIndex == 2,
+                  scale: _scales[2],
+                  onTap: () => widget.onTap(2),
+                ),
+              ],
             ),
           ),
         ),
@@ -236,14 +238,14 @@ class _GlassNavState extends State<_GlassNav> with TickerProviderStateMixin {
   }
 }
 
-// ── Standard tile ──────────────────────────────────────────────────────────────
-class _Tile extends StatelessWidget {
+// ── Standard nav tile ──────────────────────────────────────────────────────────
+class _NavTile extends StatelessWidget {
   final _Item item;
-  final bool  isActive;
+  final bool isActive;
   final Animation<double> scale;
   final VoidCallback onTap;
 
-  const _Tile({
+  const _NavTile({
     required this.item,
     required this.isActive,
     required this.scale,
@@ -262,48 +264,47 @@ class _Tile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
+                duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                width:  isActive ? 46 : 34,
-                height: isActive ? 34 : 28,
+                width: isActive ? 48 : 36,
+                height: isActive ? 36 : 28,
                 decoration: isActive
                     ? BoxDecoration(
-                        color: item.color.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(12),
+                        color: item.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: item.color.withValues(alpha: 0.25),
-                            blurRadius: 10,
+                            color: item.color.withValues(alpha: 0.3),
+                            blurRadius: 12,
                           ),
                         ],
                       )
                     : null,
                 child: Center(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, anim) => ScaleTransition(
-                      scale: anim, child: child,
-                    ),
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
                     child: Icon(
-                      isActive ? item.iconOn : item.iconOff,
+                      item.icon,
                       key: ValueKey(isActive),
-                      size: 21,
+                      size: 20,
                       color: isActive
                           ? item.color
-                          : Colors.white.withValues(alpha: 0.38),
+                          : Colors.white.withValues(alpha: 0.30),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: GoogleFonts.inter(
-                  fontSize: 9.5,
+                  fontSize: 10,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                   color: isActive
                       ? item.color
-                      : Colors.white.withValues(alpha: 0.38),
+                      : Colors.white.withValues(alpha: 0.30),
                 ),
                 child: Text(item.label),
               ),
@@ -315,23 +316,23 @@ class _Tile extends StatelessWidget {
   }
 }
 
-// ── Compost tile — pulsing emerald jewel ───────────────────────────────────────
-class _CompostTile extends StatefulWidget {
+// ── Scan centre button — glowing amber ────────────────────────────────────────
+class _ScanCenterButton extends StatefulWidget {
   final bool isActive;
   final Animation<double> scale;
   final VoidCallback onTap;
 
-  const _CompostTile({
+  const _ScanCenterButton({
     required this.isActive,
     required this.scale,
     required this.onTap,
   });
 
   @override
-  State<_CompostTile> createState() => _CompostTileState();
+  State<_ScanCenterButton> createState() => _ScanCenterButtonState();
 }
 
-class _CompostTileState extends State<_CompostTile>
+class _ScanCenterButtonState extends State<_ScanCenterButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
 
@@ -340,7 +341,7 @@ class _CompostTileState extends State<_CompostTile>
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
   }
 
@@ -353,6 +354,7 @@ class _CompostTileState extends State<_CompostTile>
   @override
   Widget build(BuildContext context) {
     return Expanded(
+      flex: 2,
       child: GestureDetector(
         onTap: () {
           HapticFeedback.mediumImpact();
@@ -361,53 +363,53 @@ class _CompostTileState extends State<_CompostTile>
         behavior: HitTestBehavior.opaque,
         child: ScaleTransition(
           scale: widget.scale,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedBuilder(
-                animation: _pulse,
-                builder: (_, child) => Container(
-                  width: 50,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF065F46), _kEmeraldGlow],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _kEmeraldGlow.withValues(
-                          alpha: widget.isActive
-                              ? 0.45 + _pulse.value * 0.25
-                              : 0.20 + _pulse.value * 0.12,
-                        ),
-                        blurRadius: widget.isActive
-                            ? 16 + _pulse.value * 10
-                            : 8 + _pulse.value * 4,
-                        spreadRadius: widget.isActive ? 1 : 0,
-                      ),
-                    ],
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, child) => Container(
+                width: 62,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFF9A3C), Color(0xFFF59E0B)],
                   ),
-                  child: child,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kAmber.withValues(
+                        alpha: widget.isActive
+                            ? 0.55 + _pulse.value * 0.25
+                            : 0.25 + _pulse.value * 0.15,
+                      ),
+                      blurRadius: widget.isActive
+                          ? 20 + _pulse.value * 12
+                          : 10 + _pulse.value * 6,
+                      spreadRadius: widget.isActive ? 2 : 0,
+                    ),
+                  ],
                 ),
-                child: const Center(
-                  child: Icon(Icons.eco_rounded, color: Colors.white, size: 22),
-                ),
+                child: child,
               ),
-              const SizedBox(height: 3),
-              Text(
-                'Compost',
-                style: GoogleFonts.inter(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: widget.isActive
-                      ? _kEmeraldGlow
-                      : Colors.white.withValues(alpha: 0.50),
-                ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.document_scanner_rounded,
+                      color: Colors.white, size: 22),
+                  SizedBox(height: 2),
+                  Text(
+                    'SCAN',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

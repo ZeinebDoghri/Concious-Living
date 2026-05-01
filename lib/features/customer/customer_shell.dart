@@ -68,7 +68,7 @@ class _CustomerShellState extends State<CustomerShell>
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF0A0F1E),
       extendBody: true,
       body: widget.navigationShell,
       bottomNavigationBar: _WowNav(

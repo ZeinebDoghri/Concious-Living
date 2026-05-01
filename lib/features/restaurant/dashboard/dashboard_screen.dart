@@ -18,15 +18,17 @@ import '../../../providers/user_provider.dart';
 import '../../../providers/venue_type_provider.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const _kCherry   = Color(0xFF8B1A1F);
-const _kOlive    = Color(0xFF5A7A18);
-const _kAmber    = Color(0xFFD97706);
-const _kIndigo   = Color(0xFF3B5BB5);
-const _kEmerald  = Color(0xFF10B981);
-const _kSurface  = Color(0xFFF8FAFC);
-const _kCard     = Colors.white;
-const _kBorder   = Color(0xFFE2E8F0);
+const _kCherry   = Color(0xFFFF6B6B);
+const _kOlive    = Color(0xFF00C896);
+const _kAmber    = Color(0xFFF59E0B);
+const _kIndigo   = Color(0xFF818CF8);
+const _kEmerald  = Color(0xFF00C896);
+const _kSurface  = Color(0xFF0A1628);   // dark navy
+const _kCard     = Color(0xFF111D2E);   // dark card
+const _kBorder   = Color(0xFF1E2D3D);   // dark border
 const _kSlate    = Color(0xFF64748B);
+const _kTextPrimary   = Colors.white;
+const _kTextSecondary = Color(0xFF94A3B8);
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -147,17 +149,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
           final headerGradient = isHotel
               ? const LinearGradient(
-                  colors: [Color(0xFF8B1A1F), Color(0xFF5A0000)],
+                  colors: [Color(0xFF1A0A2E), Color(0xFF2D1B69), Color(0xFF11998E)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : const LinearGradient(
-                  colors: [Color(0xFF2D5016), Color(0xFF1A3009)],
+                  colors: [Color(0xFF0A1628), Color(0xFF0D2137), Color(0xFF00695C)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 );
 
-          final accentColor = isHotel ? _kCherry : _kOlive;
+          final accentColor = isHotel ? const Color(0xFFB388FF) : _kOlive;
 
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -246,11 +248,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                         accentColor: accentColor,
                       ),
 
-                      // ── Compost AI teaser ──────────────────────────────────
-                      _CompostTeaser(
+                      // ── Environmental impact ───────────────────────────────
+                      _ImpactRow(
+                        wasteKg: wasteKg,
+                        scans: scans,
+                        freshness: freshness,
+                      ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.08, end: 0),
+
+                      // ── 3-in-1 Scan card ───────────────────────────────────
+                      _ScanAllCard(
                         onTap: () {
-                          HapticFeedback.selectionClick();
-                          context.go(AppRoutes.restaurantCompost);
+                          HapticFeedback.mediumImpact();
+                          context.go(AppRoutes.restaurantScan);
                         },
                       ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.08, end: 0),
 
@@ -555,7 +564,7 @@ class _Section extends StatelessWidget {
             style: GoogleFonts.sora(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1E293B),
+              color: Colors.white,
               letterSpacing: -0.2,
             ),
           ),
@@ -1201,7 +1210,7 @@ class _TipCard extends StatelessWidget {
                 Text(
                   tip.title,
                   style: GoogleFonts.sora(
-                    fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B),
+                    fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1282,7 +1291,7 @@ class _AlertRow extends StatelessWidget {
                   Text(
                     alert.customerName,
                     style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1E293B),
+                      fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
                     ),
                   ),
                   Text(
@@ -1314,6 +1323,222 @@ class _AlertRow extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Environmental Impact Row ────────────────────────────────────────────────────
+class _ImpactRow extends StatelessWidget {
+  final int wasteKg;
+  final int scans;
+  final int freshness;
+  const _ImpactRow({required this.wasteKg, required this.scans, required this.freshness});
+
+  @override
+  Widget build(BuildContext context) {
+    final co2 = (wasteKg * 2.5).toStringAsFixed(1);
+    final meals = (wasteKg * 1.8).round();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '🌍 Impact environnemental aujourd\'hui',
+            style: GoogleFonts.sora(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _ImpactChip(emoji: '♻️', value: '${wasteKg}kg', label: 'évités', color: _kOlive),
+              const SizedBox(width: 8),
+              _ImpactChip(emoji: '💨', value: '${co2}kg', label: 'CO₂', color: _kIndigo),
+              const SizedBox(width: 8),
+              _ImpactChip(emoji: '🍽', value: '$meals', label: 'repas', color: _kAmber),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ImpactChip extends StatelessWidget {
+  final String emoji, value, label;
+  final Color color;
+  const _ImpactChip({
+    required this.emoji, required this.value,
+    required this.label, required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 0.8),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.sora(
+                fontSize: 16, fontWeight: FontWeight.w800, color: color,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10, color: Colors.white.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 3-in-1 Scan Card ───────────────────────────────────────────────────────────
+class _ScanAllCard extends StatefulWidget {
+  final VoidCallback onTap;
+  const _ScanAllCard({required this.onTap});
+
+  @override
+  State<_ScanAllCard> createState() => _ScanAllCardState();
+}
+
+class _ScanAllCardState extends State<_ScanAllCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _pulse,
+        builder: (_, child) => Container(
+          margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF9A3C), Color(0xFFF59E0B), Color(0xFFFF6B35)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: _kAmber.withValues(alpha: 0.30 + _pulse.value * 0.15),
+                blurRadius: 24 + _pulse.value * 8,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.document_scanner_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '3 ANALYSES EN 1 SCAN',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Fraîcheur · Compost · Déchets',
+                    style: GoogleFonts.sora(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'IA simultanée · Résultat en 2 secondes',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ],
         ),
