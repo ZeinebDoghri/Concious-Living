@@ -447,7 +447,7 @@ class _NextButtonState extends State<_NextButton> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                widget.isLast ? 'Commencer' : 'Suivant',
+                widget.isLast ? 'Get Started' : 'Next',
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,

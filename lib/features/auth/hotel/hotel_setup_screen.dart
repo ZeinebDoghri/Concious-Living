@@ -187,7 +187,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
 
       await userProvider.saveProfile(updated);
       if (!mounted) return;
-      context.go(AppRoutes.restaurantDashboard);
+      context.go(AppRoutes.hotelDashboard);
     } catch (e) {
       _snack(_readableError(e));
     } finally {

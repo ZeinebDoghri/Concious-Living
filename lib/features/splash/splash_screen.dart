@@ -52,7 +52,9 @@ class _SplashScreenState extends State<SplashScreen>
         final profile = await FirebaseService.getUser(authUser.uid);
         if (!ctx.mounted) return;
         final role = profile?.role;
-        if (role == 'restaurant' || role == 'hotel') {
+        if (role == 'hotel') {
+          ctx.go(AppRoutes.hotelDashboard);
+        } else if (role == 'restaurant') {
           ctx.go(AppRoutes.restaurantDashboard);
         } else {
           ctx.go(AppRoutes.customerHome);

@@ -15,20 +15,20 @@ import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/freshness_badge.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const _kEmerald  = Color(0xFF10B981);
-const _kEmeraldD = Color(0xFF059669);
-const _kEmeraldL = Color(0xFFD1FAE5);
-const _kRose     = Color(0xFFEF4444);
-const _kRoseL    = Color(0xFFFEE2E2);
-const _kAmber    = Color(0xFFD97706);
-const _kAmberL   = Color(0xFFFEF3C7);
-const _kCherry   = Color(0xFF8B1A1F);
-const _kSlate    = Color(0xFF64748B);
-const _kSlateL   = Color(0xFFF1F5F9);
-const _kInk      = Color(0xFF1E293B);
-const _kSurface  = Color(0xFFF8FAFC);
-const _kCard     = Colors.white;
-const _kBorder   = Color(0xFFE2E8F0);
+const _kEmerald  = Color(0xFF4F6815);   // Olive
+const _kEmeraldD = Color(0xFF374A0F);   // Olive Dark
+const _kEmeraldL = Color(0xFFD4E8A8);   // Olive Mist
+const _kRose     = Color(0xFF75070C);   // Cherry
+const _kRoseL    = Color(0xFFFBBCBF);   // Cherry Blush
+const _kAmber    = Color(0xFFE8C84A);   // Butter Deep
+const _kAmberL   = Color(0xFFFFEDAB);   // Butter
+const _kCherry   = Color(0xFF75070C);   // Cherry
+const _kSlate    = Color(0xFF8C7B7C);   // Fog
+const _kSlateL   = Color(0xFFFAF5EE);   // Parchment
+const _kInk      = Color(0xFF2C1A1B);   // Espresso
+const _kSurface  = Color(0xFFEDE0D3);   // Warm Oat
+const _kCard     = Color(0xFFFAF5EE);   // Parchment
+const _kBorder   = Color(0xFFD9C9B4);   // Sand
 
 class StaffResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -115,7 +115,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
           : <Map>[];
 
       for (final entry in items) {
-        final name = (entry['name'] as String?)?.trim() ?? 'Déchet';
+        final name = (entry['name'] as String?)?.trim() ?? 'Waste item';
         final kg = (entry['quantityKg'] as num?)?.toDouble() ?? 0.0;
         if (venueId.isNotEmpty) {
           await FirebaseService.logWaste(
@@ -453,7 +453,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Résultat du scan',
+                    'Scan Result',
                     style: GoogleFonts.sora(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -1064,7 +1064,7 @@ class _WasteCard extends StatelessWidget {
     final raw = result['detectedItems'];
     if (raw is! List) return [];
     return raw.whereType<Map>().map((e) => <String, dynamic>{
-          'name': (e['name'] as String?)?.trim() ?? 'Déchet',
+          'name': (e['name'] as String?)?.trim() ?? 'Waste item',
           'quantityKg': (e['quantityKg'] as num?)?.toDouble() ?? 0.0,
         }).toList();
   }
@@ -1186,11 +1186,11 @@ class _SmartActionButton extends StatelessWidget {
   });
 
   String get _label {
-    if (isDone) return 'Actions enregistrées ✓';
+    if (isDone) return 'Actions saved ✓';
     final parts = <String>[];
-    if (detectedCount > 0) parts.add('Enregistrer les déchets');
-    if (status == 'spoiled') parts.add('Retirer du stock');
-    if (parts.isEmpty) return 'Mettre à jour l\'inventaire';
+    if (detectedCount > 0) parts.add('Log waste');
+    if (status == 'spoiled') parts.add('Remove from stock');
+    if (parts.isEmpty) return 'Update inventory';
     return parts.join(' · ');
   }
 

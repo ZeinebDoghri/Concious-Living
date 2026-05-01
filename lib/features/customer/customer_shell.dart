@@ -18,11 +18,11 @@ class _Item {
 }
 
 const _items = [
-  _Item(Icons.home_outlined, Icons.home_rounded, 'Accueil', Color(0xFF5A7A18)),
-  _Item(Icons.camera_alt_outlined, Icons.camera_alt_rounded, 'Scanner', Color(0xFF8B1A1F)),
-  _Item(Icons.history_outlined, Icons.history_rounded, 'Historique', Color(0xFF3B5BB5)),
-  _Item(Icons.shield_outlined, Icons.shield_rounded, 'Allergènes', Color(0xFFD97706)),
-  _Item(Icons.person_outline_rounded, Icons.person_rounded, 'Profil', Color(0xFF6B4F52)),
+  _Item(Icons.home_outlined, Icons.home_rounded, 'Home', Color(0xFF5A7A18)),
+  _Item(Icons.camera_alt_outlined, Icons.camera_alt_rounded, 'Scan', Color(0xFF8B1A1F)),
+  _Item(Icons.history_outlined, Icons.history_rounded, 'History', Color(0xFF3B5BB5)),
+  _Item(Icons.shield_outlined, Icons.shield_rounded, 'Allergens', Color(0xFFD97706)),
+  _Item(Icons.person_outline_rounded, Icons.person_rounded, 'Profile', Color(0xFF6B4F52)),
 ];
 
 class CustomerShell extends StatefulWidget {
@@ -68,7 +68,7 @@ class _CustomerShellState extends State<CustomerShell>
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0F1E),
+      backgroundColor: const Color(0xFFF0E6DA),
       extendBody: true,
       body: widget.navigationShell,
       bottomNavigationBar: _WowNav(

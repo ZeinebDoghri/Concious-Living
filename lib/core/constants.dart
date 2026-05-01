@@ -119,8 +119,11 @@ class AppRoutes {
   static const restaurantProfile = '/restaurant/profile';
   static const restaurantProfileEdit = '/restaurant/profile/edit';
 
+  static const hotelDashboard = '/hotel/dashboard';
   static const hotelProfile = '/hotel/profile';
   static const hotelProfileEdit = '/hotel/profile/edit';
+  static const hotelScan = '/hotel/scan';
+  static const hotelScanResult = '/hotel/scan/result';
 
   static String customerHistoryDetail(String id) => '/customer/history/$id';
 

@@ -540,7 +540,7 @@ class _PhotoCard extends StatelessWidget {
               Expanded(
                 child: _ActionChip(
                   icon: Icons.camera_alt_rounded,
-                  label: 'Caméra',
+                  label: 'Camera',
                   onTap: () {
                     HapticFeedback.mediumImpact();
                     prov.pickFromCamera();
@@ -656,21 +656,21 @@ class _EducationCards extends StatelessWidget {
   const _EducationCards();
 
   static const _composable = [
-    ('🥦', 'Légumes & fruits'),
-    ('☕', 'Marc de café'),
-    ('🥚', "Coquilles d'œufs"),
-    ('🌿', 'Herbes fraîches'),
-    ('🍞', 'Pain rassis'),
-    ('🍂', 'Feuilles mortes'),
+    ('🥦', 'Vegetables & fruits'),
+    ('☕', 'Coffee grounds'),
+    ('🥚', 'Eggshells'),
+    ('🌿', 'Fresh herbs'),
+    ('🍞', 'Stale bread'),
+    ('🍂', 'Dead leaves'),
   ];
 
   static const _nonComposable = [
-    ('🥩', 'Viandes cuites'),
-    ('🧴', 'Emballages plastique'),
-    ('🪟', 'Verre'),
-    ('🥫', 'Métal / canettes'),
-    ('🛢️', 'Huile de cuisson'),
-    ('🧻', 'Papier gras'),
+    ('🥩', 'Cooked meat'),
+    ('🧴', 'Plastic packaging'),
+    ('🪟', 'Glass'),
+    ('🥫', 'Metal / cans'),
+    ('🛢️', 'Cooking oil'),
+    ('🧻', 'Greasy paper'),
   ];
 
   @override
@@ -1125,7 +1125,7 @@ class _ResultSection extends StatelessWidget {
                               color: Colors.white, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'Sauvegarder la session',
+                            'Save Session',
                             style: GoogleFonts.sora(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,

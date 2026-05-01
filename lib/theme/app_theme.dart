@@ -81,11 +81,11 @@ class AppTheme {
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      scaffoldBackgroundColor: const Color(0xFFEDE0D3), // warm oat — darker than #F0E6DA
       colorScheme: base.colorScheme.copyWith(
         primary:    AppColors.cherry,
         secondary:  AppColors.olive,
-        surface:    Colors.white,
+        surface:    const Color(0xFFFAF5EE), // parchment
         onSurface:  AppColors.espresso,
         onPrimary:  AppColors.butter,
         onSecondary: AppColors.butter,
@@ -95,7 +95,7 @@ class AppTheme {
 
       // ── Divider ──────────────────────────────────────────────────────────
       dividerTheme: DividerThemeData(
-        color: const Color(0xFFE2E8F0),
+        color: const Color(0xFFD9C9B4), // sand
         thickness: 0.6,
         space: 0.6,
       ),
@@ -117,16 +117,16 @@ class AppTheme {
         shadowColor: Colors.transparent,
       ),
 
-      // ── Cards — glass-inspired with depth ─────────────────────────────────
+      // ── Cards — warm parchment ────────────────────────────────────────────
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: const Color(0xFFFAF5EE), // parchment
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFFE8EDF2), width: 0.8),
+          side: const BorderSide(color: Color(0xFFD9C9B4), width: 0.8), // sand
         ),
-        shadowColor: const Color(0xFF1E293B),
+        shadowColor: const Color(0xFF2C1A1B),
       ),
 
       // ── Snackbar ──────────────────────────────────────────────────────────
@@ -195,7 +195,7 @@ class AppTheme {
       // ── Input decoration ──────────────────────────────────────────────────
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: const Color(0xFFFFF8F0), // cream
         contentPadding: const EdgeInsets.symmetric(
             horizontal: 18, vertical: 16),
         labelStyle: GoogleFonts.inter(

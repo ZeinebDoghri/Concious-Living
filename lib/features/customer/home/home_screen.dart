@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -262,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen>
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1A0533), Color(0xFF0D1B4B), Color(0xFF0A2E2A)],
+                  colors: [Color(0xFF75070C), Color(0xFF9E1A21), Color(0xFF520508)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -395,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen>
               title: "Today's nutrition",
               actionLabel: 'Details',
               onTap: () => context.go(AppRoutes.nutritionProgress),
-            ),
+            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06, delay: 100.ms),
             _DarkCardShell(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Column(
@@ -453,7 +454,12 @@ class _HomeScreenState extends State<HomeScreen>
             ),
 
             // ── Scan CTA ────────────────────────────────────────────────────
-            _DarkScanBanner(onTap: () => context.go(AppRoutes.customerScan)),
+            _DarkScanBanner(onTap: () => context.go(AppRoutes.customerScan))
+                .animate().fadeIn(delay: 300.ms).scale(
+                  begin: const Offset(0.95, 0.95),
+                  delay: 300.ms,
+                  curve: Curves.easeOutBack,
+                ),
 
             // ── Alerts ──────────────────────────────────────────────────────
             if (alertCards.isNotEmpty) ...[
@@ -892,18 +898,18 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1A5C42), Color(0xFF0D7A5C)],
+                  colors: [Color(0xFF75070C), Color(0xFF9E1A21)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _kEmerald.withValues(alpha: 0.35 + _pulse.value * 0.15),
+                  color: const Color(0xFFFFEDAB).withValues(alpha: 0.2 + _pulse.value * 0.15),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _kEmerald.withValues(alpha: 0.2 + _pulse.value * 0.12),
+                    color: const Color(0xFF75070C).withValues(alpha: 0.3 + _pulse.value * 0.15),
                     blurRadius: 18 + _pulse.value * 8,
                     offset: const Offset(0, 4),
                   ),
@@ -917,11 +923,11 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: _kEmerald.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.camera_alt_rounded,
-                      color: _kEmerald, size: 26),
+                      color: Colors.white, size: 26),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -944,14 +950,14 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: _kEmerald.withValues(alpha: 0.8),
+                          color: const Color(0xFFFFEDAB).withValues(alpha: 0.9),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const Icon(Icons.arrow_forward_ios_rounded,
-                    color: _kEmerald, size: 16),
+                    color: Color(0xFFFFEDAB), size: 16),
               ],
             ),
           ),
