@@ -8,6 +8,7 @@ class UserModel {
   final DateTime? dateOfBirth;
   final String? gender;
   final List<String> conditions;
+  final List<String> allergens;
   final int calorieGoal;
   final String role; // 'customer' | 'restaurant' | 'hotel'
   final bool notifyDailyIntake;
@@ -37,6 +38,7 @@ class UserModel {
     required this.name,
     required this.email,
     required this.conditions,
+    required this.allergens,
     required this.calorieGoal,
     required this.role,
     required this.notifyDailyIntake,
@@ -69,6 +71,7 @@ class UserModel {
     DateTime? dateOfBirth,
     String? gender,
     List<String>? conditions,
+    List<String>? allergens,
     int? calorieGoal,
     String? role,
     bool? notifyDailyIntake,
@@ -97,6 +100,7 @@ class UserModel {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,
       conditions: conditions ?? this.conditions,
+      allergens: allergens ?? this.allergens,
       calorieGoal: calorieGoal ?? this.calorieGoal,
       role: role ?? this.role,
       notifyDailyIntake: notifyDailyIntake ?? this.notifyDailyIntake,
@@ -128,6 +132,7 @@ class UserModel {
       'dateOfBirth': dateOfBirth?.toIso8601String(),
       'gender': gender,
       'conditions': conditions,
+      'allergens': allergens,
       'calorieGoal': calorieGoal,
       'role': role,
       'notifyDailyIntake': notifyDailyIntake,
@@ -165,6 +170,7 @@ class UserModel {
           : DateTime.tryParse(json['dateOfBirth'] as String),
       gender: json['gender'] as String?,
       conditions: (json['conditions'] as List?)?.cast<String>() ?? <String>[],
+      allergens: (json['allergens'] as List?)?.cast<String>() ?? <String>[],
       calorieGoal: (json['calorieGoal'] ?? 2000) as int,
       role: (json['role'] ?? 'customer') as String,
       notifyDailyIntake: (json['notifyDailyIntake'] ?? true) as bool,

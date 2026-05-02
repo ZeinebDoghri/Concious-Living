@@ -17,19 +17,13 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -52,11 +46,29 @@ class DefaultFirebaseOptions {
     }
   }
 
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyA5OTjLIzW59glxE_q7bLiWG06OGRfWJq4',
+    appId: '1:50634132035:web:90641a1d66c116a2b4a2f6',
+    messagingSenderId: '50634132035',
+    projectId: 'concious-living-app',
+    authDomain: 'concious-living-app.firebaseapp.com',
+    storageBucket: 'concious-living-app.firebasestorage.app',
+  );
+
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAB2o6X7jzVPdJIgChkIAVyNMqcxbFt1vA',
     appId: '1:50634132035:android:906e9bc4713d9f8eb4a2f6',
     messagingSenderId: '50634132035',
     projectId: 'concious-living-app',
     storageBucket: 'concious-living-app.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyBkUYSpux71A1bULmPWIxrF5VbB8bCcXXA',
+    appId: '1:50634132035:ios:ad08fc9a7a779a30b4a2f6',
+    messagingSenderId: '50634132035',
+    projectId: 'concious-living-app',
+    storageBucket: 'concious-living-app.firebasestorage.app',
+    iosBundleId: 'com.example.conciousLivingApp',
   );
 }
