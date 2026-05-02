@@ -9,7 +9,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
 import '../../../features/restaurant/waste/compost_inference_service.dart';
 
