@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/models/user_model.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 
@@ -38,7 +39,10 @@ class ProfileScreen extends StatelessWidget {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return '?';
 
-    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
 
     String firstChar(String s) {
@@ -67,7 +71,12 @@ class ProfileScreen extends StatelessWidget {
     return AppColors.olive;
   }
 
-  Future<List<String>> _loadAllergens() async {
+  Future<List<String>> _loadAllergens(UserModel? user) async {
+    final profileAllergens = user?.allergens ?? const <String>[];
+    if (profileAllergens.isNotEmpty) {
+      return profileAllergens;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsAllergensKey);
 
@@ -136,7 +145,9 @@ class ProfileScreen extends StatelessWidget {
     final scans = context.watch<ScanHistoryProvider>().items;
 
     final scansTotal = scans.length;
-    final scansThisWeek = scans.where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7).length;
+    final scansThisWeek = scans
+        .where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7)
+        .length;
 
     final intakePct = userProvider.mockDailyIntakePct;
     final goalsMet = intakePct.values.where((v) => v <= 100).length;
@@ -157,7 +168,11 @@ class ProfileScreen extends StatelessWidget {
       }
 
       final recent = scans.take(12).toList(growable: false);
-      final avg = recent.map((e) => score(e.result.overallRisk)).reduce((a, b) => a + b) / recent.length;
+      final avg =
+          recent
+              .map((e) => score(e.result.overallRisk))
+              .reduce((a, b) => a + b) /
+          recent.length;
       if (avg >= 2.4) return 'High';
       if (avg >= 1.7) return 'Moderate';
       return 'Low';
@@ -203,7 +218,10 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.oliveMist,
                               borderRadius: BorderRadius.circular(10),
@@ -291,9 +309,13 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               const Spacer(),
                               InkWell(
-                                onTap: () => context.go('/customer/nutrition-goals'),
+                                onTap: () =>
+                                    context.go('/customer/nutrition-goals'),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 6,
+                                  ),
                                   child: Text(
                                     'Edit goals',
                                     style: GoogleFonts.inter(
@@ -336,7 +358,7 @@ class ProfileScreen extends StatelessWidget {
                             child: Divider(color: AppColors.sand, height: 1),
                           ),
                           FutureBuilder<List<String>>(
-                            future: _loadAllergens(),
+                            future: _loadAllergens(user),
                             builder: (context, snap) {
                               final allergens = snap.data ?? const <String>[];
                               return Row(
@@ -383,7 +405,8 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push(AppRoutes.customerEditProfile),
+                              onPressed: () =>
+                                  context.push(AppRoutes.customerEditProfile),
                               icon: const Icon(Icons.edit_outlined),
                               color: AppColors.cherry,
                               iconSize: 18,
@@ -391,13 +414,22 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        _InfoRow(label: AppStrings.fullName, value: _fmtText(user?.name)),
+                        _InfoRow(
+                          label: AppStrings.fullName,
+                          value: _fmtText(user?.name),
+                        ),
                         const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Date of birth', value: _fmtDob(user?.dateOfBirth)),
+                        _InfoRow(
+                          label: 'Date of birth',
+                          value: _fmtDob(user?.dateOfBirth),
+                        ),
                         const Divider(color: AppColors.sand, height: 1),
                         _InfoRow(label: 'Phone', value: _fmtText(user?.phone)),
                         const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Gender', value: _fmtText(user?.gender)),
+                        _InfoRow(
+                          label: 'Gender',
+                          value: _fmtText(user?.gender),
+                        ),
                       ],
                     ),
                   ),
@@ -418,7 +450,9 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('${AppRoutes.customerEditProfile}?step=2'),
+                              onPressed: () => context.push(
+                                '${AppRoutes.customerEditProfile}?step=2',
+                              ),
                               icon: const Icon(Icons.edit_outlined),
                               color: AppColors.cherry,
                               iconSize: 18,
@@ -493,9 +527,11 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         FutureBuilder<List<String>>(
-                          future: _loadAllergens(),
+                          future: _loadAllergens(user),
                           builder: (context, snap) {
-                            final allergens = (snap.data ?? const <String>[]).toList()..sort();
+                            final allergens =
+                                (snap.data ?? const <String>[]).toList()
+                                  ..sort();
                             if (allergens.isEmpty) {
                               return Text(
                                 'No allergens flagged',
@@ -513,11 +549,17 @@ class ProfileScreen extends StatelessWidget {
                               children: allergens
                                   .map(
                                     (a) => Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.butter,
                                         borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: AppColors.riskModerateText, width: 0.5),
+                                        border: Border.all(
+                                          color: AppColors.riskModerateText,
+                                          width: 0.5,
+                                        ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -563,11 +605,26 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            Expanded(child: _MetricTile(number: '$scansTotal', label: 'Total scans')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: '$scansTotal',
+                                label: 'Total scans',
+                              ),
+                            ),
                             const SizedBox(width: 10),
-                            Expanded(child: _MetricTile(number: '$scansThisWeek', label: 'This week')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: '$scansThisWeek',
+                                label: 'This week',
+                              ),
+                            ),
                             const SizedBox(width: 10),
-                            Expanded(child: _MetricTile(number: avgRiskLabel(), label: 'Avg risk')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: avgRiskLabel(),
+                                label: 'Avg risk',
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -590,7 +647,9 @@ class ProfileScreen extends StatelessWidget {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(alpha: 0.25),
+                          activeTrackColor: AppColors.cherry.withValues(
+                            alpha: 0.25,
+                          ),
                           title: Text(
                             'Daily intake summary',
                             style: GoogleFonts.inter(
@@ -603,13 +662,17 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyDailyIntake: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyDailyIntake: v),
+                            );
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(alpha: 0.25),
+                          activeTrackColor: AppColors.cherry.withValues(
+                            alpha: 0.25,
+                          ),
                           title: Text(
                             'Allergen alerts',
                             style: GoogleFonts.inter(
@@ -622,13 +685,17 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyAllergens: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyAllergens: v),
+                            );
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(alpha: 0.25),
+                          activeTrackColor: AppColors.cherry.withValues(
+                            alpha: 0.25,
+                          ),
                           title: Text(
                             'Weekly health report',
                             style: GoogleFonts.inter(
@@ -641,13 +708,18 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyWeeklyReport: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyWeeklyReport: v),
+                            );
                           },
                         ),
                         const Divider(color: AppColors.sand, height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.flag_outlined, color: AppColors.cherry),
+                          leading: const Icon(
+                            Icons.flag_outlined,
+                            color: AppColors.cherry,
+                          ),
                           title: Text(
                             'Nutrition goals',
                             style: GoogleFonts.inter(
@@ -660,7 +732,10 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.history, color: AppColors.cherry),
+                          leading: const Icon(
+                            Icons.history,
+                            color: AppColors.cherry,
+                          ),
                           title: Text(
                             'Scan history',
                             style: GoogleFonts.inter(
@@ -673,7 +748,10 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.info_outline, color: AppColors.fog),
+                          leading: const Icon(
+                            Icons.info_outline,
+                            color: AppColors.fog,
+                          ),
                           title: Text(
                             'About the project',
                             style: GoogleFonts.inter(
@@ -705,7 +783,8 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
                                       child: Text(
                                         AppStrings.ok,
                                         style: GoogleFonts.inter(
@@ -723,7 +802,10 @@ class ProfileScreen extends StatelessWidget {
                         const Divider(color: AppColors.sand, height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.delete_outline, color: AppColors.cherry),
+                          leading: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.cherry,
+                          ),
                           title: Text(
                             'Clear history',
                             style: GoogleFonts.inter(
@@ -736,15 +818,21 @@ class ProfileScreen extends StatelessWidget {
                             final ok = await _confirmDialog(
                               context,
                               title: 'Clear history',
-                              body: 'This will clear your scan history on this device.',
+                              body:
+                                  'This will clear your scan history on this device.',
                             );
                             if (!context.mounted || !ok) return;
-                            await context.read<ScanHistoryProvider>().clearAll();
+                            await context
+                                .read<ScanHistoryProvider>()
+                                .clearAll();
                           },
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.logout, color: AppColors.cherry),
+                          leading: const Icon(
+                            Icons.logout,
+                            color: AppColors.cherry,
+                          ),
                           title: Text(
                             'Sign out',
                             style: GoogleFonts.inter(
