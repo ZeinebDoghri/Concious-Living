@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_service.dart';
@@ -76,23 +78,11 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       final imageFile  = kIsWeb ? null : File(file.path);
       final imageBytes = await file.readAsBytes();
 
-      // ── Run ALL models in parallel ─────────────────────────────────────
-      setState(() => _step = '3 analyses IA en parallèle…');
+      // ── Run 2 models in parallel ─────────────────────────────────────
+      setState(() => _step = '2 analyses IA en parallèle…');
 
       final futures = await Future.wait<dynamic>([
-        // Freshness API (server-side)
-        imageFile != null
-            ? ApiService.predictFreshness(imageFile)
-                .catchError((_) => <String, dynamic>{'status': 'unknown', 'confidence': 0.0})
-            : Future.value({'status': 'unknown', 'confidence': 0.0}),
-
-        // Waste detection API (server-side)
-        imageFile != null
-            ? ApiService.predictWaste(imageFile)
-                .catchError((_) => <String, dynamic>{'detectedItems': [], 'confidence': 0.0})
-            : Future.value({'detectedItems': [], 'confidence': 0.0}),
-
-        // Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
+        // 1. Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
         _compostService
             .classify(imageBytes)
             .then((r) => r.toMap())
@@ -105,24 +95,56 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 'inferenceTimeMs':   0,
               };
             }),
+
+        // 2. Freshness HuggingFace API (NEW)
+        () async {
+          try {
+            final request = http.MultipartRequest(
+              'POST',
+              Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
+            );
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'image',
+                imageBytes,
+                filename: file.path.split('/').last,
+              ),
+            );
+            final streamed = await request.send().timeout(const Duration(seconds: 60));
+            final response = await http.Response.fromStream(streamed);
+            if (response.statusCode == 200) {
+              return jsonDecode(response.body) as Map<String, dynamic>;
+            } else {
+              debugPrint('[Scan] Freshness API error: ${response.statusCode}');
+              return <String, dynamic>{
+                'status': 'unknown',
+                'confidence': 0.0,
+                'label': 'Non détecté',
+              };
+            }
+          } catch (e) {
+            debugPrint('[Scan] Freshness error: $e');
+            return <String, dynamic>{
+              'status': 'unknown',
+              'confidence': 0.0,
+              'label': 'Non détecté',
+            };
+          }
+        }(),
       ]);
 
       if (!mounted) return;
       setState(() => _isAnalysing = false);
 
-      // Navigate to unified result screen
+      // Navigate to result page with freshness and compost results
       context.go(
         AppRoutes.restaurantScanResult,
         extra: <String, dynamic>{
           'imagePath':       file.path,
           'imageBytes':      imageBytes,
-          'freshnessResult': futures[0] as Map<String, dynamic>,
-          'wasteResult':     futures[1] as Map<String, dynamic>,
-          'compostResult':   futures[2] as Map<String, dynamic>,
+          'compostResult':   futures[0] as Map<String, dynamic>,
+          'freshnessResult': futures[1] as Map<String, dynamic>,
           'isFusion':        true,
-          // Legacy compat
-          'result':          futures[0],
-          'scanMode':        'freshness',
         },
       );
     } catch (e) {
