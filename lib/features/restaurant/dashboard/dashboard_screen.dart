@@ -256,6 +256,69 @@ class _DashboardScreenState extends State<DashboardScreen>
                         accentColor: accentColor,
                       ),
 
+                      const SizedBox(height: 12),
+
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          context.go(AppRoutes.restaurantWaste);
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _kCard,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: _kBorder),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  color: _kAmber.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.delete_outline_rounded, color: _kAmber),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Analyse dechets',
+                                      style: GoogleFonts.sora(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: _kTextPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Masque + estimation de masse',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: _kTextSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: _kSlate),
+                            ],
+                          ),
+                        ),
+                      ),
+
                       // ── Environmental impact ───────────────────────────────
                       _ImpactRow(
                         wasteKg: wasteKg,

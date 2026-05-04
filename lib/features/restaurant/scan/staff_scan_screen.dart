@@ -8,8 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_service.dart';
+import '../../../core/api_config.dart';
 import '../../../core/constants.dart';
 import '../../../features/restaurant/waste/compost_inference_service.dart';
+import '../../../features/restaurant/waste/waste_pipeline_service.dart';
 
 class StaffScanScreen extends StatefulWidget {
   const StaffScanScreen({super.key});
@@ -25,6 +27,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
 
   final _picker         = ImagePicker();
   final _compostService = CompostInferenceService();
+  final _wasteService   = WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
 
   XFile?  _lastFile;
   bool    _isAnalysing = false;
@@ -54,6 +57,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     _scanLine.dispose();
     _pulse.dispose();
     _compostService.dispose();
+    _wasteService.dispose();
     super.dispose();
   }
 
@@ -86,11 +90,20 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 .catchError((_) => <String, dynamic>{'status': 'unknown', 'confidence': 0.0})
             : Future.value({'status': 'unknown', 'confidence': 0.0}),
 
-        // Waste detection API (server-side)
-        imageFile != null
-            ? ApiService.predictWaste(imageFile)
-                .catchError((_) => <String, dynamic>{'detectedItems': [], 'confidence': 0.0})
-            : Future.value({'detectedItems': [], 'confidence': 0.0}),
+        // Waste pipeline API (server-side)
+        _wasteService.analyze(imageBytes).then((result) {
+          final payload = result.toJson();
+          payload['detectedItems'] = result.massEstimates
+              .map((e) => {
+                    'name': e.label,
+                    'quantityKg': e.estimatedKg,
+                  })
+              .toList(growable: false);
+          return payload;
+        }).catchError((e) {
+          debugPrint('[Scan] Waste pipeline error: $e');
+          return <String, dynamic>{'detectedItems': [], 'confidence': 0.0};
+        }),
 
         // Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
         _compostService

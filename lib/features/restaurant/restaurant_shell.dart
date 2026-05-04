@@ -14,9 +14,9 @@ const _kRose     = Color(0xFFFF6B6B);
 const _kSlate    = Color(0xFF94A3B8);
 
 // Branch mapping: visual index → StatefulShellRoute branch index
-// Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Déchets 4=Compost 5=Stocks 6=Profil
-// New nav: 0=Dashboard  1=Scan  2=Profil
-const _branchMap = [0, 1, 6];
+// Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Dechets 4=Compost 5=Stocks 6=Profil
+// New nav: 0=Dashboard  1=Scan  2=Dechets  3=Profil
+const _branchMap = [0, 1, 3, 6];
 
 class _Item {
   final IconData icon;
@@ -28,6 +28,7 @@ class _Item {
 const _items = [
   _Item(Icons.dashboard_rounded,        'Dashboard', _kEmerald),
   _Item(Icons.document_scanner_rounded, 'Scan',      _kAmber),
+  _Item(Icons.delete_rounded,           'Dechets',   _kRose),
   _Item(Icons.person_rounded,           'Profile',   _kSlate),
 ];
 
@@ -218,12 +219,19 @@ class _FloatingNavState extends State<_FloatingNav>
                   scale: _scales[1],
                   onTap: () => widget.onTap(1),
                 ),
-                // Profil
+                // Dechets
                 _NavTile(
                   item: _items[2],
                   isActive: widget.currentIndex == 2,
                   scale: _scales[2],
                   onTap: () => widget.onTap(2),
+                ),
+                // Profil
+                _NavTile(
+                  item: _items[3],
+                  isActive: widget.currentIndex == 3,
+                  scale: _scales[3],
+                  onTap: () => widget.onTap(3),
                 ),
               ],
             ),

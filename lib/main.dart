@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'app_router.dart';
 import 'core/constants.dart';
-import 'core/firebase_options.dart';
+import 'firebase_options.dart';
 import 'providers/alerts_provider.dart';
 import 'providers/compost_provider.dart';
 import 'providers/inventory_provider.dart';

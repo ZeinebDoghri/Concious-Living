@@ -122,7 +122,14 @@ class CompostProvider extends ChangeNotifier {
       } else {
         imageBytes = await _selectedImageFile!.readAsBytes();
       }
-      _result = await _inferenceService.classify(imageBytes);
+      debugPrint('[CompostProvider] image bytes=${imageBytes.length}');
+      CompostInferenceResult? compostResult;
+
+      await _inferenceService.classify(imageBytes).then((value) {
+        compostResult = value;
+      });
+
+      _result = compostResult;
       _state = CompostState.done;
     } catch (e) {
       _errorMessage = 'Classification failed: $e';

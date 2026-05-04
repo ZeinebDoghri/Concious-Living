@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -7,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../core/constants.dart'; // Ensure AppRoutes is available
 
 import '../../../core/firebase_service.dart';
 import '../../../core/models/waste_item_model.dart';
@@ -175,7 +177,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     final status =
         ((_freshnessResult['status'] as String?) ?? 'fresh').toLowerCase();
     final detectedCount =
-        ((_wasteResult['detectedItems'] as List?)?.length ?? 0);
+      ((_wasteResult['mass_estimates'] as List?)?.length ??
+        (_wasteResult['detectedItems'] as List?)?.length ??
+        0);
     final maskPng = _compostResult['maskPng'] as Uint8List?;
     final ms = (_compostResult['inferenceTimeMs'] as num?)?.toInt() ?? 920;
 
@@ -332,6 +336,61 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                   color: _kAmber,
                   delay: 200,
                   child: _WasteCard(result: _wasteResult),
+                ),
+
+                const SizedBox(height: 10),
+
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    context.go(AppRoutes.restaurantWaste);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _kCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: _kAmber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.delete_rounded, color: _kAmber, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ouvrir Analyse dechets',
+                                style: GoogleFonts.sora(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kInk,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Interface complete avec overlay + masse',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: _kSlate,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: _kSlate),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -1061,12 +1120,26 @@ class _WasteCard extends StatelessWidget {
   const _WasteCard({required this.result});
 
   List<Map<String, dynamic>> get _items {
-    final raw = result['detectedItems'];
+    final raw = result['mass_estimates'] ?? result['detectedItems'];
     if (raw is! List) return [];
     return raw.whereType<Map>().map((e) => <String, dynamic>{
-          'name': (e['name'] as String?)?.trim() ?? 'Waste item',
-          'quantityKg': (e['quantityKg'] as num?)?.toDouble() ?? 0.0,
+          'name': (e['label'] ?? e['name'] as Object?)?.toString().trim() ?? 'Waste item',
+          'quantityKg': (e['estimatedKg'] ?? e['quantityKg'] as Object?) is num
+              ? (e['estimatedKg'] ?? e['quantityKg'] as num).toDouble()
+              : 0.0,
         }).toList();
+  }
+
+  Uint8List? get _overlayBytes {
+    final raw = result['overlay_png_b64'];
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        return base64Decode(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   @override
@@ -1093,9 +1166,23 @@ class _WasteCard extends StatelessWidget {
     final top = items.reduce((a, b) =>
         (a['quantityKg'] as double) >= (b['quantityKg'] as double) ? a : b);
 
+    final overlayBytes = _overlayBytes;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (overlayBytes != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              overlayBytes,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         // Top item highlight
         Container(
           padding: const EdgeInsets.all(12),
