@@ -9,9 +9,9 @@ import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
+import '../allergens/allergy_service.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-//import 'dart:typed_data';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -23,9 +23,11 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen>
     with SingleTickerProviderStateMixin {
   final _picker = ImagePicker();
+  final _allergyService = AllergyService();
 
   XFile? _selected;
   bool _isAnalysing = false;
+  String? _allergyError;
 
   late final AnimationController _pulseController;
 
@@ -36,6 +38,9 @@ class _ScanScreenState extends State<ScanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+
+    // Wake up the allergy API in the background as soon as screen loads
+    _allergyService.warmUpApi();
   }
 
   @override
@@ -45,45 +50,73 @@ class _ScanScreenState extends State<ScanScreen>
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _pick(ImageSource source) async {
-  if (_isAnalysing) return;
+    if (_isAnalysing) return;
 
-  try {
-    final file = await _picker.pickImage(source: source, imageQuality: 90);
-    if (file == null) return;
-    if (!mounted) return;
+    try {
+      final file = await _picker.pickImage(source: source, imageQuality: 90);
+      if (file == null) return;
+      if (!mounted) return;
 
-    setState(() {
-      _selected = file;
-      _isAnalysing = true;
-    });
+      setState(() {
+        _selected = file;
+        _isAnalysing = true;
+        _allergyError = null;
+      });
 
-    final imageBytes = await file.readAsBytes();  // works on both web and mobile
-    final result = await ApiService.predictNutrients(imageBytes);
-    if (!mounted) return;
+      final imageBytes = await file.readAsBytes();
 
-    setState(() => _isAnalysing = false);
+      // Run both APIs in parallel to save time
+      final results = await Future.wait([
+        ApiService.predictNutrients(imageBytes),
+        // Wrap in an async closure so we can return a nullable AllergyResult
+        (() async {
+          try {
+            return await _allergyService.detectAllergens(
+              imageFile: kIsWeb ? null : File(file.path),
+              imageBytes: imageBytes,
+              filename: file.name,
+            );
+          } catch (e) {
+            _allergyError = e.toString();
+            return null;
+          }
+        })(),
+      ]);
 
-    context.go(
-      AppRoutes.customerResult,
-      extra: <String, dynamic>{
-        'dishName': 'Dish',
-        'imagePath': kIsWeb ? null : file.path,  // null on web
-        'imageBytes': imageBytes,                 // always passed
-        'result': result.toJson(),
-      },
-    );
-  } catch (e) {
-    if (!mounted) return;
-    setState(() => _isAnalysing = false);
-    _snack(e.toString());
+      if (!mounted) return;
+      setState(() => _isAnalysing = false);
+
+      final nutrientResult = results[0];
+      final allergyResult = results[1] as AllergyResult?;
+
+      context.go(
+        AppRoutes.customerResult,
+        extra: <String, dynamic>{
+          'dishName': allergyResult?.dish ?? 'Dish',
+          'imagePath': kIsWeb ? null : file.path,
+          'imageBytes': imageBytes,
+          'result': (nutrientResult as dynamic).toJson(),
+          // Allergy data — null if API failed
+          'allergyDish': allergyResult?.dish,
+          'allergens': allergyResult?.allergens ?? [],
+          'ingredients': allergyResult?.ingredients ?? [],
+          'allergenSource': allergyResult?.allergenSource ?? 'none',
+          'allergyError': _allergyError,
+          'top5': allergyResult?.top5 ?? [],
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAnalysing = false);
+      _snack(e.toString());
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +187,7 @@ class _ScanScreenState extends State<ScanScreen>
                       ),
                     ),
                     if (_isAnalysing)
-                      _AnalysingOverlay(
-                        pulse: _pulseController,
-                      ),
+                      _AnalysingOverlay(pulse: _pulseController),
                   ],
                 ),
               ),
@@ -172,10 +203,7 @@ class _PreviewFrame extends StatelessWidget {
   final String? imagePath;
   final Animation<double> pulse;
 
-  const _PreviewFrame({
-    required this.imagePath,
-    required this.pulse,
-  });
+  const _PreviewFrame({required this.imagePath, required this.pulse});
 
   @override
   Widget build(BuildContext context) {
@@ -195,10 +223,7 @@ class _PreviewFrame extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (path != null)
-                Image.file(
-                  File(path),
-                  fit: BoxFit.cover,
-                )
+                Image.file(File(path), fit: BoxFit.cover)
               else
                 Container(
                   color: AppColors.oat,
@@ -231,8 +256,10 @@ class _PreviewFrame extends StatelessWidget {
                 alignment: Alignment.topCenter,
                 child: Container(
                   margin: const EdgeInsets.only(top: 14),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.espresso.withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(AppRadii.badge),
@@ -284,9 +311,7 @@ class _AnalysingOverlay extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 4),
-                    const CircularProgressIndicator(
-                      color: AppColors.cherry,
-                    ),
+                    const CircularProgressIndicator(color: AppColors.cherry),
                     const SizedBox(height: 14),
                     Text(
                       AppStrings.analysingDish,

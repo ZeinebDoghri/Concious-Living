@@ -108,7 +108,8 @@ class UserProvider extends ChangeNotifier {
     }
 
     final message = error.toString();
-    if (message.contains('Failed to fetch') || message.contains('XMLHttpRequest')) {
+    if (message.contains('Failed to fetch') ||
+        message.contains('XMLHttpRequest')) {
       return 'Network error. Please check your connection and try again.';
     }
     return message;
@@ -159,21 +160,39 @@ class UserProvider extends ChangeNotifier {
     }
 
     if (kIsWeb) {
-      final role = await _roleFallbackFromPrefs();
-      currentUser = UserModel(
-        id: user.uid,
-        name: user.displayName ?? (role == 'restaurant' ? 'Restaurant Manager' : role == 'hotel' ? 'Hotel Manager' : ''),
-        email: user.email ?? '',
-        conditions: const <String>[],
-        calorieGoal: 2200,
-        role: role,
-        notifyDailyIntake: true,
-        notifyAllergens: true,
-        notifyWeeklyReport: true,
-      );
+      UserModel? loaded;
+      try {
+        loaded = await FirebaseService.getUser(user.uid);
+      } catch (e, st) {
+        _logError('UserProvider._onAuthChanged web getUser failed', e, st);
+        loaded = null;
+      }
+
+      if (loaded != null) {
+        currentUser = loaded;
+      } else {
+        final role = await _roleFallbackFromPrefs();
+        currentUser = UserModel(
+          id: user.uid,
+          name:
+              user.displayName ??
+              (role == 'restaurant'
+                  ? 'Restaurant Manager'
+                  : role == 'hotel'
+                  ? 'Hotel Manager'
+                  : ''),
+          email: user.email ?? '',
+          conditions: const <String>[],
+          allergens: const <String>[],
+          calorieGoal: 2200,
+          role: role,
+          notifyDailyIntake: true,
+          notifyAllergens: true,
+          notifyWeeklyReport: true,
+        );
+      }
       notifyListeners();
 
-      _loadUserInBackground(user.uid);
       return;
     }
 
@@ -190,9 +209,16 @@ class UserProvider extends ChangeNotifier {
       final role = await _roleFallbackFromPrefs();
       currentUser = UserModel(
         id: user.uid,
-        name: user.displayName ?? (role == 'restaurant' ? 'Restaurant Manager' : role == 'hotel' ? 'Hotel Manager' : ''),
+        name:
+            user.displayName ??
+            (role == 'restaurant'
+                ? 'Restaurant Manager'
+                : role == 'hotel'
+                ? 'Hotel Manager'
+                : ''),
         email: user.email ?? '',
         conditions: const <String>[],
+        allergens: const <String>[],
         calorieGoal: 2200,
         role: role,
         notifyDailyIntake: true,
@@ -243,10 +269,11 @@ class UserProvider extends ChangeNotifier {
         name: role == 'restaurant'
             ? 'Restaurant Manager'
             : role == 'hotel'
-                ? 'Hotel Manager'
-                : '',
+            ? 'Hotel Manager'
+            : '',
         email: email,
         conditions: const <String>[],
+        allergens: const <String>[],
         calorieGoal: 2200,
         role: role,
         notifyDailyIntake: true,
@@ -259,7 +286,6 @@ class UserProvider extends ChangeNotifier {
       notifyListeners();
 
       _loadUserInBackground(uid);
-      _saveUserInBackground(user);
       return user;
     }
 
@@ -270,16 +296,18 @@ class UserProvider extends ChangeNotifier {
       _logError('UserProvider.login getUser failed', e, st);
       loaded = null;
     }
-    final user = loaded ??
+    final user =
+        loaded ??
         UserModel(
           id: uid,
           name: role == 'restaurant'
               ? 'Restaurant Manager'
               : role == 'hotel'
-                  ? 'Hotel Manager'
-                  : '',
+              ? 'Hotel Manager'
+              : '',
           email: email,
           conditions: const <String>[],
+          allergens: const <String>[],
           calorieGoal: 2200,
           role: role,
           notifyDailyIntake: true,
@@ -345,6 +373,7 @@ class UserProvider extends ChangeNotifier {
       name: name,
       email: email,
       conditions: const <String>[],
+      allergens: const <String>[],
       calorieGoal: 2200,
       role: 'customer',
       notifyDailyIntake: true,
@@ -418,6 +447,7 @@ class UserProvider extends ChangeNotifier {
       name: managerName,
       email: email,
       conditions: const <String>[],
+      allergens: const <String>[],
       calorieGoal: 2200,
       role: 'restaurant',
       notifyDailyIntake: true,
@@ -494,6 +524,7 @@ class UserProvider extends ChangeNotifier {
       name: managerName,
       email: email,
       conditions: const <String>[],
+      allergens: const <String>[],
       calorieGoal: 2200,
       role: 'hotel',
       notifyDailyIntake: true,

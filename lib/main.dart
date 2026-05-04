@@ -14,6 +14,7 @@ import 'providers/scan_history_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/venue_type_provider.dart';
 import 'theme/app_theme.dart';
+import 'features/customer/allergens/allergy_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,9 @@ Future<void> main() async {
       persistenceEnabled: false,
     );
   }
+
+  // Wake up the HuggingFace Space early so it's ready when user scans
+  AllergyService().warmUpApi();
 
   runApp(const ConsciousLivingApp());
 }

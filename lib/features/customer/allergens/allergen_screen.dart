@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
+import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -31,6 +33,20 @@ class _AllergenScreenState extends State<AllergenScreen>
   }
 
   Future<void> _load() async {
+    final userAllergens = context.read<UserProvider>().currentUser?.allergens;
+    if (userAllergens != null && userAllergens.isNotEmpty) {
+      final next = userAllergens.toList(growable: false)..sort();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey, jsonEncode(next));
+
+      if (!mounted) return;
+      setState(() {
+        _allergens = next;
+        _loading = false;
+      });
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
 
@@ -54,6 +70,12 @@ class _AllergenScreenState extends State<AllergenScreen>
   Future<void> _save(List<String> next) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, jsonEncode(next));
+
+    final userProvider = context.read<UserProvider>();
+    final user = userProvider.currentUser;
+    if (user != null) {
+      await userProvider.saveProfile(user.copyWith(allergens: next));
+    }
 
     if (!mounted) return;
     setState(() => _allergens = next);
@@ -106,7 +128,9 @@ class _AllergenScreenState extends State<AllergenScreen>
                 ),
                 child: _loading
                     ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.cherry),
+                        child: CircularProgressIndicator(
+                          color: AppColors.cherry,
+                        ),
                       )
                     : SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
@@ -144,10 +168,13 @@ class _AllergenScreenState extends State<AllergenScreen>
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.butter,
-                                          borderRadius:
-                                              BorderRadius.circular(AppRadii.chip),
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadii.chip,
+                                          ),
                                           border: Border.all(
-                                              color: AppColors.sand, width: 0.5),
+                                            color: AppColors.sand,
+                                            width: 0.5,
+                                          ),
                                         ),
                                         child: Text(
                                           a,
@@ -178,15 +205,20 @@ class _AllergenScreenState extends State<AllergenScreen>
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: AppColors.infoBg,
-                                borderRadius:
-                                    BorderRadius.circular(AppRadii.innerCard),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.innerCard,
+                                ),
                                 border: Border.all(
-                                    color: AppColors.sand, width: 0.5),
+                                  color: AppColors.sand,
+                                  width: 0.5,
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.info_outline,
-                                      color: AppColors.infoText),
+                                  const Icon(
+                                    Icons.info_outline,
+                                    color: AppColors.infoText,
+                                  ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
@@ -296,40 +328,53 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: _options.map((a) {
-                    final selected = _selected.contains(a);
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          if (selected) {
-                            _selected.remove(a);
-                          } else {
-                            _selected.add(a);
-                          }
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(AppRadii.chip),
-                      splashColor: AppColors.cherry.withValues(alpha: 0.12),
-                      child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.cherry : Colors.transparent,
+                  children: _options
+                      .map((a) {
+                        final selected = _selected.contains(a);
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (selected) {
+                                _selected.remove(a);
+                              } else {
+                                _selected.add(a);
+                              }
+                            });
+                          },
                           borderRadius: BorderRadius.circular(AppRadii.chip),
-                          border: Border.all(color: AppColors.sand, width: 1),
-                        ),
-                        child: Text(
-                          a,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? AppColors.butter : AppColors.cocoa,
-                            height: 1.2,
+                          splashColor: AppColors.cherry.withValues(alpha: 0.12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.cherry
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.chip,
+                              ),
+                              border: Border.all(
+                                color: AppColors.sand,
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              a,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? AppColors.butter
+                                    : AppColors.cocoa,
+                                height: 1.2,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    );
-                  }).toList(growable: false),
+                        );
+                      })
+                      .toList(growable: false),
                 ),
                 const SizedBox(height: 16),
                 TextField(
