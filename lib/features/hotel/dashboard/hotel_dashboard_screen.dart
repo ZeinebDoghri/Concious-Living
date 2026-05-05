@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants.dart';
 import '../../../core/venue_alert_service.dart';
 import '../../../providers/user_provider.dart';
 
@@ -983,7 +985,7 @@ class _QuickActionsRow extends StatelessWidget {
             label: 'Scan Food',
             color: _kCherry,
             bg: _kCherryB,
-            onTap: () {},
+            onTap: () => context.go(AppRoutes.hotelContaminationScan),
           ),
         ),
         const SizedBox(width: 10),

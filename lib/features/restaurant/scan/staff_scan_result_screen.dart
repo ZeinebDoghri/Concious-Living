@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -7,10 +8,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/olive_header.dart';
+import 'annotated_contamination_image.dart';
+import 'food_contamination_service.dart';
 
 class StaffScanResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -66,7 +70,34 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
     final item = ScanHistoryItem(
       dishName: dish,
       scannedAt: DateTime.now(),
-      result: null,
+      result: const NutrientResult(
+        cholesterol: NutrientValue(
+          value: 0,
+          unit: 'mg',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        saturatedFat: NutrientValue(
+          value: 0,
+          unit: 'g',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        sodium: NutrientValue(
+          value: 0,
+          unit: 'mg',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        sugar: NutrientValue(
+          value: 0,
+          unit: 'g',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        overallRisk: 'low',
+        message: 'Restaurant scan saved',
+      ),
       imagePath: imagePath,
     );
 
@@ -81,8 +112,13 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
   @override
   Widget build(BuildContext context) {
     final imagePath = (widget.args['imagePath'] as String?)?.trim();
+    final imageBytes = widget.args['imageBytes'] as Uint8List?;
     final freshnessResult = (widget.args['freshnessResult'] as Map<String, dynamic>?) ?? {};
     final compostResult = (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
+    final contaminationResult = (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
+    final contamination = contaminationResult.isNotEmpty
+        ? FoodAnalysisResult.fromJson(contaminationResult)
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.oat,
@@ -91,7 +127,7 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
           children: [
             const OliveHeader(
               title: 'Analysis Results',
-              subtitle: 'Freshness & Compost insights',
+              subtitle: 'Freshness, compost & contamination insights',
               showBack: true,
               height: 140,
             ),
@@ -113,28 +149,43 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Image Preview
-                        if (imagePath != null && imagePath.isNotEmpty) ...[
+                        if ((imagePath != null && imagePath.isNotEmpty) || imageBytes != null) ...[
                           Hero(
                             tag: 'scan_image',
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(AppRadii.screenCard),
                               child: AspectRatio(
                                 aspectRatio: 16 / 10,
-                                child: kIsWeb
-                                    ? Container(
-                                        color: Colors.grey[300],
-                                        child: const Center(
-                                          child: Icon(Icons.image),
-                                        ),
+                                child: contamination != null && imageBytes != null
+                                    ? AnnotatedContaminationImage(
+                                        imageBytes: imageBytes,
+                                        detections: contamination.detections,
                                       )
-                                    : Image.file(
-                                        File(imagePath),
-                                        fit: BoxFit.cover,
-                                      ),
+                                    : imageBytes != null
+                                        ? Image.memory(
+                                            imageBytes,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : kIsWeb
+                                            ? Container(
+                                                color: Colors.grey[300],
+                                                child: const Center(
+                                                  child: Icon(Icons.image),
+                                                ),
+                                              )
+                                            : Image.file(
+                                                File(imagePath!),
+                                                fit: BoxFit.cover,
+                                              ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 18),
+                        ],
+
+                        if (contamination != null) ...[
+                          _buildContaminationCard(contamination, imageBytes),
+                          const SizedBox(height: 16),
                         ],
 
                         // Dish Name Input
@@ -389,6 +440,114 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
             label: 'Background',
             value: backgroundPct,
             color: const Color(0xFF9CA3AF),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContaminationCard(
+    FoodAnalysisResult result,
+    Uint8List? imageBytes,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: result.isContaminated
+            ? const Color(0xFFFFF5F5)
+            : const Color(0xFFF0FFF4),
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        border: Border.all(
+          color: result.isContaminated
+              ? const Color(0xFFFCA5A5)
+              : const Color(0xFFA7F3D0),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (result.isContaminated
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF10B981))
+                .withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                result.isContaminated
+                    ? Icons.warning_rounded
+                    : Icons.check_circle_rounded,
+                color: result.isContaminated
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF10B981),
+                size: 48,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contamination Analysis 🦠',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.espresso,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      result.isContaminated
+                          ? 'Contamination détectée'
+                          : 'Aucune contamination détectée',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: result.isContaminated
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF10B981),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Confiance: ${result.confidence.toStringAsFixed(1)}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.cocoa,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (imageBytes != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AnnotatedContaminationImage(
+                imageBytes: imageBytes,
+                detections: result.detections,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          Text(
+            result.detectionCount > 0
+                ? '${result.detectionCount} détection(s) trouvée(s)'
+                : 'Aucune boîte YOLO retournée par le modèle',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.cocoa,
+            ),
           ),
         ],
       ),

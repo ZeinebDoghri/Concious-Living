@@ -11,30 +11,33 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_config.dart';
 import '../../../core/constants.dart';
-import '../../../features/restaurant/scan/food_contamination_service.dart';
-import '../../../features/restaurant/waste/compost_inference_service.dart';
-import '../../../features/restaurant/waste/waste_pipeline_service.dart';
+import '../../restaurant/scan/food_contamination_service.dart';
+import '../../restaurant/waste/compost_inference_service.dart';
+import '../../restaurant/waste/waste_pipeline_service.dart';
 
-class StaffScanScreen extends StatefulWidget {
-  const StaffScanScreen({super.key});
+// Hotel brand colors
+const _kCherry = Color(0xFF75070C);
+const _dark = Color(0xFF0A0F1E);
+const _card = Color(0xFF141B2D);
+
+class HotelScanScreen extends StatefulWidget {
+  const HotelScanScreen({super.key});
 
   @override
-  State<StaffScanScreen> createState() => _StaffScanScreenState();
+  State<HotelScanScreen> createState() => _HotelScanScreenState();
 }
 
-class _StaffScanScreenState extends State<StaffScanScreen>
+class _HotelScanScreenState extends State<HotelScanScreen>
     with TickerProviderStateMixin {
-  static const _dark  = Color(0xFF0A0F1E);
-  static const _card  = Color(0xFF141B2D);
-
-  final _picker         = ImagePicker();
+  final _picker = ImagePicker();
   final _compostService = CompostInferenceService();
-  final _wasteService   = WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
+  final _wasteService =
+      WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
   final _contaminationService = FoodContaminationService();
 
-  XFile?  _lastFile;
-  bool    _isAnalysing = false;
-  String  _step        = '';
+  XFile? _lastFile;
+  bool _isAnalysing = false;
+  String _step = '';
 
   late final AnimationController _scanLine;
   late final AnimationController _pulse;
@@ -51,7 +54,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    // Ping API in background (all platforms use FastAPI backend)
     _compostService.init();
     _contaminationService.init();
   }
@@ -61,12 +63,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     _scanLine.dispose();
     _pulse.dispose();
     _compostService.dispose();
-    // Contamination service uses stateless HTTP calls.
     _wasteService.dispose();
     super.dispose();
   }
 
-  // ── Capture & analyse ──────────────────────────────────────────────────────
   Future<void> _pick(ImageSource source) async {
     if (_isAnalysing) return;
     HapticFeedback.mediumImpact();
@@ -77,9 +77,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       if (file == null || !mounted) return;
 
       setState(() {
-        _lastFile    = file;
+        _lastFile = file;
         _isAnalysing = true;
-        _step        = 'Préparation de l\'image…';
+        _step = 'Préparation de l\'image…';
       });
 
       final imageBytes = await file.readAsBytes();
@@ -88,26 +88,27 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       setState(() => _step = '4 analyses IA en parallèle…');
 
       final futures = await Future.wait<dynamic>([
-        // 1. Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
+        // 1. Compost segmentation
         _compostService
             .classify(imageBytes)
             .then((r) => r.toMap())
             .catchError((e) {
-              debugPrint('[Scan] Compost API error: $e');
+              debugPrint('[Hotel Scan] Compost API error: $e');
               return <String, dynamic>{
-                'compostablePct':    0.0,
+                'compostablePct': 0.0,
                 'nonCompostablePct': 0.0,
-                'backgroundPct':     100.0,
-                'inferenceTimeMs':   0,
+                'backgroundPct': 100.0,
+                'inferenceTimeMs': 0,
               };
             }),
 
-        // 2. Freshness HuggingFace API (NEW)
+        // 2. Freshness HuggingFace API
         () async {
           try {
             final request = http.MultipartRequest(
               'POST',
-              Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
+              Uri.parse(
+                  'https://jawher0000-freshness-check.hf.space/predict'),
             );
             request.files.add(
               http.MultipartFile.fromBytes(
@@ -116,12 +117,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 filename: file.path.split('/').last,
               ),
             );
-            final streamed = await request.send().timeout(const Duration(seconds: 60));
+            final streamed =
+                await request.send().timeout(const Duration(seconds: 60));
             final response = await http.Response.fromStream(streamed);
             if (response.statusCode == 200) {
               return jsonDecode(response.body) as Map<String, dynamic>;
             } else {
-              debugPrint('[Scan] Freshness API error: ${response.statusCode}');
+              debugPrint(
+                  '[Hotel Scan] Freshness API error: ${response.statusCode}');
               return <String, dynamic>{
                 'status': 'unknown',
                 'confidence': 0.0,
@@ -129,7 +132,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               };
             }
           } catch (e) {
-            debugPrint('[Scan] Freshness error: $e');
+            debugPrint('[Hotel Scan] Freshness error: $e');
             return <String, dynamic>{
               'status': 'unknown',
               'confidence': 0.0,
@@ -138,7 +141,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           }
         }(),
 
-        // 3. Waste pipeline API (server-side)
+        // 3. Waste pipeline API
         _wasteService.analyze(imageBytes).then((result) {
           final payload = result.toJson();
           payload['detectedItems'] = result.massEstimates
@@ -149,13 +152,16 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               .toList(growable: false);
           return payload;
         }).catchError((e) {
-          debugPrint('[Scan] Waste pipeline error: $e');
-          return <String, dynamic>{'detectedItems': [], 'confidence': 0.0};
+          debugPrint('[Hotel Scan] Waste pipeline error: $e');
+          return <String, dynamic>{
+            'detectedItems': [],
+            'confidence': 0.0
+          };
         }),
 
         // 4. Food contamination YOLO model
         _contaminationService.analyze(imageBytes).then((result) => result.toJson()).catchError((e) {
-          debugPrint('[Scan] Contamination API error: $e');
+          debugPrint('[Hotel Scan] Contamination API error: $e');
           return <String, dynamic>{
             'label': 'clean',
             'confidence': 0.0,
@@ -171,17 +177,16 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       if (!mounted) return;
       setState(() => _isAnalysing = false);
 
-      // Navigate to result page with freshness, compost, and waste results
       context.go(
-        AppRoutes.restaurantScanResult,
+        AppRoutes.hotelScanResult,
         extra: <String, dynamic>{
-          'imagePath':       file.path,
-          'imageBytes':      imageBytes,
-          'compostResult':   futures[0] as Map<String, dynamic>,
+          'imagePath': file.path,
+          'imageBytes': imageBytes,
+          'compostResult': futures[0] as Map<String, dynamic>,
           'freshnessResult': futures[1] as Map<String, dynamic>,
-          'wasteResult':     futures[2] as Map<String, dynamic>,
+          'wasteResult': futures[2] as Map<String, dynamic>,
           'contaminationResult': futures[3] as Map<String, dynamic>,
-          'isFusion':        true,
+          'isFusion': true,
         },
       );
     } catch (e) {
@@ -193,7 +198,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     }
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -224,7 +228,8 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           GestureDetector(
             onTap: () => context.pop(),
             child: Container(
-              width: 38, height: 38,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
@@ -249,7 +254,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   ),
                 ),
                 Text(
-                  'Freshness · Gaspillage · Compost · Insectes — en parallèle',
+                  'Fraîcheur · Gaspillage · Compost · Insectes — en parallèle',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: Colors.white.withValues(alpha: 0.55),
@@ -258,12 +263,11 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               ],
             ),
           ),
-          // AI badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)]),
+                  colors: [_kCherry, Color(0xFF5B21B6)]),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -287,7 +291,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           aspectRatio: 1,
           child: Stack(
             children: [
-              // Image preview or placeholder
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: _lastFile != null && !kIsWeb
@@ -332,26 +335,22 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                         ),
                       ),
               ),
-              // Scan corner brackets
-              ..._corners(),
-              // Animated scan line
               if (!_isAnalysing)
                 AnimatedBuilder(
                   animation: _scanLine,
                   builder: (_, _) {
                     final t = _scanLine.value;
                     return Positioned(
-                      top: t * (double.infinity < 0
-                          ? 0
-                          : 300), // handled by LayoutBuilder below
-                      left: 24, right: 24,
+                      top: t * 300,
+                      left: 24,
+                      right: 24,
                       child: Container(
                         height: 2,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
                               Colors.transparent,
-                              const Color(0xFF10B981),
+                              _kCherry,
                               Colors.transparent,
                             ],
                           ),
@@ -360,9 +359,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                     );
                   },
                 ),
-              // AI labels overlay
               Positioned(
-                bottom: 14, left: 14,
+                bottom: 14,
+                left: 14,
                 child: _buildAiLabels(),
               ),
             ],
@@ -398,10 +397,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     );
   }
 
-  List<Widget> _corners() {
-    return [];  // Simplified — decorative corners via ClipRRect above
-  }
-
   Widget _buildCaptureDock() {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -418,22 +413,20 @@ class _StaffScanScreenState extends State<StaffScanScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Mode indicator chips
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _modeIndicator(Icons.thermostat_rounded,
-                    'Freshness', const Color(0xFFEF4444)),
+                _modeIndicator(Icons.thermostat_rounded, 'Freshness',
+                    const Color(0xFFEF4444)),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.delete_rounded,
-                    'Waste', const Color(0xFFD97706)),
+                _modeIndicator(
+                    Icons.delete_rounded, 'Waste', const Color(0xFFD97706)),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.eco_rounded,
-                    'Compost', const Color(0xFF10B981)),
+                _modeIndicator(Icons.eco_rounded, 'Compost',
+                    const Color(0xFF10B981)),
               ],
             ),
             const SizedBox(height: 20),
-            // Capture row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -447,65 +440,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   icon: Icons.tips_and_updates_outlined,
                   label: 'Conseils',
                   onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Additional buttons for expiry and freshness checks
-            Column(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantExpiryDate),
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  label: const Text('Check Expiry Date'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantFreshnessCheck),
-                  icon: const Icon(Icons.favorite_outline),
-                  label: const Text('Freshness Check'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantContaminationScan),
-                  icon: const Icon(Icons.search_rounded),
-                  label: const Text('🔍 Contamination Scan'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -549,14 +483,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: const Color(0xFF10B981)
-                  .withValues(alpha: 0.5 + _pulse.value * 0.3),
+              color:
+                  _kCherry.withValues(alpha: 0.5 + _pulse.value * 0.3),
               width: 3,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981)
-                    .withValues(alpha: 0.2 + _pulse.value * 0.15),
+                color: _kCherry.withValues(
+                    alpha: 0.2 + _pulse.value * 0.15),
                 blurRadius: 20 + _pulse.value * 10,
               ),
             ],
@@ -565,10 +499,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
         ),
         child: Container(
           margin: const EdgeInsets.all(6),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+            gradient: const RadialGradient(
+              colors: [_kCherry, Color(0xFF5B21B6)],
             ),
           ),
           child: const Icon(Icons.camera_alt_rounded,
@@ -589,7 +523,8 @@ class _StaffScanScreenState extends State<StaffScanScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52, height: 52,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.07),
               shape: BoxShape.circle,
@@ -654,7 +589,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 ),
               ),
               const SizedBox(height: 24),
-              // 3 spinning indicators
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -673,8 +607,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
 class _Background extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -691,8 +623,7 @@ class _BgPainter extends CustomPainter {
     paint.color = const Color(0xFF0A0F1E);
     canvas.drawRect(Offset.zero & size, paint);
 
-    // Soft glow blobs
-    paint.color = const Color(0xFF10B981).withValues(alpha: 0.06);
+    paint.color = _kCherry.withValues(alpha: 0.06);
     canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.2), 180, paint);
     paint.color = const Color(0xFF7C3AED).withValues(alpha: 0.05);
     canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.7), 160, paint);
@@ -721,18 +652,22 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return RotationTransition(
       turns: _ctrl,
       child: Container(
-        width: 56, height: 56,
-        decoration: const BoxDecoration(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: SweepGradient(
-            colors: [Color(0xFF10B981), Colors.transparent],
+            colors: [_kCherry, Colors.transparent],
           ),
         ),
         child: Container(
@@ -742,7 +677,7 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
             color: Color(0xFF141B2D),
           ),
           child: const Icon(Icons.psychology_rounded,
-              color: Color(0xFF10B981), size: 28),
+              color: _kCherry, size: 28),
         ),
       ),
     );
@@ -772,7 +707,10 @@ class _MiniLoaderState extends State<_MiniLoader>
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -780,7 +718,8 @@ class _MiniLoaderState extends State<_MiniLoader>
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 20, height: 20,
+          width: 20,
+          height: 20,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
             color: widget.color,
@@ -790,7 +729,9 @@ class _MiniLoaderState extends State<_MiniLoader>
         Text(
           widget.label,
           style: GoogleFonts.inter(
-              fontSize: 9, color: widget.color, fontWeight: FontWeight.w600),
+              fontSize: 9,
+              color: widget.color,
+              fontWeight: FontWeight.w600),
         ),
       ],
     );

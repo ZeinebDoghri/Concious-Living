@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants.dart'; // Ensure AppRoutes is available
+import 'annotated_contamination_image.dart';
+import 'food_contamination_service.dart';
 
 import '../../../core/firebase_service.dart';
 import '../../../core/models/waste_item_model.dart';
@@ -18,13 +20,11 @@ import '../../../shared/widgets/freshness_badge.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const _kEmerald  = Color(0xFF4F6815);   // Olive
-const _kEmeraldD = Color(0xFF374A0F);   // Olive Dark
 const _kEmeraldL = Color(0xFFD4E8A8);   // Olive Mist
 const _kRose     = Color(0xFF75070C);   // Cherry
 const _kRoseL    = Color(0xFFFBBCBF);   // Cherry Blush
 const _kAmber    = Color(0xFFE8C84A);   // Butter Deep
 const _kAmberL   = Color(0xFFFFEDAB);   // Butter
-const _kCherry   = Color(0xFF75070C);   // Cherry
 const _kSlate    = Color(0xFF8C7B7C);   // Fog
 const _kSlateL   = Color(0xFFFAF5EE);   // Parchment
 const _kInk      = Color(0xFF2C1A1B);   // Espresso
@@ -87,6 +87,8 @@ class _StaffResultScreenState extends State<StaffResultScreen>
       (widget.args['wasteResult'] as Map<String, dynamic>?) ?? {};
   Map<String, dynamic> get _compostResult =>
       (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
+    Map<String, dynamic> get _contaminationResult =>
+      (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
 
   void _snack(String msg, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +107,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     if (_actionLoading || _actionDone) return;
     HapticFeedback.mediumImpact();
     setState(() => _actionLoading = true);
+    final inv = context.read<InventoryProvider>();
 
     try {
       final user = context.read<UserProvider>().currentUser;
@@ -138,7 +141,6 @@ class _StaffResultScreenState extends State<StaffResultScreen>
       final status =
           ((_freshnessResult['status'] as String?) ?? '').toLowerCase();
       if (status == 'spoiled') {
-        final inv = context.read<InventoryProvider>();
         final candidate = inv.items
             .where((e) => e.status == 'spoiled')
             .followedBy(inv.items.where((e) => e.status == 'expiring'))
@@ -176,6 +178,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
         (_compostResult['compostablePct'] as num?)?.toDouble() ?? 0.0;
     final status =
         ((_freshnessResult['status'] as String?) ?? 'fresh').toLowerCase();
+    final contamination = _contaminationResult.isNotEmpty
+        ? FoodAnalysisResult.fromJson(_contaminationResult)
+        : null;
     final detectedCount =
       ((_wasteResult['mass_estimates'] as List?)?.length ??
         (_wasteResult['detectedItems'] as List?)?.length ??
@@ -236,8 +241,13 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 children: [
                   // Scanned image
                   if (_imageBytes != null)
-                    Image.memory(_imageBytes!, fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _imageFallback())
+                    contamination != null
+                        ? AnnotatedContaminationImage(
+                            imageBytes: _imageBytes!,
+                            detections: contamination.detections,
+                          )
+                        : Image.memory(_imageBytes!, fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => _imageFallback())
                   else if (!kIsWeb && _imageFile != null)
                     Image.file(_imageFile!, fit: BoxFit.cover)
                   else
@@ -270,7 +280,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                           ),
                         ),
                         Text(
-                          '3 IA · fraîcheur · déchets · compost',
+                          '4 IA · fraîcheur · déchets · compost · contamination',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.65),
@@ -328,6 +338,22 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 ),
 
                 const SizedBox(height: 12),
+
+                if (contamination != null)
+                  _SectionCard(
+                    title: '🦠 Contamination / Insectes',
+                    subtitle: contamination.isContaminated
+                        ? 'Contamination détectée'
+                        : 'Aucune contamination détectée',
+                    color: contamination.isContaminated ? _kRose : _kEmerald,
+                    delay: 150,
+                    child: _contaminationCard(
+                      result: contamination,
+                      imageBytes: _imageBytes,
+                    ),
+                  ),
+
+                if (contamination != null) const SizedBox(height: 12),
 
                 // ── Waste card ─────────────────────────────────────────────
                 _SectionCard(
@@ -474,6 +500,88 @@ class _StaffResultScreenState extends State<StaffResultScreen>
           ),
         ),
       );
+
+    Widget _contaminationCard({
+      required FoodAnalysisResult result,
+      required Uint8List? imageBytes,
+    }) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: result.isContaminated
+              ? const Color(0xFFFFF5F5)
+              : const Color(0xFFF0FFF4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: result.isContaminated
+                ? const Color(0xFFFCA5A5)
+                : const Color(0xFFA7F3D0),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  result.isContaminated
+                      ? Icons.warning_rounded
+                      : Icons.check_circle_rounded,
+                  color: result.isContaminated
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF10B981),
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        result.isContaminated
+                            ? 'Contamination détectée'
+                            : 'Aucune contamination détectée',
+                        style: GoogleFonts.sora(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Confidence: ${result.confidence.toStringAsFixed(1)}%',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: _kSlate,
+                        ),
+                      ),
+                      Text(
+                        '${result.detectionCount} objet(s) détecté(s)',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: _kSlate,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (imageBytes != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: AnnotatedContaminationImage(
+                  imageBytes: imageBytes,
+                  detections: result.detections,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LEGACY VIEW (backward compat)

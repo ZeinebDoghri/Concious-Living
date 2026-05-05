@@ -39,6 +39,13 @@ import 'features/restaurant/profile/restaurant_profile_screen.dart';
 import 'features/restaurant/restaurant_shell.dart';
 import 'features/restaurant/scan/staff_result_screen.dart';
 import 'features/restaurant/scan/staff_scan_screen.dart';
+import 'features/restaurant/scan/contamination_scan_screen.dart';
+import 'features/restaurant/scan/contamination_result_screen.dart';
+import 'features/restaurant/scan/food_contamination_service.dart';
+import 'features/hotel/scan/hotel_contamination_scan_screen.dart';
+import 'features/hotel/scan/hotel_contamination_result_screen.dart';
+import 'features/hotel/scan/hotel_scan_screen.dart';
+import 'features/hotel/scan/hotel_result_screen.dart';
 import 'features/restaurant/waste/compost_screen.dart';
 import 'features/restaurant/expiry_date.dart';
 import 'features/freshness/freshness_check.dart';
@@ -128,7 +135,7 @@ GoRouter createAppRouter() {
               GoRoute(
                 path: AppRoutes.hotelScan,
                 pageBuilder: (context, state) =>
-                    slidePage(child: const StaffScanScreen()),
+                    slidePage(child: const HotelScanScreen()),
               ),
               GoRoute(
                 path: AppRoutes.hotelScanResult,
@@ -137,7 +144,23 @@ GoRouter createAppRouter() {
                   final args = extra is Map<String, dynamic>
                       ? extra
                       : <String, dynamic>{};
-                  return slidePage(child: StaffResultScreen(args: args));
+                  return slidePage(child: HotelResultScreen(args: args));
+                },
+              ),
+              GoRoute(
+                path: AppRoutes.hotelContaminationScan,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelContaminationScanScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelContaminationResult,
+                pageBuilder: (context, state) {
+                  final result = state.extra;
+                  return slidePage(
+                    child: HotelContaminationResultScreen(
+                      payload: result as ContaminationScanResultPayload,
+                    ),
+                  );
                 },
               ),
             ],
@@ -321,6 +344,22 @@ GoRouter createAppRouter() {
                       ? extra
                       : <String, dynamic>{};
                   return slidePage(child: StaffResultScreen(args: args));
+                },
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantContaminationScan,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const ContaminationScanScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantContaminationResult,
+                pageBuilder: (context, state) {
+                  final result = state.extra;
+                  return slidePage(
+                    child: ContaminationResultScreen(
+                      payload: result as ContaminationScanResultPayload,
+                    ),
+                  );
                 },
               ),
             ],

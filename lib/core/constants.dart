@@ -112,6 +112,8 @@ class AppRoutes {
   static const restaurantDashboard = '/restaurant/dashboard';
   static const restaurantScan = '/restaurant/scan';
   static const restaurantScanResult = '/restaurant/scan/result';
+  static const restaurantContaminationScan = '/restaurant/contamination-scan';
+  static const restaurantContaminationResult = '/restaurant/contamination-result';
   static const restaurantAlerts = '/restaurant/alerts';
   static const restaurantWaste = '/restaurant/waste';
   static const restaurantCompost = '/restaurant/compost';
@@ -126,6 +128,8 @@ class AppRoutes {
   static const hotelProfileEdit = '/hotel/profile/edit';
   static const hotelScan = '/hotel/scan';
   static const hotelScanResult = '/hotel/scan/result';
+  static const hotelContaminationScan = '/hotel/contamination-scan';
+  static const hotelContaminationResult = '/hotel/contamination-result';
 
   static String customerHistoryDetail(String id) => '/customer/history/$id';
 
