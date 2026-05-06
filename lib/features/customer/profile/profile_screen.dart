@@ -13,11 +13,33 @@ import '../../../core/models/user_model.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   static const _cherryMutedText = Color(0xFFF5C0C2);
   static const _prefsAllergensKey = 'customer_allergens_json';
+  late final AnimationController _entryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    super.dispose();
+  }
 
   String _fmtText(String? value, {String fallback = '—'}) {
     final v = (value ?? '').trim();
@@ -183,14 +205,29 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.oat,
-      body: Column(
-        children: [
+      body: FadeTransition(
+        opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic)),
+          child: Column(
+            children: [
           SizedBox(
             height: 220,
             width: double.infinity,
             child: Stack(
               children: [
-                Container(color: AppColors.cherry),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF8B1A1F), Color(0xFF6B1215)],
+                    ),
+                  ),
+                ),
                 Positioned.fill(child: CustomPaint(painter: _ArcPainter())),
                 SafeArea(
                   bottom: false,
@@ -225,6 +262,13 @@ class ProfileScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.oliveMist,
                               borderRadius: BorderRadius.circular(10),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x4DFFFFFF),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Text(
                               'Customer',
@@ -287,7 +331,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: 80),
               child: Column(
                 children: [
                   Transform.translate(
@@ -861,6 +905,8 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }
@@ -869,10 +915,10 @@ class ProfileScreen extends StatelessWidget {
 class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.06);
-    final center = Offset(size.width * 0.86, size.height * 0.14);
-    final radius = size.width * 0.78;
-    canvas.drawCircle(center, radius, paint);
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width + 36, size.height + 12), 120, paint);
   }
 
   @override
@@ -891,6 +937,13 @@ class _StatPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.butter.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x4DFFFFFF),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label,
@@ -921,6 +974,13 @@ class _Card extends StatelessWidget {
         color: AppColors.parchment,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.sand, width: 0.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F2C1A1B),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
@@ -1001,15 +1061,16 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Expanded(
+          SizedBox(
+            width: 110,
             child: Text(
               label,
               style: GoogleFonts.inter(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: AppColors.fog,
               ),
             ),
@@ -1018,7 +1079,6 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              textAlign: TextAlign.right,
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,

@@ -25,13 +25,24 @@ class OliveHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: height,
-      color: AppColors.olive,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF5A7A18), Color(0xFF445C12)],
+        ),
+      ),
       child: SafeArea(
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Stack(
             children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _HeaderArcPainter(),
+                ),
+              ),
               Align(
                 alignment: Alignment.topLeft,
                 child: Row(
@@ -39,7 +50,7 @@ class OliveHeader extends StatelessWidget {
                     if (showBack)
                       IconButton(
                         onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios_new),
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
                         color: AppColors.butter,
                         splashColor: AppColors.butter.withValues(alpha: 0.2),
                       )
@@ -60,8 +71,9 @@ class OliveHeader extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: GoogleFonts.dmSerifDisplay(
                         fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w400,
                         color: AppColors.butter,
+                        letterSpacing: 0.3,
                         height: 1.2,
                       ),
                     ),
@@ -87,4 +99,21 @@ class OliveHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HeaderArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+      Offset(size.width + 36, size.height + 12),
+      120,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

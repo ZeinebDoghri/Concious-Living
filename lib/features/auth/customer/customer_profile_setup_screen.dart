@@ -12,12 +12,15 @@ import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 
 class CustomerProfileSetupScreen extends StatefulWidget {
   final Map<String, dynamic> args;
 
-  const CustomerProfileSetupScreen({super.key, this.args = const <String, dynamic>{}});
+  const CustomerProfileSetupScreen({
+    super.key,
+    this.args = const <String, dynamic>{},
+  });
 
   @override
   State<CustomerProfileSetupScreen> createState() =>
@@ -55,8 +58,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   void initState() {
     super.initState();
     final fromProvider = context.read<UserProvider>().currentUser?.name;
-    _displayNameController.text =
-      (fromProvider?.trim().isNotEmpty ?? false)
+    _displayNameController.text = (fromProvider?.trim().isNotEmpty ?? false)
         ? fromProvider!.trim()
         : (widget.args['name'] as String?)?.trim() ?? '';
 
@@ -70,7 +72,10 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
       curve: Curves.easeOutCubic,
     );
     _screenScale = Tween<double>(begin: 0.95, end: 1.0).animate(
-      CurvedAnimation(parent: _screenExitController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _screenExitController,
+        curve: Curves.easeOutCubic,
+      ),
     );
   }
 
@@ -83,7 +88,10 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
 
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (file == null) return;
 
     final bytes = await file.readAsBytes();
@@ -108,11 +116,11 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.cherry,
+              primary: AppColors.cherry,
               onPrimary: AppColors.cherryHeaderText,
-                  surface: AppColors.parchment,
-                  onSurface: AppColors.espresso,
-                ),
+              surface: AppColors.parchment,
+              onSurface: AppColors.espresso,
+            ),
           ),
           child: child!,
         );
@@ -245,90 +253,63 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   Widget build(BuildContext context) {
     final forward = _step >= _prevStep;
 
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _screenFade,
-          child: ScaleTransition(
-            scale: _screenScale,
-            child: Column(
-              children: [
-                CherryHeader(
-                  title: AppStrings.setupYourProfile,
-                  showBack: true,
-                  height: 180,
-                  actions: [
-                    if (_step > 0)
-                      IconButton(
-                        onPressed: _back,
-                        icon: const Icon(Icons.chevron_left),
-                        color: AppColors.cherryHeaderText,
-                        splashColor: AppColors.cherryHeaderText.withValues(alpha: 0.15),
-                      ),
-                  ],
-                ),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: AppColors.parchment,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        _StepProgressHeader(step: _step),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            switchInCurve: Curves.easeInOut,
-                            switchOutCurve: Curves.easeInOut,
-                            transitionBuilder: (child, animation) {
-                              final inTween = Tween<Offset>(
-                                begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
-                                end: Offset.zero,
-                              );
-                              final outTween = Tween<Offset>(
-                                begin: Offset.zero,
-                                end: forward ? const Offset(-1, 0) : const Offset(1, 0),
-                              );
+    return CustomerFlowFrame(
+      title: AppStrings.setupYourProfile,
+      subtitle: AppStrings.personaliseAlerts,
+      badgeIcon: Icons.tune_rounded,
+      badgeLabel: 'Setup flow',
+      highlights: const ['Personal details', 'Health goals', 'Preferences'],
+      onBack: _step > 0 ? _back : () => context.go(AppRoutes.customerRegister),
+      child: FadeTransition(
+        opacity: _screenFade,
+        child: ScaleTransition(
+          scale: _screenScale,
+          child: Column(
+            children: [
+              const SizedBox(height: 6),
+              _StepProgressHeader(step: _step),
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                transitionBuilder: (child, animation) {
+                  final inTween = Tween<Offset>(
+                    begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
+                    end: Offset.zero,
+                  );
+                  final outTween = Tween<Offset>(
+                    begin: Offset.zero,
+                    end: forward ? const Offset(-1, 0) : const Offset(1, 0),
+                  );
 
-                              final isIncoming = child.key == ValueKey(_step);
-                              final offsetAnim = isIncoming
-                                  ? inTween.animate(animation)
-                                  : outTween.animate(animation);
+                  final isIncoming = child.key == ValueKey(_step);
+                  final offsetAnim = isIncoming
+                      ? inTween.animate(animation)
+                      : outTween.animate(animation);
 
-                              return SlideTransition(position: offsetAnim, child: child);
-                            },
-                            child: SingleChildScrollView(
-                              key: ValueKey(_step),
-                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                              child: _stepContent(),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          child: AnimatedButton(
-                            label: _step == 2 ? AppStrings.completeSetup : AppStrings.continueCta,
-                            color: _step == 2 ? AppColors.olive : AppColors.cherry,
-                            textColor: _step == 2 ? AppColors.oliveHeaderText : AppColors.cherryHeaderText,
-                            onTap: _step == 2 ? _complete : () async => _next(),
-                            isLoading: _completing,
-                            height: 52,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  return SlideTransition(position: offsetAnim, child: child);
+                },
+                child: SingleChildScrollView(
+                  key: ValueKey(_step),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
+                  child: _stepContent(),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              AnimatedButton(
+                label: _step == 2
+                    ? AppStrings.completeSetup
+                    : AppStrings.continueCta,
+                color: _step == 2 ? AppColors.olive : AppColors.cherry,
+                textColor: _step == 2
+                    ? AppColors.oliveHeaderText
+                    : AppColors.cherryHeaderText,
+                onTap: _step == 2 ? _complete : () async => _next(),
+                isLoading: _completing,
+                height: 52,
+              ),
+            ],
           ),
         ),
       ),
@@ -362,13 +343,9 @@ class _StepProgressHeader extends StatelessWidget {
       child: Row(
         children: [
           dot(0),
-          Expanded(
-            child: Container(height: 2, color: lineColor(0)),
-          ),
+          Expanded(child: Container(height: 2, color: lineColor(0))),
           dot(1),
-          Expanded(
-            child: Container(height: 2, color: lineColor(1)),
-          ),
+          Expanded(child: Container(height: 2, color: lineColor(1))),
           dot(2),
         ],
       ),
@@ -443,12 +420,15 @@ class _StepPersonalInfo extends StatelessWidget {
     final avatar = avatarBytes != null
         ? CircleAvatar(radius: 45, backgroundImage: MemoryImage(avatarBytes!))
         : (avatarPath != null && File(avatarPath!).existsSync())
-            ? CircleAvatar(radius: 45, backgroundImage: FileImage(File(avatarPath!)))
-            : const CircleAvatar(
-                radius: 45,
-                backgroundColor: AppColors.cherry,
-                child: Icon(Icons.person, size: 42, color: AppColors.parchment),
-              );
+        ? CircleAvatar(
+            radius: 45,
+            backgroundImage: FileImage(File(avatarPath!)),
+          )
+        : const CircleAvatar(
+            radius: 45,
+            backgroundColor: AppColors.cherry,
+            child: Icon(Icons.person, size: 42, color: AppColors.parchment),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +451,11 @@ class _StepPersonalInfo extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt, size: 14, color: AppColors.parchment),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 14,
+                      color: AppColors.parchment,
+                    ),
                   ),
                 ),
               ),
@@ -483,7 +467,10 @@ class _StepPersonalInfo extends StatelessWidget {
           controller: displayNameController,
           decoration: InputDecoration(
             labelText: 'Display name',
-            prefixIcon: const Icon(Icons.person_outline, color: AppColors.cocoa),
+            prefixIcon: const Icon(
+              Icons.person_outline,
+              color: AppColors.cocoa,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -493,7 +480,10 @@ class _StepPersonalInfo extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 labelText: 'Date of birth',
-                prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.cocoa),
+                prefixIcon: const Icon(
+                  Icons.cake_outlined,
+                  color: AppColors.cocoa,
+                ),
                 hintText: _dobLabel(),
               ),
             ),
@@ -634,31 +624,36 @@ class _StepHealthProfile extends StatelessWidget {
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: options.map((c) {
-            final selected = conditions.contains(c);
-            return InkWell(
-              onTap: () => onToggleCondition(c),
-              borderRadius: BorderRadius.circular(AppRadii.chip),
-              splashColor: AppColors.cherry.withValues(alpha: 0.15),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.cherry : Colors.transparent,
+          children: options
+              .map((c) {
+                final selected = conditions.contains(c);
+                return InkWell(
+                  onTap: () => onToggleCondition(c),
                   borderRadius: BorderRadius.circular(AppRadii.chip),
-                  border: Border.all(color: AppColors.sand, width: 1),
-                ),
-                child: Text(
-                  c,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.butter : AppColors.cocoa,
-                    height: 1.2,
+                  splashColor: AppColors.cherry.withValues(alpha: 0.15),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.cherry : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppRadii.chip),
+                      border: Border.all(color: AppColors.sand, width: 1),
+                    ),
+                    child: Text(
+                      c,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? AppColors.butter : AppColors.cocoa,
+                        height: 1.2,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }).toList(growable: false),
+                );
+              })
+              .toList(growable: false),
         ),
         const SizedBox(height: 20),
         Text(

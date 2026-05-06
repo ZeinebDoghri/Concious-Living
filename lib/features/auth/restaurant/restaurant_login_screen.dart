@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
+import '../../../shared/widgets/animated_button.dart';
 
 class RestaurantLoginScreen extends StatefulWidget {
   const RestaurantLoginScreen({super.key});
@@ -18,13 +19,14 @@ class RestaurantLoginScreen extends StatefulWidget {
 }
 
 class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin  {
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure   = true;
   bool _isLoading = false;
 
   late final AnimationController _bgAnim;
+  late final AnimationController _entryController;
 
   @override
   void initState() {
@@ -33,6 +35,10 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
   }
 
   @override
@@ -40,6 +46,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _bgAnim.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -89,7 +96,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A05),
+      backgroundColor: AppColors.oat,
       resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
@@ -101,9 +108,21 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
               painter: _LoginBgPainter(_bgAnim.value),
             ),
           ),
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _HeaderArcPainter(),
+            ),
+          ),
 
-          SafeArea(
-            child: Column(
+          FadeTransition(
+            opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.03),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic)),
+              child: SafeArea(
+                child: Column(
               children: [
                 // ── Top bar ────────────────────────────────────────────────
                 Padding(
@@ -116,7 +135,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                           context.go(AppRoutes.roleSelector);
                         },
                         icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                        color: Colors.white70,
+                        color: AppColors.butter,
                         iconSize: 20,
                       ),
                     ],
@@ -133,11 +152,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                         height: 64,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF5A7A18), Color(0xFF2D5016)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: AppColors.butter.withValues(alpha: 0.2),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.olive.withValues(alpha: 0.5),
@@ -146,7 +161,13 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 30),
+                        child: Text(
+                          'CL',
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 18,
+                            color: AppColors.cherry,
+                          ),
+                        ),
                       ).animate().scale(
                         begin: const Offset(0.6, 0.6),
                         duration: 600.ms,
@@ -155,11 +176,11 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                       const SizedBox(height: 16),
                       Text(
                         'Connexion Restaurant',
-                        style: GoogleFonts.sora(
+                        style: GoogleFonts.dmSerifDisplay(
                           fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.butter,
+                          letterSpacing: 0.3,
                         ),
                       ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
                       const SizedBox(height: 6),
@@ -168,7 +189,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.45),
+                          color: AppColors.butter.withValues(alpha: 0.78),
                         ),
                       ).animate().fadeIn(delay: 300.ms, duration: 500.ms),
                     ],
@@ -181,9 +202,16 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                 Expanded(
                   child: Container(
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0F2C1A1B),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
@@ -192,10 +220,10 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                         children: [
                           Text(
                             'Votre espace professionnel',
-                            style: GoogleFonts.sora(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1E293B),
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.espresso,
                             ),
                           ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
 
@@ -268,8 +296,8 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                               child: Text(
                                 AppStrings.forgotPassword,
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                   color: AppColors.olive,
                                 ),
                               ),
@@ -279,36 +307,13 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                           const SizedBox(height: 8),
 
                           // Sign in button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: ElevatedButton(
-                              onPressed: _isLoading ? null : _signIn,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.olive,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadii.button),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      AppStrings.signIn,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                            ),
+                          AnimatedButton(
+                            label: AppStrings.signIn,
+                            color: AppColors.olive,
+                            textColor: AppColors.butter,
+                            onTap: _isLoading ? null : _signIn,
+                            isLoading: _isLoading,
+                            height: 52,
                           ).animate().fadeIn(delay: 550.ms, duration: 400.ms),
 
                           const SizedBox(height: 20),
@@ -320,10 +325,10 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'ou',
+                                  ' or ',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
-                                    color: AppColors.cocoa,
+                                    color: AppColors.fog,
                                   ),
                                 ),
                               ),
@@ -396,6 +401,8 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                 ),
               ],
             ),
+              ),
+            ),
           ),
         ],
       ),
@@ -425,16 +432,29 @@ class _LoginBgPainter extends CustomPainter {
       Offset(size.width * (0.2 + 0.06 * math.sin(a)), size.height * 0.15),
       size.width * 0.55,
       AppColors.olive,
-      0.20,
+      0.08,
     );
     glow(
       Offset(size.width * 0.8, size.height * (0.25 + 0.04 * math.cos(a))),
       size.width * 0.4,
-      const Color(0xFF10B981),
-      0.10,
+      AppColors.cherry,
+      0.05,
     );
   }
 
   @override
   bool shouldRepaint(_LoginBgPainter old) => old.t != t;
+}
+
+class _HeaderArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width + 24, 100), 120, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

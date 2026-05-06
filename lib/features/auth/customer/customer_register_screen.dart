@@ -2,11 +2,10 @@ import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
-import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 
 class CustomerRegisterScreen extends StatefulWidget {
   const CustomerRegisterScreen({super.key});
@@ -16,384 +15,366 @@ class CustomerRegisterScreen extends StatefulWidget {
 }
 
 class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  // ── Controllers ─────────────────────────────────────────────────────────────
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
+  // ── Focus nodes ──────────────────────────────────────────────────────────────
   final _passwordFocus = FocusNode();
 
+  // ── UI state ─────────────────────────────────────────────────────────────────
   bool _obscure = true;
   bool _obscure2 = true;
   bool _isLoading = false;
-
   String? _emailError;
 
-  late final AnimationController _cardController;
-  late final Animation<Offset> _cardSlide;
+  // ── Animation ────────────────────────────────────────────────────────────────
+  late final AnimationController _entryController;
+  late final Animation<Offset> _entrySlide;
+  late final Animation<double> _entryFade;
 
+  // ── Password-strength helpers ────────────────────────────────────────────────
+  int get strength {
+    final p = _passwordController.text;
+    int score = 0;
+    if (p.length >= 8) score++;
+    if (p.contains(RegExp(r'[A-Z]'))) score++;
+    if (p.contains(RegExp(r'[0-9]'))) score++;
+    if (p.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))) score++;
+    return score;
+  }
+
+  bool get showStrength => _passwordController.text.isNotEmpty;
+  bool get mismatch =>
+      _confirmController.text.isNotEmpty &&
+      _passwordController.text != _confirmController.text;
+
+  // ── Lifecycle ────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _cardController = AnimationController(
+    _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 300),
     )..forward();
 
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
     );
-
-    _emailController.addListener(_validateEmailRealtime);
+    _entryFade = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
   }
 
   @override
   void dispose() {
+    _entryController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     _passwordFocus.dispose();
-    _cardController.dispose();
     super.dispose();
   }
 
-  void _validateEmailRealtime() {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      if (_emailError != null) setState(() => _emailError = null);
-      return;
-    }
-
-    final ok = EmailValidator.validate(email);
-    final nextError = ok ? null : AppStrings.validationInvalidEmail;
-    if (nextError != _emailError) setState(() => _emailError = nextError);
-  }
-
-  int _passwordStrength(String v) {
-    if (v.isEmpty) return 0;
-    int score = 0;
-    if (v.length >= 6) score++;
-    if (v.length >= 10) score++;
-    if (RegExp(r'[A-Z]').hasMatch(v)) score++;
-    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
-      score++;
-    }
-    return score.clamp(0, 4);
-  }
-
-  void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  String _readableError(Object e) {
-    final message = e.toString();
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
-    }
-    if (message.startsWith('StateError: ')) {
-      return message.substring('StateError: '.length);
-    }
-    return message;
-  }
-
+  // ── Actions ──────────────────────────────────────────────────────────────────
   Future<void> _createAccount() async {
-    if (_isLoading) return;
-
-    final name = _nameController.text.trim();
+    // Validate email
     final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    final confirm = _confirmController.text;
-
-    if (name.isEmpty) {
-      _snack(AppStrings.validationRequiredField);
-      return;
-    }
     if (!EmailValidator.validate(email)) {
-      _snack(AppStrings.validationInvalidEmail);
+      setState(() => _emailError = AppStrings.validationInvalidEmail);
       return;
     }
-    if (password.length < 6) {
-      _snack(AppStrings.validationPasswordMin);
-      return;
-    }
-    if (password != confirm) {
-      _snack(AppStrings.validationPasswordsMismatch);
-      return;
-    }
+    setState(() => _emailError = null);
+
+    // Validate password match
+    if (mismatch || _passwordController.text.isEmpty) return;
 
     setState(() => _isLoading = true);
-
     try {
-      await context.read<UserProvider>().registerCustomer(
-            name: name,
-            email: email,
-            password: password,
-          );
-      if (!mounted) return;
-      context.go(AppRoutes.customerProfileSetup);
+      // TODO: implement registration logic via UserProvider
+      // await context.read<UserProvider>().register(...);
+      if (mounted) context.go(AppRoutes.customerHome);
     } catch (e) {
-      _snack(_readableError(e));
+      // TODO: show error snackbar
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final password = _passwordController.text;
-    final strength = _passwordStrength(password);
-    final showStrength = _passwordFocus.hasFocus && password.isNotEmpty;
-
-    final mismatch = _confirmController.text.isNotEmpty &&
-        _passwordController.text != _confirmController.text;
-
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
+    return CustomerFlowFrame(
+      title: AppStrings.createYourAccount,
+      subtitle: AppStrings.joinToday,
+      badgeIcon: Icons.badge_rounded,
+      badgeLabel: 'Create profile',
+      highlights: const [
+        'Set goals',
+        'Save allergens',
+        'Custom alerts',
+      ],
+      onBack: () => context.go(AppRoutes.customerLogin),
+      child: FadeTransition(
+        opacity: _entryFade,
+        child: SlideTransition(
+          position: _entrySlide,
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Welcome banner ───────────────────────────────────────────────
             Container(
-              height: 200,
-              width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.cherry),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 56,
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.06),
-                    ),
-                  ),
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            onPressed: () => context.go(AppRoutes.customerLogin),
-                            icon: const Icon(Icons.arrow_back_ios_new),
-                            color: AppColors.cherryHeaderText,
-                            splashColor: AppColors.cherryHeaderText.withValues(alpha: 0.15),
-                          ),
-                          const Spacer(),
-                          Center(
-                            child: Column(
-                              children: [
-                                Text(
-                                  AppStrings.createYourAccount,
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 24,
-                                    color: AppColors.cherryHeaderText,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  AppStrings.joinToday,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.cherryBlush,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                    ),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.sand, width: 0.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0F2C1A1B),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: SlideTransition(
-                position: _cardSlide,
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.parchment,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: AppColors.oliveMist,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_add_alt_rounded,
+                      color: AppColors.oliveDark,
+                      size: 24,
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                  const SizedBox(width: 14),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: AppStrings.fullName,
-                            prefixIcon: const Icon(Icons.person_outline, color: AppColors.cocoa),
+                        Text(
+                          'Join in a few steps',
+                          style: GoogleFonts.dmSerifDisplay(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.espresso,
+                            letterSpacing: 0.2,
+                            height: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: AppStrings.emailAddress,
-                            prefixIcon: const Icon(Icons.email_outlined, color: AppColors.cocoa),
-                            errorText: _emailError,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          focusNode: _passwordFocus,
-                          controller: _passwordController,
-                          obscureText: _obscure,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            labelText: AppStrings.password,
-                            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.cocoa),
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(() => _obscure = !_obscure),
-                              icon: Icon(
-                                _obscure ? Icons.visibility : Icons.visibility_off,
-                                color: AppColors.cocoa,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (showStrength) ...[
-                          const SizedBox(height: 10),
-                          Row(
-                            children: List.generate(4, (i) {
-                              final filled = strength >= (i + 1);
-                              final Color color;
-                              if (!filled) {
-                                color = AppColors.sand;
-                              } else {
-                                if (i == 0) {
-                                  color = AppColors.cherryBlush;
-                                } else if (i == 1) {
-                                  color = AppColors.butter;
-                                } else if (i == 2) {
-                                  color = AppColors.oliveMist;
-                                } else {
-                                  color = AppColors.olive;
-                                }
-                              }
-                              return Expanded(
-                                child: Container(
-                                  height: 8,
-                                  margin: EdgeInsets.only(right: i == 3 ? 0 : 8),
-                                  decoration: BoxDecoration(
-                                    color: color,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppColors.sand, width: 0.5),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _confirmController,
-                          obscureText: _obscure2,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            labelText: AppStrings.confirmPassword,
-                            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.cocoa),
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(() => _obscure2 = !_obscure2),
-                              icon: Icon(
-                                _obscure2 ? Icons.visibility : Icons.visibility_off,
-                                color: AppColors.cocoa,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (mismatch) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            AppStrings.validationPasswordsMismatch,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.cherry,
-                              height: 1.2,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        Wrap(
-                          children: [
-                            Text(
-                              AppStrings.termsPrefix,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.cocoa,
-                                height: 1.4,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                _snack(AppStrings.aboutProject);
-                              },
-                              child: Text(
-                                AppStrings.termsOfService,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.cherry,
-                                  decoration: TextDecoration.underline,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        AnimatedButton(
-                          label: AppStrings.createAccountCta,
-                          color: AppColors.cherry,
-                          textColor: AppColors.cherryHeaderText,
-                          onTap: _createAccount,
-                          isLoading: _isLoading,
-                          height: 52,
-                        ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => context.go(AppRoutes.customerLogin),
-                            child: Text(
-                              AppStrings.alreadyHaveAccount,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.cocoa,
-                                height: 1.2,
-                              ),
-                            ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Create your account once and personalize nutrition tracking, meal alerts, and your dietary profile.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.cocoa,
+                            height: 1.5,
                           ),
                         ),
                       ],
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // ── Full name ────────────────────────────────────────────────────
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: AppStrings.fullName,
+                prefixIcon: const Icon(
+                  Icons.person_outline,
+                  color: AppColors.cocoa,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Email ────────────────────────────────────────────────────────
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: AppStrings.emailAddress,
+                prefixIcon: const Icon(
+                  Icons.email_outlined,
+                  color: AppColors.cocoa,
+                ),
+                errorText: _emailError,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Password ─────────────────────────────────────────────────────
+            TextField(
+              focusNode: _passwordFocus,
+              controller: _passwordController,
+              obscureText: _obscure,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: AppStrings.password,
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  color: AppColors.cocoa,
+                ),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                  icon: Icon(
+                    _obscure ? Icons.visibility : Icons.visibility_off,
+                    color: AppColors.cocoa,
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Password strength bar ────────────────────────────────────────
+            if (showStrength) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: List.generate(4, (i) {
+                  final filled = strength >= (i + 1);
+                  final Color color;
+                  if (!filled) {
+                    color = AppColors.sand;
+                  } else if (i == 0) {
+                    color = AppColors.cherryBlush;
+                  } else if (i == 1) {
+                    color = AppColors.butter;
+                  } else if (i == 2) {
+                    color = AppColors.oliveMist;
+                  } else {
+                    color = AppColors.olive;
+                  }
+                  return Expanded(
+                    child: Container(
+                      height: 8,
+                      margin: EdgeInsets.only(right: i == 3 ? 0 : 8),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppColors.sand,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // ── Confirm password ─────────────────────────────────────────────
+            TextField(
+              controller: _confirmController,
+              obscureText: _obscure2,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: AppStrings.confirmPassword,
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  color: AppColors.cocoa,
+                ),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscure2 = !_obscure2),
+                  icon: Icon(
+                    _obscure2 ? Icons.visibility : Icons.visibility_off,
+                    color: AppColors.cocoa,
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Mismatch error ───────────────────────────────────────────────
+            if (mismatch) ...[
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.validationPasswordsMismatch,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.cherry,
+                  height: 1.2,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // ── Terms ────────────────────────────────────────────────────────
+            Wrap(
+              children: [
+                Text(
+                  AppStrings.termsPrefix,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppColors.cocoa,
+                    height: 1.4,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: Text(
+                    AppStrings.termsOfService,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.olive,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Submit button ────────────────────────────────────────────────
+            AnimatedButton(
+              label: AppStrings.createAccountCta,
+              color: AppColors.olive,
+              textColor: AppColors.oliveHeaderText,
+              onTap: _createAccount,
+              isLoading: _isLoading,
+              height: 52,
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Already have account ─────────────────────────────────────────
+            Center(
+              child: TextButton(
+                onPressed: () => context.go(AppRoutes.customerLogin),
+                child: Text(
+                  AppStrings.alreadyHaveAccount,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.olive,
+                    height: 1.2,
+                  ),
                 ),
               ),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 import '../../../shared/widgets/empty_state.dart';
 
 class AllergenScreen extends StatefulWidget {
@@ -98,158 +98,155 @@ class _AllergenScreenState extends State<AllergenScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            CherryHeader(
-              title: AppStrings.myAllergenProfile,
-              subtitle: AppStrings.allergenBanner,
-              showBack: false,
-              actions: [
-                IconButton(
-                  onPressed: _edit,
-                  icon: const Icon(Icons.edit_outlined),
-                  color: AppColors.butter,
-                  splashColor: AppColors.butter.withValues(alpha: 0.2),
+    return CustomerFlowFrame(
+      title: AppStrings.myAllergenProfile,
+      subtitle: AppStrings.allergenBanner,
+      badgeIcon: Icons.shield_rounded,
+      badgeLabel: 'Allergen profile',
+      highlights: const ['Save allergens', 'Flagged automatically', 'Scan safely'],
+      onBack: null,
+      bodyPadding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+      child: _loading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.olive),
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionCard(
+                  title: AppStrings.myAllergens,
+                  child: _allergens.isEmpty
+                      ? EmptyState(
+                          icon: Icons.shield_outlined,
+                          title: AppStrings.noAllergensTitle,
+                          subtitle: AppStrings.noAllergensSubtitle,
+                          actionLabel: AppStrings.editAllergenProfile,
+                          onAction: _edit,
+                        )
+                      : Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: _allergens
+                              .map(
+                                (a) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.oliveMist,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadii.chip,
+                                    ),
+                                    border: Border.all(
+                                      color: const Color(0xFFDCE9DE),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    a,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.espresso,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(growable: false),
+                        ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  title: AppStrings.recentAllergenWarnings,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                      border: Border.all(
+                        color: const Color(0xFFDCE9DE),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: AppColors.oliveDark,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            AppStrings.allergenInformation,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.cocoa,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                AnimatedButton(
+                  label: AppStrings.scanYourDish,
+                  color: AppColors.olive,
+                  textColor: AppColors.oliveHeaderText,
+                  onTap: () async => context.go(AppRoutes.customerScan),
+                  height: 52,
                 ),
               ],
             ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.cherry,
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppStrings.myAllergens,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            if (_allergens.isEmpty)
-                              EmptyState(
-                                icon: Icons.shield_outlined,
-                                title: AppStrings.noAllergensTitle,
-                                subtitle: AppStrings.noAllergensSubtitle,
-                                actionLabel: AppStrings.editAllergenProfile,
-                                onAction: _edit,
-                              )
-                            else
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: _allergens
-                                    .map(
-                                      (a) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.butter,
-                                          borderRadius: BorderRadius.circular(
-                                            AppRadii.chip,
-                                          ),
-                                          border: Border.all(
-                                            color: AppColors.sand,
-                                            width: 0.5,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          a,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.espresso,
-                                            height: 1.2,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(growable: false),
-                              ),
-                            const SizedBox(height: 18),
-                            Text(
-                              AppStrings.recentAllergenWarnings,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.infoBg,
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.innerCard,
-                                ),
-                                border: Border.all(
-                                  color: AppColors.sand,
-                                  width: 0.5,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    color: AppColors.infoText,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      AppStrings.allergenInformation,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.infoText,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            AnimatedButton(
-                              label: AppStrings.scanYourDish,
-                              color: AppColors.cherry,
-                              textColor: AppColors.butter,
-                              onTap: () async =>
-                                  context.go(AppRoutes.customerScan),
-                              height: 52,
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
+    );       // ← closes CustomerFlowFrame correctly
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFDCE9DE), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F5132).withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.sora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.espresso,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }

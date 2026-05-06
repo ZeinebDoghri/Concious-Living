@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 import '../allergens/allergy_service.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -21,7 +21,7 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _picker = ImagePicker();
   final _allergyService = AllergyService();
 
@@ -30,6 +30,7 @@ class _ScanScreenState extends State<ScanScreen>
   String? _allergyError;
 
   late final AnimationController _pulseController;
+  late final AnimationController _entryController;
 
   @override
   void initState() {
@@ -38,6 +39,10 @@ class _ScanScreenState extends State<ScanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
 
     // Wake up the allergy API in the background as soon as screen loads
     _allergyService.warmUpApi();
@@ -46,6 +51,7 @@ class _ScanScreenState extends State<ScanScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -122,78 +128,118 @@ class _ScanScreenState extends State<ScanScreen>
   Widget build(BuildContext context) {
     final image = _selected;
 
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            CherryHeader(
-              title: AppStrings.scanYourDish,
-              subtitle: AppStrings.centerDishHint,
-              showBack: false,
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+    return CustomerFlowFrame(
+      title: AppStrings.scanYourDish,
+      subtitle: AppStrings.centerDishHint,
+      badgeIcon: Icons.camera_alt_rounded,
+      badgeLabel: 'Nutrition scan',
+      highlights: const [
+        'Capture a dish',
+        'Run allergen check',
+        'Read nutrition',
+      ],
+      onBack: null,
+      bodyPadding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic)),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: _SectionCard(
+                  title: AppStrings.takePhotoOrUpload,
+                  child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _PreviewFrame(
+                    imagePath: image?.path,
+                    pulse: _pulseController,
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppStrings.takePhotoOrUpload,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.cocoa,
-                              height: 1.6,
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ScaleTransition(
+                          scale: Tween<double>(
+                            begin: 1.0,
+                            end: 1.08,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: _pulseController,
+                              curve: Curves.easeInOut,
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          _PreviewFrame(
-                            imagePath: image?.path,
-                            pulse: _pulseController,
+                          child: AnimatedButton(
+                            label: AppStrings.scanYourDish,
+                            color: AppColors.olive,
+                            textColor: AppColors.oliveHeaderText,
+                            onTap: () => _pick(ImageSource.camera),
+                            height: 52,
                           ),
-                          const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AnimatedButton(
-                                  label: AppStrings.scanYourDish,
-                                  color: AppColors.cherry,
-                                  textColor: AppColors.butter,
-                                  onTap: () => _pick(ImageSource.camera),
-                                  height: 52,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: () => _pick(ImageSource.gallery),
-                            icon: const Icon(Icons.photo_library_outlined),
-                            label: Text(AppStrings.uploadFromGallery),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    if (_isAnalysing)
-                      _AnalysingOverlay(pulse: _pulseController),
-                  ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _pick(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(AppStrings.uploadFromGallery),
+                  ),
+                ],
+              ),
                 ),
               ),
-            ),
-          ],
+              if (_isAnalysing) _AnalysingOverlay(pulse: _pulseController),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.sand, width: 0.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F2C1A1B),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 17,
+              fontWeight: FontWeight.w400,
+              color: AppColors.espresso,
+            ),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }

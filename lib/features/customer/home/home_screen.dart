@@ -14,16 +14,15 @@ import '../../../providers/alerts_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 
-
 // ── Design tokens ──────────────────────────────────────────────────────────────
-const _kBg      = Color(0xFF0A0F1E);
-const _kCard    = Color(0xFF111827);
-const _kBorder  = Color(0xFF1E2D3D);
-const _kEmerald = Color(0xFF00C896);
-const _kAmber   = Color(0xFFF59E0B);
-const _kRose    = Color(0xFFFF6B6B);
-const _kSlate   = Color(0xFF94A3B8);
-const _kBlue    = Color(0xFF3B82F6);
+const _kBg      = AppColors.oat;
+const _kCard    = Colors.white;
+const _kBorder  = AppColors.sand;
+const _kEmerald = AppColors.olive;
+const _kAmber   = AppColors.butterDeep;
+const _kRose    = AppColors.cherry;
+const _kSlate   = AppColors.fog;
+const _kBlue    = AppColors.cherryDark;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,21 +32,27 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _enterController;
+  late final AnimationController _screenController;
 
   @override
   void initState() {
     super.initState();
     _enterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+    _screenController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
     )..forward();
   }
 
   @override
   void dispose() {
     _enterController.dispose();
+    _screenController.dispose();
     super.dispose();
   }
 
@@ -60,13 +65,18 @@ class _HomeScreenState extends State<HomeScreen>
   String _initials(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return '?';
-    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     String firstChar(String s) {
       final t = s.trim();
       return t.isEmpty ? '' : t.substring(0, 1).toUpperCase();
     }
-    return (firstChar(parts.first) + (parts.length > 1 ? firstChar(parts[1]) : '')).trim();
+    return (firstChar(parts.first) +
+            (parts.length > 1 ? firstChar(parts[1]) : ''))
+        .trim();
   }
 
   double _overallDailyPct(Map<String, double> values) {
@@ -92,15 +102,18 @@ class _HomeScreenState extends State<HomeScreen>
   List<double> _goalProgresses(UserProvider provider, double overall) {
     final goalSeed = provider.currentUser?.calorieGoal.toDouble() ?? 2200;
     final offset = ((goalSeed / 2200) * 10).clamp(0, 12);
-    final calories  = overall.clamp(0.0, 130.0).toDouble();
-    final carbs     = (overall + 6 + offset * 0.15).clamp(0.0, 130.0).toDouble();
-    final fats      = (overall - 4 + offset * 0.1).clamp(0.0, 130.0).toDouble();
-    final proteins  = (overall + 2 - offset * 0.08).clamp(0.0, 130.0).toDouble();
+    final calories = overall.clamp(0.0, 130.0).toDouble();
+    final carbs =
+        (overall + 6 + offset * 0.15).clamp(0.0, 130.0).toDouble();
+    final fats =
+        (overall - 4 + offset * 0.1).clamp(0.0, 130.0).toDouble();
+    final proteins =
+        (overall + 2 - offset * 0.08).clamp(0.0, 130.0).toDouble();
     return [calories, carbs, fats, proteins];
   }
 
   List<_AlertCardData> _alertCards(List<double> progresses) {
-    final data  = <_AlertCardData>[];
+    final data = <_AlertCardData>[];
     final names = ['Calories', 'Carbs', 'Fats', 'Proteins'];
     for (var i = 0; i < progresses.length; i++) {
       final value = progresses[i];
@@ -136,9 +149,9 @@ class _HomeScreenState extends State<HomeScreen>
             .where((e) => e.isNotEmpty)
             .toList(growable: false) ??
         const <String>[];
-    final hasKeto        = dietary.any((e) => e.contains('keto'));
-    final hasVegetarian  = dietary.any((e) => e.contains('vegetarian'));
-    final hasVegan       = dietary.any((e) => e.contains('vegan'));
+    final hasKeto = dietary.any((e) => e.contains('keto'));
+    final hasVegetarian = dietary.any((e) => e.contains('vegetarian'));
+    final hasVegan = dietary.any((e) => e.contains('vegan'));
 
     if (hasKeto) {
       return const [
@@ -191,10 +204,13 @@ class _HomeScreenState extends State<HomeScreen>
   List<int> _weeklyCounts(List<ScanHistoryItem> items) {
     final now = DateTime.now();
     return List<int>.generate(7, (index) {
-      final day = DateTime(now.year, now.month, now.day - (6 - index));
+      final day =
+          DateTime(now.year, now.month, now.day - (6 - index));
       return items.where((item) {
         final dt = item.scannedAt;
-        return dt.year == day.year && dt.month == day.month && dt.day == day.day;
+        return dt.year == day.year &&
+            dt.month == day.month &&
+            dt.day == day.day;
       }).length;
     });
   }
@@ -219,20 +235,20 @@ class _HomeScreenState extends State<HomeScreen>
     final dateText    = DateFormat('EEE, MMM d').format(now);
     final serviceText = _serviceLabel(now);
 
-    final intakePct   = userProvider.mockDailyIntakePct;
-    final overall     = _overallDailyPct(intakePct);
-    final progresses  = _goalProgresses(userProvider, overall);
-    final alertCards  = _alertCards(progresses);
+    final intakePct  = userProvider.mockDailyIntakePct;
+    final overall    = _overallDailyPct(intakePct);
+    final progresses = _goalProgresses(userProvider, overall);
+    final alertCards = _alertCards(progresses);
 
     final scans = scanProvider.items.toList()
       ..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
-    final recentScans        = scans.take(3).toList(growable: false);
-    final weeklyCounts       = _weeklyCounts(scans);
-    final totalWeeklyScans   = weeklyCounts.fold<int>(0, (a, b) => a + b);
-    final goalsMet           = progresses.where((v) => v <= 100).length;
-    final averageRisk        = _averageRiskLabel(overall);
-    final healthScore        = (100 - (overall - 60).clamp(0, 40)).round();
-    final allergens = user?.conditions ?? [];
+    final recentScans      = scans.take(3).toList(growable: false);
+    final weeklyCounts     = _weeklyCounts(scans);
+    final totalWeeklyScans = weeklyCounts.fold<int>(0, (a, b) => a + b);
+    final goalsMet         = progresses.where((v) => v <= 100).length;
+    final averageRisk      = _averageRiskLabel(overall);
+    final healthScore      = (100 - (overall - 60).clamp(0, 40)).round();
+    final allergens        = user?.conditions ?? [];
 
     final headerStats = [
       '${scanProvider.items.length} scans',
@@ -242,399 +258,487 @@ class _HomeScreenState extends State<HomeScreen>
 
     final tipPool = _tipsFor(userProvider);
     final tip     = tipPool[now.day % tipPool.length];
-    final tipTitle = userProvider.currentUser?.dietaryOptions
-                    .any((e) => e.trim().toLowerCase().contains('keto')) == true
-        ? 'Keep carbs deliberate'
-        : userProvider.currentUser?.dietaryOptions.any((e) =>
-                  e.trim().toLowerCase().contains('vegetarian') ||
-                  e.trim().toLowerCase().contains('vegan')) == true
-            ? 'Build better plant protein'
-            : 'Reduce waste before it starts';
+    final tipTitle =
+        userProvider.currentUser?.dietaryOptions.any(
+                  (e) => e.trim().toLowerCase().contains('keto')) ==
+                true
+            ? 'Keep carbs deliberate'
+            : userProvider.currentUser?.dietaryOptions.any((e) =>
+                      e.trim().toLowerCase().contains('vegetarian') ||
+                      e.trim().toLowerCase().contains('vegan')) ==
+                    true
+                ? 'Build better plant protein'
+                : 'Reduce waste before it starts';
 
     return Scaffold(
       backgroundColor: _kBg,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Hero Header ─────────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF75070C), Color(0xFF9E1A21), Color(0xFF520508)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft:  Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top row: greeting + health ring
-                      Row(
+      body: FadeTransition(
+        opacity: CurvedAnimation(
+            parent: _screenController, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+              parent: _screenController,
+              curve: Curves.easeOutCubic)),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // ── Hero Header ──────────────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF8B1A1F), Color(0xFF6B1215)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  greeting,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: Colors.white.withValues(alpha: 0.55),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  name,
-                                  style: GoogleFonts.sora(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '$dateText · $serviceText',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Colors.white.withValues(alpha: 0.45),
-                                  ),
-                                ),
-                              ],
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: CustomPaint(
+                              painter: _HeaderArcPainter(),
+                              size: const Size(140, 60),
                             ),
                           ),
-                          _HealthScoreRing(score: healthScore),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Quick stats chips
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: headerStats.map((stat) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            stat,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                          ),
-                        )).toList(growable: false),
-                      ),
-                      // Allergen quick-chips
-                      if (allergens.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            const Icon(Icons.warning_amber_rounded,
-                                color: Color(0xFFFFB347), size: 14),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Active allergens:',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFFFB347),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: allergens.take(5).map((a) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFB347).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFFFFB347).withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Text(
-                              a,
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFFFB347),
-                              ),
-                            ),
-                          )).toList(growable: false),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Macro progress grid ─────────────────────────────────────────
-            _DarkSectionTitle(
-              title: "Today's nutrition",
-              actionLabel: 'Details',
-              onTap: () => context.go(AppRoutes.nutritionProgress),
-            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06, delay: 100.ms),
-            _DarkCardShell(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.05,
-                    children: List.generate(4, (index) {
-                      final labels = const ['Calories', 'Carbs', 'Fats', 'Proteins'];
-                      final icons  = const [
-                        Icons.local_fire_department_rounded,
-                        Icons.grain_rounded,
-                        Icons.water_drop_rounded,
-                        Icons.fitness_center_rounded,
-                      ];
-                      final value = progresses[index];
-                      return _DarkProgressTile(
-                        label:    labels[index],
-                        icon:     icons[index],
-                        value:    value,
-                        color:    _progressColor(value),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => context.go(AppRoutes.customerScan),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _kEmerald.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _kEmerald.withValues(alpha: 0.3)),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '＋ Scan your next meal to update',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _kEmerald,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Scan CTA ────────────────────────────────────────────────────
-            _DarkScanBanner(onTap: () => context.go(AppRoutes.customerScan))
-                .animate().fadeIn(delay: 300.ms).scale(
-                  begin: const Offset(0.95, 0.95),
-                  delay: 300.ms,
-                  curve: Curves.easeOutBack,
-                ),
-
-            // ── Alerts ──────────────────────────────────────────────────────
-            if (alertCards.isNotEmpty) ...[
-              _DarkSectionTitle(
-                title: 'Your alerts',
-                actionLabel: 'See all',
-                onTap: () => context.go(AppRoutes.nutritionProgress),
-              ),
-              SizedBox(
-                height: 90,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: alertCards.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) => _DarkAlertCard(data: alertCards[index]),
-                ),
-              ),
-            ],
-
-            // ── Quick actions ───────────────────────────────────────────────
-            _DarkSectionTitle(title: 'Quick actions', actionLabel: null, onTap: null),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _DarkQuickAction(
-                      icon:  Icons.flag_outlined,
-                      color: _kEmerald,
-                      label: 'Goals',
-                      onTap: () => context.go(AppRoutes.nutritionGoals),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DarkQuickAction(
-                      icon:  Icons.ramen_dining,
-                      color: _kAmber,
-                      label: 'Allergens',
-                      onTap: () => context.go(AppRoutes.customerAllergens),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DarkQuickAction(
-                      icon:  Icons.insights_outlined,
-                      color: _kBlue,
-                      label: 'Progress',
-                      onTap: () => context.go(AppRoutes.nutritionProgress),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DarkQuickAction(
-                      icon:  Icons.history,
-                      color: _kSlate,
-                      label: 'History',
-                      onTap: () => context.go(AppRoutes.customerHistory),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Today's tip ─────────────────────────────────────────────────
-            const SizedBox(height: 8),
-            _DarkSectionTitle(title: "Today's tip", actionLabel: null, onTap: null),
-            _DarkTipCard(title: tipTitle, body: tip),
-
-            // ── Recent scans ────────────────────────────────────────────────
-            _DarkSectionTitle(
-              title: 'Recent scans',
-              actionLabel: 'See all',
-              onTap: () => context.go(AppRoutes.customerHistory),
-            ),
-            if (recentScans.isEmpty)
-              _DarkCardShell(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Text(
-                  AppStrings.noScansSubtitle,
-                  style: GoogleFonts.inter(fontSize: 13, color: _kSlate),
-                ),
-              )
-            else
-              Column(
-                children: List.generate(recentScans.length, (index) {
-                  final scan = recentScans[index];
-                  return _StaggerIn(
-                    controller: _enterController,
-                    index: index,
-                    child: _DarkRecentScanTile(
-                      item: scan,
-                      onTap: () => context.go(AppRoutes.customerHistoryDetail(scan.id)),
-                    ),
-                  );
-                }),
-              ),
-
-            // ── Weekly summary ──────────────────────────────────────────────
-            _DarkSectionTitle(title: 'This week', actionLabel: null, onTap: null),
-            _DarkCardShell(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _DarkMetricPill(
-                        label: '$totalWeeklyScans dishes scanned',
-                        good:  totalWeeklyScans >= 4,
-                      ),
-                      _DarkMetricPill(
-                        label: 'Avg risk: $averageRisk',
-                        good:  averageRisk == 'Low',
-                      ),
-                      _DarkMetricPill(
-                        label: '$goalsMet goals met',
-                        good:  goalsMet >= 3,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 64,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(7, (index) {
-                        final labels = const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                        final count  = weeklyCounts[index];
-                        final barH   = min(44.0, max(6.0, count == 0 ? 6.0 : count * 10.0));
-                        final color  = _weekColor(count);
-                        return Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                          // Top row: greeting + health ring
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AnimatedContainer(
-                                duration: Duration(milliseconds: 300 + index * 60),
-                                curve: Curves.easeOutCubic,
-                                height: barH,
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color.withValues(alpha: 0.3),
-                                      blurRadius: 6,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      greeting,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: AppColors.butter
+                                            .withValues(alpha: 0.78),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      name,
+                                      style: GoogleFonts.dmSerifDisplay(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w400,
+                                        color: AppColors.butter,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '$dateText · $serviceText',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: AppColors.butter
+                                            .withValues(alpha: 0.72),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                labels[index],
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: _kSlate,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              _HealthScoreRing(score: healthScore),
                             ],
                           ),
-                        );
-                      }),
+                          const SizedBox(height: 20),
+                          // Quick stats chips
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: headerStats
+                                .map((stat) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.14),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.15),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        stat,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.butter,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(growable: false),
+                          ),
+                          // Allergen quick-chips
+                          if (allergens.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                const Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Color(0xFFFFB347),
+                                    size: 14),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Active allergens:',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFFFB347),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: allergens
+                                  .take(5)
+                                  .map((a) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFB347)
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: const Color(0xFFFFB347)
+                                                .withValues(alpha: 0.4),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          a,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                const Color(0xFFFFB347),
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(growable: false),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Macro progress grid ──────────────────────────────────────
+                _DarkSectionTitle(
+                  title: "Today's nutrition",
+                  actionLabel: 'Details',
+                  onTap: () => context.go(AppRoutes.nutritionProgress),
+                )
+                    .animate()
+                    .fadeIn(delay: 100.ms)
+                    .slideY(begin: 0.06, delay: 100.ms),
+                _DarkCardShell(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.05,
+                        children: List.generate(4, (index) {
+                          final labels = const [
+                            'Calories',
+                            'Carbs',
+                            'Fats',
+                            'Proteins'
+                          ];
+                          final icons = const [
+                            Icons.local_fire_department_rounded,
+                            Icons.grain_rounded,
+                            Icons.water_drop_rounded,
+                            Icons.fitness_center_rounded,
+                          ];
+                          final value = progresses[index];
+                          return _DarkProgressTile(
+                            label: labels[index],
+                            icon: icons[index],
+                            value: value,
+                            color: _progressColor(value),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => context.go(AppRoutes.customerScan),
+                        child: Container(
+                          width: double.infinity,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color:
+                                _kEmerald.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: _kEmerald.withValues(
+                                    alpha: 0.3)),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '＋ Scan your next meal to update',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _kEmerald,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Scan CTA ─────────────────────────────────────────────────
+                _DarkScanBanner(
+                        onTap: () => context.go(AppRoutes.customerScan))
+                    .animate()
+                    .fadeIn(delay: 300.ms)
+                    .scale(
+                      begin: const Offset(0.95, 0.95),
+                      delay: 300.ms,
+                      curve: Curves.easeOutBack,
+                    ),
+
+                // ── Alerts ───────────────────────────────────────────────────
+                if (alertCards.isNotEmpty) ...[
+                  _DarkSectionTitle(
+                    title: 'Your alerts',
+                    actionLabel: 'See all',
+                    onTap: () =>
+                        context.go(AppRoutes.nutritionProgress),
+                  ),
+                  SizedBox(
+                    height: 90,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: alertCards.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: 10),
+                      itemBuilder: (context, index) =>
+                          _DarkAlertCard(data: alertCards[index]),
                     ),
                   ),
                 ],
-              ),
+
+                // ── Quick actions ─────────────────────────────────────────────
+                _DarkSectionTitle(
+                    title: 'Quick actions',
+                    actionLabel: null,
+                    onTap: null),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _DarkQuickAction(
+                          icon: Icons.flag_outlined,
+                          color: _kEmerald,
+                          label: 'Goals',
+                          onTap: () =>
+                              context.go(AppRoutes.nutritionGoals),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _DarkQuickAction(
+                          icon: Icons.ramen_dining,
+                          color: _kAmber,
+                          label: 'Allergens',
+                          onTap: () =>
+                              context.go(AppRoutes.customerAllergens),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _DarkQuickAction(
+                          icon: Icons.insights_outlined,
+                          color: _kBlue,
+                          label: 'Progress',
+                          onTap: () =>
+                              context.go(AppRoutes.nutritionProgress),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _DarkQuickAction(
+                          icon: Icons.history,
+                          color: _kSlate,
+                          label: 'History',
+                          onTap: () =>
+                              context.go(AppRoutes.customerHistory),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Today's tip ───────────────────────────────────────────────
+                const SizedBox(height: 8),
+                _DarkSectionTitle(
+                    title: "Today's tip",
+                    actionLabel: null,
+                    onTap: null),
+                _DarkTipCard(title: tipTitle, body: tip),
+
+                // ── Recent scans ──────────────────────────────────────────────
+                _DarkSectionTitle(
+                  title: 'Recent scans',
+                  actionLabel: 'See all',
+                  onTap: () => context.go(AppRoutes.customerHistory),
+                ),
+                if (recentScans.isEmpty)
+                  _DarkCardShell(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Text(
+                      AppStrings.noScansSubtitle,
+                      style: GoogleFonts.inter(
+                          fontSize: 13, color: _kSlate),
+                    ),
+                  )
+                else
+                  Column(
+                    children: List.generate(recentScans.length, (index) {
+                      final scan = recentScans[index];
+                      return _StaggerIn(
+                        controller: _enterController,
+                        index: index,
+                        child: _DarkRecentScanTile(
+                          item: scan,
+                          onTap: () => context.go(
+                              AppRoutes.customerHistoryDetail(scan.id)),
+                        ),
+                      );
+                    }),
+                  ),
+
+                // ── Weekly summary ────────────────────────────────────────────
+                _DarkSectionTitle(
+                    title: 'This week',
+                    actionLabel: null,
+                    onTap: null),
+                _DarkCardShell(
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _DarkMetricPill(
+                            label: '$totalWeeklyScans dishes scanned',
+                            good: totalWeeklyScans >= 4,
+                          ),
+                          _DarkMetricPill(
+                            label: 'Avg risk: $averageRisk',
+                            good: averageRisk == 'Low',
+                          ),
+                          _DarkMetricPill(
+                            label: '$goalsMet goals met',
+                            good: goalsMet >= 3,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 64,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: List.generate(7, (index) {
+                            final labels = const [
+                              'M', 'T', 'W', 'T', 'F', 'S', 'S'
+                            ];
+                            final count = weeklyCounts[index];
+                            final barH = min(
+                                44.0,
+                                max(6.0,
+                                    count == 0 ? 6.0 : count * 10.0));
+                            final color = _weekColor(count);
+                            return Expanded(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.end,
+                                children: [
+                                  AnimatedContainer(
+                                    duration: Duration(
+                                        milliseconds:
+                                            300 + index * 60),
+                                    curve: Curves.easeOutCubic,
+                                    height: barH,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(
+                                          alpha: 0.85),
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withValues(
+                                              alpha: 0.3),
+                                          blurRadius: 6,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    labels[index],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      color: _kSlate,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 120),
+              ],
             ),
-            const SizedBox(height: 120),
-          ],
+          ),
         ),
       ),
     );
@@ -667,6 +771,9 @@ class _HealthScoreRing extends StatelessWidget {
           radius: 38,
           lineWidth: 5,
           percent: pct,
+          animation: true,
+          animationDuration: 1000,
+          animateFromLastPercent: true,
           circularStrokeCap: CircularStrokeCap.round,
           backgroundColor: Colors.white.withValues(alpha: 0.10),
           progressColor: _color,
@@ -675,10 +782,10 @@ class _HealthScoreRing extends StatelessWidget {
             children: [
               Text(
                 '$score',
-                style: GoogleFonts.sora(
+                style: GoogleFonts.dmSerifDisplay(
                   fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.butter,
                   height: 1,
                 ),
               ),
@@ -706,12 +813,11 @@ class _HealthScoreRing extends StatelessWidget {
   }
 }
 
-// ── Section title (dark) ───────────────────────────────────────────────────────
+// ── Section title ──────────────────────────────────────────────────────────────
 class _DarkSectionTitle extends StatelessWidget {
   final String title;
   final String? actionLabel;
   final VoidCallback? onTap;
-  //final double topPadding;
 
   const _DarkSectionTitle({
     required this.title,
@@ -722,28 +828,26 @@ class _DarkSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.sora(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+          Text(
+            title,
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 17,
+              color: AppColors.espresso,
             ),
           ),
+          const Spacer(),
           if (actionLabel != null && onTap != null)
-            GestureDetector(
-              onTap: onTap,
+            TextButton(
+              onPressed: onTap,
               child: Text(
                 actionLabel!,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _kEmerald,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.cherry,
                 ),
               ),
             ),
@@ -753,7 +857,7 @@ class _DarkSectionTitle extends StatelessWidget {
   }
 }
 
-// ── Card shell (dark) ──────────────────────────────────────────────────────────
+// ── Card shell ─────────────────────────────────────────────────────────────────
 class _DarkCardShell extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry margin;
@@ -768,13 +872,13 @@ class _DarkCardShell extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kBorder, width: 1),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kBorder, width: 0.5),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: Color(0x0F2C1A1B),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -783,7 +887,7 @@ class _DarkCardShell extends StatelessWidget {
   }
 }
 
-// ── Progress tile (dark) ───────────────────────────────────────────────────────
+// ── Progress tile ──────────────────────────────────────────────────────────────
 class _DarkProgressTile extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -802,9 +906,9 @@ class _DarkProgressTile extends StatelessWidget {
     final pct = (value / 100).clamp(0.0, 1.0);
     return Container(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: AppColors.cream,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.sand, width: 0.5),
       ),
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       child: Column(
@@ -814,8 +918,11 @@ class _DarkProgressTile extends StatelessWidget {
             radius: 36,
             lineWidth: 5,
             percent: pct,
+            animation: true,
+            animationDuration: 1000,
+            animateFromLastPercent: true,
             circularStrokeCap: CircularStrokeCap.round,
-            backgroundColor: _kBorder,
+            backgroundColor: AppColors.oatDeep,
             progressColor: color,
             center: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -827,7 +934,7 @@ class _DarkProgressTile extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.espresso,
                   ),
                 ),
               ],
@@ -839,7 +946,7 @@ class _DarkProgressTile extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: _kSlate,
+              color: AppColors.cocoa,
             ),
           ),
         ],
@@ -848,7 +955,7 @@ class _DarkProgressTile extends StatelessWidget {
   }
 }
 
-// ── Scan banner (dark, animated) ───────────────────────────────────────────────
+// ── Scan banner ────────────────────────────────────────────────────────────────
 class _DarkScanBanner extends StatefulWidget {
   final VoidCallback onTap;
   const _DarkScanBanner({required this.onTap});
@@ -904,12 +1011,14 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFFFFEDAB).withValues(alpha: 0.2 + _pulse.value * 0.15),
+                  color: const Color(0xFFFFEDAB)
+                      .withValues(alpha: 0.2 + _pulse.value * 0.15),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF75070C).withValues(alpha: 0.3 + _pulse.value * 0.15),
+                    color: const Color(0xFF75070C).withValues(
+                        alpha: 0.3 + _pulse.value * 0.15),
                     blurRadius: 18 + _pulse.value * 8,
                     offset: const Offset(0, 4),
                   ),
@@ -927,7 +1036,7 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.camera_alt_rounded,
-                      color: Colors.white, size: 26),
+                      color: AppColors.butter, size: 26),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -937,10 +1046,10 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                     children: [
                       Text(
                         'Scan a dish',
-                        style: GoogleFonts.sora(
+                        style: GoogleFonts.dmSerifDisplay(
                           fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.butter,
                           height: 1.1,
                         ),
                       ),
@@ -950,7 +1059,8 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFFFFEDAB).withValues(alpha: 0.9),
+                          color: const Color(0xFFFFEDAB)
+                              .withValues(alpha: 0.9),
                         ),
                       ),
                     ],
@@ -970,9 +1080,9 @@ class _DarkScanBannerState extends State<_DarkScanBanner>
 // ── Alert card data ────────────────────────────────────────────────────────────
 class _AlertCardData {
   final IconData icon;
-  final String   title;
-  final String   subtitle;
-  final Color    color;
+  final String title;
+  final String subtitle;
+  final Color color;
 
   const _AlertCardData({
     required this.icon,
@@ -982,7 +1092,7 @@ class _AlertCardData {
   });
 }
 
-// ── Alert card (dark) ──────────────────────────────────────────────────────────
+// ── Alert card ─────────────────────────────────────────────────────────────────
 class _DarkAlertCard extends StatelessWidget {
   final _AlertCardData data;
   const _DarkAlertCard({required this.data});
@@ -997,8 +1107,8 @@ class _DarkAlertCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border(
           left: BorderSide(color: data.color, width: 3),
-          top:    BorderSide(color: _kBorder, width: 1),
-          right:  BorderSide(color: _kBorder, width: 1),
+          top: BorderSide(color: _kBorder, width: 1),
+          right: BorderSide(color: _kBorder, width: 1),
           bottom: BorderSide(color: _kBorder, width: 1),
         ),
         boxShadow: [
@@ -1031,7 +1141,7 @@ class _DarkAlertCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppColors.espresso,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1051,11 +1161,11 @@ class _DarkAlertCard extends StatelessWidget {
   }
 }
 
-// ── Quick action (dark) ────────────────────────────────────────────────────────
+// ── Quick action ───────────────────────────────────────────────────────────────
 class _DarkQuickAction extends StatelessWidget {
-  final IconData    icon;
-  final Color       color;
-  final String      label;
+  final IconData icon;
+  final Color color;
+  final String label;
   final VoidCallback onTap;
 
   const _DarkQuickAction({
@@ -1106,7 +1216,7 @@ class _DarkQuickAction extends StatelessWidget {
   }
 }
 
-// ── Tip card (dark) ────────────────────────────────────────────────────────────
+// ── Tip card ───────────────────────────────────────────────────────────────────
 class _DarkTipCard extends StatelessWidget {
   final String title;
   final String body;
@@ -1140,7 +1250,8 @@ class _DarkTipCard extends StatelessWidget {
               color: _kEmerald.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lightbulb_outline, color: _kEmerald, size: 24),
+            child: const Icon(Icons.lightbulb_outline,
+                color: _kEmerald, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1148,7 +1259,8 @@ class _DarkTipCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                     color: _kEmerald.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
@@ -1168,7 +1280,7 @@ class _DarkTipCard extends StatelessWidget {
                   style: GoogleFonts.sora(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.espresso,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1191,22 +1303,22 @@ class _DarkTipCard extends StatelessWidget {
   }
 }
 
-// ── Recent scan tile (dark) ────────────────────────────────────────────────────
+// ── Recent scan tile ───────────────────────────────────────────────────────────
 class _DarkRecentScanTile extends StatelessWidget {
   final ScanHistoryItem item;
-  final VoidCallback    onTap;
+  final VoidCallback onTap;
 
   const _DarkRecentScanTile({required this.item, required this.onTap});
 
   Color _riskDotColor(double pct) {
     if (pct > 100) return _kRose;
-    if (pct >= 80)  return _kAmber;
+    if (pct >= 80) return _kAmber;
     return _kEmerald;
   }
 
   String _riskLabel(double pct) {
     if (pct > 100) return 'High risk';
-    if (pct >= 80)  return 'Moderate';
+    if (pct >= 80) return 'Moderate';
     return 'Low risk';
   }
 
@@ -1244,9 +1356,11 @@ class _DarkRecentScanTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: color.withValues(alpha: 0.25)),
+                    border: Border.all(
+                        color: color.withValues(alpha: 0.25)),
                   ),
-                  child: Icon(Icons.restaurant_menu, color: color, size: 26),
+                  child: Icon(Icons.restaurant_menu,
+                      color: color, size: 26),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1259,31 +1373,36 @@ class _DarkRecentScanTile extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: AppColors.espresso,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       ScanHistoryItem.timeAgo(item.scannedAt),
-                      style: GoogleFonts.inter(fontSize: 12, color: _kSlate),
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: _kSlate),
                     ),
                     const SizedBox(height: 8),
                     Row(
-                      children: values.map((v) => Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 5),
-                        decoration: BoxDecoration(
-                          color: _riskDotColor(v),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: _riskDotColor(v).withValues(alpha: 0.5),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                      )).toList(growable: false),
+                      children: values
+                          .map((v) => Container(
+                                width: 8,
+                                height: 8,
+                                margin:
+                                    const EdgeInsets.only(right: 5),
+                                decoration: BoxDecoration(
+                                  color: _riskDotColor(v),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _riskDotColor(v)
+                                          .withValues(alpha: 0.5),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ))
+                          .toList(growable: false),
                     ),
                   ],
                 ),
@@ -1291,9 +1410,11 @@ class _DarkRecentScanTile extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _DarkRiskBadge(text: _riskLabel(avg), color: color),
+                  _DarkRiskBadge(
+                      text: _riskLabel(avg), color: color),
                   const SizedBox(height: 12),
-                  Icon(Icons.chevron_right, color: _kSlate.withValues(alpha: 0.5)),
+                  Icon(Icons.chevron_right,
+                      color: _kSlate.withValues(alpha: 0.5)),
                 ],
               ),
             ],
@@ -1304,16 +1425,18 @@ class _DarkRecentScanTile extends StatelessWidget {
   }
 }
 
+// ── Risk badge ─────────────────────────────────────────────────────────────────
 class _DarkRiskBadge extends StatelessWidget {
   final String text;
-  final Color  color;
+  final Color color;
 
   const _DarkRiskBadge({required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
@@ -1331,10 +1454,10 @@ class _DarkRiskBadge extends StatelessWidget {
   }
 }
 
-// ── Dark metric pill ───────────────────────────────────────────────────────────
+// ── Metric pill ────────────────────────────────────────────────────────────────
 class _DarkMetricPill extends StatelessWidget {
   final String label;
-  final bool   good;
+  final bool good;
 
   const _DarkMetricPill({required this.label, required this.good});
 
@@ -1342,7 +1465,8 @@ class _DarkMetricPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = good ? _kEmerald : _kRose;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -1363,7 +1487,7 @@ class _DarkMetricPill extends StatelessWidget {
 // ── Stagger-in animation ───────────────────────────────────────────────────────
 class _StaggerIn extends StatelessWidget {
   final AnimationController controller;
-  final int    index;
+  final int index;
   final Widget child;
 
   const _StaggerIn({
@@ -1374,20 +1498,37 @@ class _StaggerIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = (0.06 * index).clamp(0.0, 0.8);
+    final clamped = index > 7 ? 7 : index;
+    final start = (0.1 * clamped).clamp(0.0, 0.8);
     final curve = CurvedAnimation(
       parent: controller,
-      curve: Interval(start, 1, curve: Curves.easeOutCubic),
+      curve: Interval(start, (start + 0.6).clamp(0.0, 1.0),
+          curve: Curves.easeOutCubic),
     );
     return FadeTransition(
       opacity: curve,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.06),
-          end:   Offset.zero,
+          begin: const Offset(0, 0.04),
+          end: Offset.zero,
         ).animate(curve),
         child: child,
       ),
     );
   }
+}
+
+// ── Header arc painter ─────────────────────────────────────────────────────────
+class _HeaderArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+        Offset(size.width + 40, size.height + 40), 120, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

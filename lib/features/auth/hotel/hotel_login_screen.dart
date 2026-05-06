@@ -15,37 +15,39 @@ class HotelLoginScreen extends StatefulWidget {
 }
 
 class _HotelLoginScreenState extends State<HotelLoginScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscure = true;
   bool _isLoading = false;
 
-  late final AnimationController _cardController;
-  late final Animation<Offset> _cardSlide;
+  late final AnimationController _entryController;
+  late final Animation<Offset> _entrySlide;
+  late final Animation<double> _entryFade;
 
   @override
   void initState() {
     super.initState();
-    _cardController = AnimationController(
+    _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 300),
     )..forward();
 
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
     );
+    _entryFade = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _cardController.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -102,15 +104,30 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
+      body: FadeTransition(
+        opacity: _entryFade,
+        child: SlideTransition(
+          position: _entrySlide,
+          child: SafeArea(
+            child: Column(
           children: [
             Container(
               height: 200,
               width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.butter),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF8B1A1F), Color(0xFF7A3A10)],
+                ),
+              ),
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _HeaderArcPainter(),
+                    ),
+                  ),
                   Positioned(
                     top: 0,
                     left: 0,
@@ -129,19 +146,37 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                         children: [
                           IconButton(
                             onPressed: () => context.go(AppRoutes.roleSelector),
-                            icon: const Icon(Icons.arrow_back_ios_new),
-                            color: AppColors.cherry,
-                            splashColor: AppColors.cherry.withValues(alpha: 0.12),
+                            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                            color: AppColors.butter,
+                            splashColor: AppColors.butter.withValues(alpha: 0.12),
                           ),
                           const Spacer(),
                           Center(
                             child: Column(
                               children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.butter.withValues(alpha: 0.2),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'CL',
+                                    style: GoogleFonts.dmSerifDisplay(
+                                      fontSize: 18,
+                                      color: AppColors.cherry,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
                                 Text(
                                   'Hotel staff sign in',
                                   style: GoogleFonts.dmSerifDisplay(
                                     fontSize: 24,
-                                    color: AppColors.cherry,
+                                    color: AppColors.butter,
+                                    letterSpacing: 0.3,
                                     height: 1.2,
                                   ),
                                 ),
@@ -151,7 +186,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w400,
-                                    color: AppColors.espresso,
+                                    color: AppColors.butter.withValues(alpha: 0.82),
                                     height: 1.3,
                                   ),
                                 ),
@@ -168,7 +203,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
             ),
             Expanded(
               child: SlideTransition(
-                position: _cardSlide,
+                position: _entrySlide,
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -177,6 +212,13 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0F2C1A1B),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
@@ -239,8 +281,8 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                         const SizedBox(height: 12),
                         AnimatedButton(
                           label: AppStrings.signIn,
-                          color: AppColors.butter,
-                          textColor: AppColors.cherry,
+                          color: AppColors.cherry,
+                          textColor: AppColors.butter,
                           onTap: _signIn,
                           isLoading: _isLoading,
                           height: 52,
@@ -268,7 +310,22 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
             ),
           ],
         ),
+          ),
+        ),
       ),
     );
   }
+}
+
+class _HeaderArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width + 36, size.height + 12), 120, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

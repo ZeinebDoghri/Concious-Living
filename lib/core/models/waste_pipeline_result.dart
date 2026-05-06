@@ -158,7 +158,7 @@ class WastePipelineResult {
       };
 
   factory WastePipelineResult.fromJson(Map<String, dynamic> json) {
-    List<T> _parseList<T>(dynamic raw, T Function(Map<String, dynamic>) parser) {
+    List<T> parseList<T>(dynamic raw, T Function(Map<String, dynamic>) parser) {
       if (raw is List) {
         return raw
             .whereType<Map>()
@@ -168,37 +168,37 @@ class WastePipelineResult {
       return <T>[];
     }
 
-    Uint8List? _parseBytes(dynamic raw) {
+    Uint8List? parseBytes(dynamic raw) {
       if (raw is String && raw.isNotEmpty) {
         return base64Decode(raw);
       }
       return null;
     }
 
-    int _readInt(dynamic value) => value is num ? value.toInt() : 0;
+    int readInt(dynamic value) => value is num ? value.toInt() : 0;
 
-    List<int> _parseIntList(dynamic raw) {
+    List<int> parseIntList(dynamic raw) {
       if (raw is! List) return <int>[];
       return raw.whereType<num>().map((value) => value.toInt()).toList(growable: false);
     }
 
-    List<double> _parseDoubleList(dynamic raw) {
+    List<double> parseDoubleList(dynamic raw) {
       if (raw is! List) return <double>[];
       return raw.whereType<num>().map((value) => value.toDouble()).toList(growable: false);
     }
 
     return WastePipelineResult(
-      topClasses: _parseList(json['top_classes'], WasteTopClass.fromJson),
-      activeClassIds: _parseIntList(json['active_classes']),
-      classifierProbabilities: _parseDoubleList(json['classifier_probs']),
-      detections: _parseList(json['detections'], WasteDetection.fromJson),
-      massEstimates: _parseList(json['mass_estimates'], WasteMassEstimate.fromJson),
-      overlayPng: _parseBytes(json['overlay_png_b64']),
-      classifierTimeMs: _readInt(json['classifier_ms']),
-      segmenterTimeMs: _readInt(json['segmenter_ms']),
-      massCalculationTimeMs: _readInt(json['mass_calculation_ms']),
-      originalWidth: _readInt(json['original_width']),
-      originalHeight: _readInt(json['original_height']),
+      topClasses: parseList(json['top_classes'], WasteTopClass.fromJson),
+      activeClassIds: parseIntList(json['active_classes']),
+      classifierProbabilities: parseDoubleList(json['classifier_probs']),
+      detections: parseList(json['detections'], WasteDetection.fromJson),
+      massEstimates: parseList(json['mass_estimates'], WasteMassEstimate.fromJson),
+      overlayPng: parseBytes(json['overlay_png_b64']),
+      classifierTimeMs: readInt(json['classifier_ms']),
+      segmenterTimeMs: readInt(json['segmenter_ms']),
+      massCalculationTimeMs: readInt(json['mass_calculation_ms']),
+      originalWidth: readInt(json['original_width']),
+      originalHeight: readInt(json['original_height']),
       notes: json['notes'] as String?,
     );
   }

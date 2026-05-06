@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
 import '../../../shared/widgets/animated_button.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 
 class CustomerForgotPasswordScreen extends StatefulWidget {
   const CustomerForgotPasswordScreen({super.key});
@@ -17,7 +18,7 @@ class CustomerForgotPasswordScreen extends StatefulWidget {
 
 class _CustomerForgotPasswordScreenState
     extends State<CustomerForgotPasswordScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _emailController = TextEditingController();
 
   bool _isLoading = false;
@@ -47,9 +48,9 @@ class _CustomerForgotPasswordScreenState
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _readableError(Object e) {
@@ -90,83 +91,24 @@ class _CustomerForgotPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.cherry),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 56,
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.06),
-                    ),
-                  ),
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            onPressed: () => context.go(AppRoutes.customerLogin),
-                            icon: const Icon(Icons.arrow_back_ios_new),
-                            color: AppColors.cherryHeaderText,
-                            splashColor: AppColors.cherryHeaderText.withValues(alpha: 0.15),
-                          ),
-                          const Spacer(),
-                          Center(
-                            child: Text(
-                              AppStrings.resetPassword,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 24,
-                                color: AppColors.cherryHeaderText,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return CustomerFlowFrame(
+      title: AppStrings.resetPassword,
+      subtitle: AppStrings.resetPasswordSubtitle,
+      badgeIcon: Icons.lock_reset_rounded,
+      badgeLabel: 'Account help',
+      highlights: const ['Secure reset', 'Email link', 'Quick recovery'],
+      onBack: () => context.go(AppRoutes.customerLogin),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        transitionBuilder: (child, anim) =>
+            FadeTransition(opacity: anim, child: child),
+        child: _sent
+            ? _SuccessView(scale: _successScale)
+            : _FormView(
+                emailController: _emailController,
+                isLoading: _isLoading,
+                onSend: _send,
               ),
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                  child: _sent
-                      ? _SuccessView(scale: _successScale)
-                      : _FormView(
-                          emailController: _emailController,
-                          isLoading: _isLoading,
-                          onSend: _send,
-                        ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -198,7 +140,11 @@ class _FormView extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.email_outlined, size: 32, color: AppColors.cherry),
+            child: const Icon(
+              Icons.email_outlined,
+              size: 32,
+              color: AppColors.cherry,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -228,7 +174,10 @@ class _FormView extends StatelessWidget {
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
               labelText: AppStrings.emailAddress,
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.cocoa),
+              prefixIcon: const Icon(
+                Icons.email_outlined,
+                color: AppColors.cocoa,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -280,7 +229,11 @@ class _SuccessView extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.check_circle, size: 40, color: AppColors.olive),
+              child: const Icon(
+                Icons.check_circle,
+                size: 40,
+                color: AppColors.olive,
+              ),
             ),
           ),
           const SizedBox(height: 16),

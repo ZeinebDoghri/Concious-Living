@@ -20,6 +20,7 @@ class RoleSelectorScreen extends StatefulWidget {
 class _RoleSelectorScreenState extends State<RoleSelectorScreen>
     with TickerProviderStateMixin {
   late final AnimationController _bgAnim;
+  late final AnimationController _entryController;
   String? _pendingRoute;
 
   @override
@@ -29,11 +30,16 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
   }
 
   @override
   void dispose() {
     _bgAnim.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -58,11 +64,11 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A14),
+      backgroundColor: AppColors.oat,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Animated mesh background ─────────────────────────────────────────
+          // ── Animated mesh background ──────────────────────────────────────
           AnimatedBuilder(
             animation: _bgAnim,
             builder: (context, _) => CustomPaint(
@@ -70,173 +76,194 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
             ),
           ),
 
-          SafeArea(
-            child: Column(
-              children: [
-                // ── Header ─────────────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
-                  child: Column(
-                    children: [
-                      // Logo
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const RadialGradient(
-                            colors: [Color(0xFFB03A3F), Color(0xFF6B1215)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.cherry.withValues(alpha: 0.5),
-                              blurRadius: 24,
-                              spreadRadius: 2,
+          FadeTransition(
+            opacity: CurvedAnimation(
+              parent: _entryController,
+              curve: Curves.easeOut,
+            ),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.03),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: _entryController,
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // ── Header ───────────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
+                      child: Column(
+                        children: [
+                          // Logo
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const RadialGradient(
+                                colors: [
+                                  Color(0xFFB03A3F),
+                                  Color(0xFF6B1215),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppColors.cherry.withValues(alpha: 0.5),
+                                  blurRadius: 24,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.eco_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          )
+                              .animate()
+                              .scale(
+                                begin: const Offset(0.5, 0.5),
+                                duration: 600.ms,
+                                curve: Curves.elasticOut,
+                              )
+                              .fadeIn(duration: 400.ms),
+
+                          const SizedBox(height: 20),
+
+                          Text(
+                            AppStrings.appNameUpper,
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.espresso,
+                              letterSpacing: 0.3,
+                            ),
+                          ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            AppStrings.taglineLong,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.fog,
+                              letterSpacing: 0.5,
+                            ),
+                          ).animate().fadeIn(delay: 350.ms, duration: 500.ms),
+
+                          const SizedBox(height: 36),
+
+                          // Section title
+                          Text(
+                            'Choisissez votre rôle',
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.espresso,
+                              letterSpacing: 0.2,
+                            ),
+                          ).animate().fadeIn(delay: 450.ms, duration: 500.ms),
+
+                          const SizedBox(height: 6),
+
+                          Text(
+                            'Pour personnaliser votre expérience',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.cocoa,
+                            ),
+                          ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // ── Role cards ───────────────────────────────────────────
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                        child: Column(
+                          children: [
+                            _RoleCard(
+                              gradientA: const Color(0xFF9E2A2F),
+                              gradientB: const Color(0xFF7A1518),
+                              glowColor: AppColors.cherry,
+                              icon: Icons.person_outline_rounded,
+                              emoji: '🥗',
+                              tag: 'CONSOMMATEUR',
+                              title: AppStrings.iAmCustomer,
+                              subtitle: AppStrings.customerCardSubtitle,
+                              features: const [
+                                'Scan de plats par IA',
+                                'Alertes allergènes',
+                                'Suivi nutritionnel',
+                              ],
+                              delay: 0,
+                              onTap: () => _select(
+                                venueType: '',
+                                route: AppRoutes.customerLogin,
+                              ),
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            _RoleCard(
+                              gradientA: const Color(0xFF6B8A1E),
+                              gradientB: const Color(0xFF4F6815),
+                              glowColor: AppColors.olive,
+                              icon: Icons.restaurant_rounded,
+                              emoji: '👨‍🍳',
+                              tag: 'RESTAURATEUR',
+                              title: AppStrings.iAmRestaurant,
+                              subtitle: AppStrings.restaurantCardSubtitle,
+                              features: const [
+                                'IA Compost Mask2Former',
+                                'Monitoring déchets',
+                                'Alertes cuisine',
+                              ],
+                              delay: 100,
+                              onTap: () => _select(
+                                venueType: 'restaurant',
+                                route: AppRoutes.restaurantLogin,
+                              ),
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            _RoleCard(
+                              gradientA: const Color(0xFF8B1A1F),
+                              gradientB: const Color(0xFF7A3A10),
+                              glowColor: AppColors.cherry,
+                              icon: Icons.hotel_rounded,
+                              emoji: '🏨',
+                              tag: 'HÔTELIER',
+                              title: AppStrings.iAmHotel,
+                              subtitle: AppStrings.hotelCardSubtitle,
+                              features: const [
+                                'Room service tracking',
+                                'Santé des hôtes',
+                                'Alertes cuisine',
+                              ],
+                              delay: 200,
+                              onTap: () => _select(
+                                venueType: 'hotel',
+                                route: AppRoutes.hotelLogin,
+                              ),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.eco_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      )
-                          .animate()
-                          .scale(
-                            begin: const Offset(0.5, 0.5),
-                            duration: 600.ms,
-                            curve: Curves.elasticOut,
-                          )
-                          .fadeIn(duration: 400.ms),
-
-                      const SizedBox(height: 20),
-
-                      Text(
-                        AppStrings.appNameUpper,
-                        style: GoogleFonts.sora(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 3,
-                        ),
-                      ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
-
-                      const SizedBox(height: 8),
-
-                      Text(
-                        AppStrings.taglineLong,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.4),
-                          letterSpacing: 0.5,
-                        ),
-                      ).animate().fadeIn(delay: 350.ms, duration: 500.ms),
-
-                      const SizedBox(height: 36),
-
-                      // Section title
-                      Text(
-                        'Choisissez votre rôle',
-                        style: GoogleFonts.sora(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
-                        ),
-                      ).animate().fadeIn(delay: 450.ms, duration: 500.ms),
-
-                      const SizedBox(height: 6),
-
-                      Text(
-                        'Pour personnaliser votre expérience',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.45),
-                        ),
-                      ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // ── Role cards ─────────────────────────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    child: Column(
-                      children: [
-                        _RoleCard(
-                          gradientA: const Color(0xFF1A3A5C),
-                          gradientB: const Color(0xFF0D1F35),
-                          glowColor: const Color(0xFF3B82F6),
-                          icon: Icons.person_outline_rounded,
-                          emoji: '🥗',
-                          tag: 'CONSOMMATEUR',
-                          title: AppStrings.iAmCustomer,
-                          subtitle: AppStrings.customerCardSubtitle,
-                          features: const [
-                            'Scan de plats par IA',
-                            'Alertes allergènes',
-                            'Suivi nutritionnel',
-                          ],
-                          delay: 600,
-                          onTap: () => _select(
-                            venueType: '',
-                            route: AppRoutes.customerLogin,
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        _RoleCard(
-                          gradientA: const Color(0xFF1A2E0A),
-                          gradientB: const Color(0xFF0D1A05),
-                          glowColor: AppColors.olive,
-                          icon: Icons.restaurant_rounded,
-                          emoji: '👨‍🍳',
-                          tag: 'RESTAURATEUR',
-                          title: AppStrings.iAmRestaurant,
-                          subtitle: AppStrings.restaurantCardSubtitle,
-                          features: const [
-                            'IA Compost Mask2Former',
-                            'Monitoring déchets',
-                            'Alertes cuisine',
-                          ],
-                          delay: 700,
-                          onTap: () => _select(
-                            venueType: 'restaurant',
-                            route: AppRoutes.restaurantLogin,
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        _RoleCard(
-                          gradientA: const Color(0xFF2A1A00),
-                          gradientB: const Color(0xFF1A1000),
-                          glowColor: const Color(0xFFD97706),
-                          icon: Icons.hotel_rounded,
-                          emoji: '🏨',
-                          tag: 'HÔTELIER',
-                          title: AppStrings.iAmHotel,
-                          subtitle: AppStrings.hotelCardSubtitle,
-                          features: const [
-                            'Room service tracking',
-                            'Santé des hôtes',
-                            'Alertes cuisine',
-                          ],
-                          delay: 800,
-                          onTap: () => _select(
-                            venueType: 'hotel',
-                            route: AppRoutes.hotelLogin,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -301,112 +328,131 @@ class _RoleCardState extends State<_RoleCard> {
             ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: widget.glowColor.withValues(alpha: 0.25),
-              width: 1,
+              color: AppColors.sand.withValues(alpha: 0.5),
+              width: 0.8,
             ),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: widget.glowColor.withValues(alpha: _pressed ? 0.15 : 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                color: Color(0x1A8B1A1F),
+                blurRadius: 20,
+                offset: Offset(0, 6),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
-          child: Row(
+          child: Stack(
             children: [
-              // Icon area
-              Column(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.glowColor.withValues(alpha: 0.12),
-                      border: Border.all(
-                        color: widget.glowColor.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        widget.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: widget.glowColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      widget.tag,
-                      style: GoogleFonts.inter(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: widget.glowColor,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ],
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(
+                  widget.icon,
+                  size: 80,
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
               ),
-
-              const SizedBox(width: 16),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
                   children: [
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.sora(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: -0.2,
+                    // Icon area
+                    Column(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.glowColor.withValues(alpha: 0.12),
+                            border: Border.all(
+                              color: widget.glowColor.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.emoji,
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: widget.glowColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            widget.tag,
+                            style: GoogleFonts.inter(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              color: widget.glowColor,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            // ✅ FIXED: removed the erroneous GoogleFonts.sora( line
+                            style: GoogleFonts.dmSerifDisplay(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.butter,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ...widget.features.map(
+                            (f) => Padding(
+                              padding: const EdgeInsets.only(bottom: 3),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: widget.glowColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    f,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.white.withValues(alpha: 0.82),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    ...widget.features.map(
-                      (f) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: widget.glowColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              f,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white.withValues(alpha: 0.55),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+
+                    // Arrow
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppColors.butter.withValues(alpha: 0.8),
+                      size: 16,
                     ),
                   ],
                 ),
-              ),
-
-              // Arrow
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: widget.glowColor.withValues(alpha: 0.6),
-                size: 16,
               ),
             ],
           ),
@@ -414,9 +460,12 @@ class _RoleCardState extends State<_RoleCard> {
       ),
     )
         .animate()
-        .fadeIn(delay: Duration(milliseconds: widget.delay), duration: 500.ms)
+        .fadeIn(
+          delay: Duration(milliseconds: widget.delay),
+          duration: 500.ms,
+        )
         .slideY(
-          begin: 0.15,
+          begin: 0.05,
           end: 0,
           delay: Duration(milliseconds: widget.delay),
           duration: 500.ms,
@@ -448,19 +497,22 @@ class _MeshPainter extends CustomPainter {
       Offset(size.width * (0.15 + 0.05 * math.sin(a)), size.height * 0.2),
       size.width * 0.6,
       AppColors.cherry,
-      0.12,
+      0.07,
     );
     glow(
       Offset(size.width * (0.85 + 0.05 * math.cos(a)), size.height * 0.65),
       size.width * 0.55,
       AppColors.olive,
-      0.10,
+      0.06,
     );
     glow(
-      Offset(size.width * 0.5, size.height * (0.5 + 0.05 * math.sin(a * 1.3))),
+      Offset(
+        size.width * 0.5,
+        size.height * (0.5 + 0.05 * math.sin(a * 1.3)),
+      ),
       size.width * 0.4,
-      const Color(0xFF3B82F6),
-      0.06,
+      AppColors.butterDeep,
+      0.04,
     );
   }
 

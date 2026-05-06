@@ -113,7 +113,7 @@ class _ContaminationScanScreenState extends State<ContaminationScanScreen>
             ),
           ),
           Consumer<ContaminationProvider>(
-            builder: (_, provider, __) =>
+            builder: (_, provider, _) =>
                 provider.isLoading ? _buildAnalysingOverlay() : const SizedBox(),
           ),
         ],

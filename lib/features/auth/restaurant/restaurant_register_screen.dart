@@ -17,7 +17,7 @@ class RestaurantRegisterScreen extends StatefulWidget {
 }
 
 class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin  {
   final _restaurantController = TextEditingController();
   final _managerController = TextEditingController();
   final _emailController = TextEditingController();
@@ -36,8 +36,9 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
   double _covers = 80;
   String _cuisine = 'Tunisian';
 
-  late final AnimationController _cardController;
-  late final Animation<Offset> _cardSlide;
+  late final AnimationController _entryController;
+  late final Animation<Offset> _entrySlide;
+  late final Animation<double> _entryFade;
 
   static const _cuisineOptions = <String>[
     'Tunisian',
@@ -52,17 +53,18 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
   @override
   void initState() {
     super.initState();
-    _cardController = AnimationController(
+    _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 300),
     )..forward();
 
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
     );
+    _entryFade = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
 
     _emailController.addListener(_validateEmailRealtime);
   }
@@ -76,7 +78,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
     _passwordController.dispose();
     _confirmController.dispose();
     _passwordFocus.dispose();
-    _cardController.dispose();
+    _entryController.dispose();
     super.dispose();
   }
 
@@ -185,15 +187,30 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
 
     return Scaffold(
       backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
+      body: FadeTransition(
+        opacity: _entryFade,
+        child: SlideTransition(
+          position: _entrySlide,
+          child: SafeArea(
+            child: Column(
           children: [
             Container(
               height: 200,
               width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.olive),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF5A7A18), Color(0xFF445C12)],
+                ),
+              ),
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _HeaderArcPainter(),
+                    ),
+                  ),
                   Positioned(
                     top: 0,
                     left: 0,
@@ -212,7 +229,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                         children: [
                           IconButton(
                             onPressed: () => context.go(AppRoutes.restaurantLogin),
-                            icon: const Icon(Icons.arrow_back_ios_new),
+                            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
                             color: AppColors.oliveHeaderText,
                             splashColor: AppColors.oliveHeaderText.withValues(alpha: 0.15),
                           ),
@@ -220,6 +237,23 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                           Center(
                             child: Column(
                               children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.butter.withValues(alpha: 0.2),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'CL',
+                                    style: GoogleFonts.dmSerifDisplay(
+                                      fontSize: 18,
+                                      color: AppColors.cherry,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
                                 Text(
                                   'Register your restaurant',
                                   style: GoogleFonts.dmSerifDisplay(
@@ -252,7 +286,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
             ),
             Expanded(
               child: SlideTransition(
-                position: _cardSlide,
+                position: _entrySlide,
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
@@ -261,6 +295,13 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0F2C1A1B),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
@@ -307,7 +348,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                           'Number of covers: ${_covers.round()}',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             color: AppColors.espresso,
                             height: 1.2,
                           ),
@@ -443,7 +484,22 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
             ),
           ],
         ),
+          ),
+        ),
       ),
     );
   }
+}
+
+class _HeaderArcPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(size.width + 36, size.height + 12), 120, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

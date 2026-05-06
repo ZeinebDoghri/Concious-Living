@@ -1,17 +1,8 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants.dart';
-
-// ── Design tokens ──────────────────────────────────────────────────────────────
-const _kDark     = Color(0xFF0A1628);
-const _kEmerald  = Color(0xFF00C896);
-const _kAmber    = Color(0xFFF59E0B);
-const _kRose     = Color(0xFFFF6B6B);
-const _kSlate    = Color(0xFF94A3B8);
 
 // Branch mapping: visual index → StatefulShellRoute branch index
 // Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Dechets 4=Compost 5=Stocks 6=Profil
@@ -19,17 +10,17 @@ const _kSlate    = Color(0xFF94A3B8);
 const _branchMap = [0, 1, 3, 6];
 
 class _Item {
-  final IconData icon;
-  final String   label;
-  final Color    color;
-  const _Item(this.icon, this.label, this.color);
+  final IconData iconOff;
+  final IconData iconOn;
+  final String label;
+  const _Item(this.iconOff, this.iconOn, this.label);
 }
 
 const _items = [
-  _Item(Icons.dashboard_rounded,        'Dashboard', _kEmerald),
-  _Item(Icons.document_scanner_rounded, 'Scan',      _kAmber),
-  _Item(Icons.delete_rounded,           'Dechets',   _kRose),
-  _Item(Icons.person_rounded,           'Profile',   _kSlate),
+  _Item(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
+  _Item(Icons.document_scanner_outlined, Icons.document_scanner_rounded, 'Scan'),
+  _Item(Icons.delete_outline_rounded, Icons.delete_rounded, 'Dechets'),
+  _Item(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
 ];
 
 class RestaurantShell extends StatefulWidget {
@@ -81,162 +72,81 @@ class _RestaurantShellState extends State<RestaurantShell>
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    final vi     = _visualIndex;
+    final vi = _visualIndex;
 
     return Scaffold(
-      backgroundColor: _kDark,
+      backgroundColor: AppColors.oat,
       extendBody: true,
-      body: AnimatedBuilder(
-        animation: _pageAnim,
-        builder: (_, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.012),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: _pageAnim, curve: Curves.easeOutCubic)),
-            child: child,
+      body: Stack(
+        children: [
+          AnimatedBuilder(
+            animation: _pageAnim,
+            builder: (_, child) => FadeTransition(
+              opacity: CurvedAnimation(parent: _pageAnim, curve: Curves.easeOut),
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.012),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(parent: _pageAnim, curve: Curves.easeOutCubic)),
+                child: child,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: KeyedSubtree(
+                key: ValueKey(vi),
+                child: widget.navigationShell,
+              ),
+            ),
           ),
-        ),
-        child: KeyedSubtree(
-          key: ValueKey(vi),
-          child: widget.navigationShell,
-        ),
-      ),
-      bottomNavigationBar: _FloatingNav(
-        currentIndex: vi,
-        bottomPad: bottom,
-        onTap: _onTap,
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: _FloatingNav(
+              currentIndex: vi,
+              onTap: _onTap,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 // ── Floating Nav ───────────────────────────────────────────────────────────────
-class _FloatingNav extends StatefulWidget {
+class _FloatingNav extends StatelessWidget {
   final int currentIndex;
-  final double bottomPad;
   final ValueChanged<int> onTap;
 
   const _FloatingNav({
     required this.currentIndex,
-    required this.bottomPad,
     required this.onTap,
   });
 
   @override
-  State<_FloatingNav> createState() => _FloatingNavState();
-}
-
-class _FloatingNavState extends State<_FloatingNav>
-    with TickerProviderStateMixin {
-  late final List<AnimationController> _controllers;
-  late final List<Animation<double>>   _scales;
-
-  @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(_items.length, (i) {
-      return AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 300),
-        value: i == widget.currentIndex ? 1.0 : 0.0,
-      );
-    });
-    _scales = _controllers.map((c) =>
-      Tween<double>(begin: 1.0, end: 1.15)
-          .animate(CurvedAnimation(parent: c, curve: Curves.easeOutBack)),
-    ).toList();
-  }
-
-  @override
-  void didUpdateWidget(_FloatingNav old) {
-    super.didUpdateWidget(old);
-    if (old.currentIndex != widget.currentIndex) {
-      _controllers[old.currentIndex].reverse();
-      _controllers[widget.currentIndex].forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, widget.bottomPad + 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(
-            height: 70,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF1E2D3D).withValues(alpha: 0.95),
-                  const Color(0xFF0A1628).withValues(alpha: 0.98),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 40,
-                  offset: const Offset(0, 10),
-                ),
-                BoxShadow(
-                  color: _kEmerald.withValues(alpha: 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Dashboard
-                _NavTile(
-                  item: _items[0],
-                  isActive: widget.currentIndex == 0,
-                  scale: _scales[0],
-                  onTap: () => widget.onTap(0),
-                ),
-                // Scan — centre special
-                _ScanCenterButton(
-                  isActive: widget.currentIndex == 1,
-                  scale: _scales[1],
-                  onTap: () => widget.onTap(1),
-                ),
-                // Dechets
-                _NavTile(
-                  item: _items[2],
-                  isActive: widget.currentIndex == 2,
-                  scale: _scales[2],
-                  onTap: () => widget.onTap(2),
-                ),
-                // Profil
-                _NavTile(
-                  item: _items[3],
-                  isActive: widget.currentIndex == 3,
-                  scale: _scales[3],
-                  onTap: () => widget.onTap(3),
-                ),
-              ],
-            ),
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    return Container(
+      margin: EdgeInsets.fromLTRB(24, 0, 24, 16 + safeBottom),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A2C1A1B),
+            blurRadius: 24,
+            offset: Offset(0, 8),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(_items.length, (i) {
+          return _NavTile(
+            item: _items[i],
+            isActive: currentIndex == i,
+            onTap: () => onTap(i),
+          );
+        }),
       ),
     );
   }
@@ -246,13 +156,11 @@ class _FloatingNavState extends State<_FloatingNav>
 class _NavTile extends StatelessWidget {
   final _Item item;
   final bool isActive;
-  final Animation<double> scale;
   final VoidCallback onTap;
 
   const _NavTile({
     required this.item,
     required this.isActive,
-    required this.scale,
     required this.onTap,
   });
 
@@ -262,157 +170,38 @@ class _NavTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: ScaleTransition(
-          scale: scale,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                width: isActive ? 48 : 36,
-                height: isActive ? 36 : 28,
-                decoration: isActive
-                    ? BoxDecoration(
-                        color: item.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: item.color.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                          ),
-                        ],
-                      )
-                    : null,
-                child: Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    transitionBuilder: (child, anim) =>
-                        ScaleTransition(scale: anim, child: child),
-                    child: Icon(
-                      item.icon,
-                      key: ValueKey(isActive),
-                      size: 20,
-                      color: isActive
-                          ? item.color
-                          : Colors.white.withValues(alpha: 0.30),
-                    ),
-                  ),
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: isActive ? 16 : 10,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: isActive ? AppColors.olive : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isActive ? item.iconOn : item.iconOff,
+                  color: isActive ? AppColors.butter : AppColors.fog,
+                  size: 20,
                 ),
-              ),
-              const SizedBox(height: 4),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                  color: isActive
-                      ? item.color
-                      : Colors.white.withValues(alpha: 0.30),
-                ),
-                child: Text(item.label),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Scan centre button — glowing amber ────────────────────────────────────────
-class _ScanCenterButton extends StatefulWidget {
-  final bool isActive;
-  final Animation<double> scale;
-  final VoidCallback onTap;
-
-  const _ScanCenterButton({
-    required this.isActive,
-    required this.scale,
-    required this.onTap,
-  });
-
-  @override
-  State<_ScanCenterButton> createState() => _ScanCenterButtonState();
-}
-
-class _ScanCenterButtonState extends State<_ScanCenterButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      flex: 2,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          widget.onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: ScaleTransition(
-          scale: widget.scale,
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _pulse,
-              builder: (_, child) => Container(
-                width: 62,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFF9A3C), Color(0xFFF59E0B)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kAmber.withValues(
-                        alpha: widget.isActive
-                            ? 0.55 + _pulse.value * 0.25
-                            : 0.25 + _pulse.value * 0.15,
-                      ),
-                      blurRadius: widget.isActive
-                          ? 20 + _pulse.value * 12
-                          : 10 + _pulse.value * 6,
-                      spreadRadius: widget.isActive ? 2 : 0,
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.document_scanner_rounded,
-                      color: Colors.white, size: 22),
-                  SizedBox(height: 2),
+                if (isActive) ...[
+                  const SizedBox(width: 8),
                   Text(
-                    'SCAN',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                    item.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.butter,
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
         ),

@@ -37,7 +37,7 @@ class _AnimatedButtonState extends State<AnimatedButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 120),
       value: 1.0,
       lowerBound: 0.96,
       upperBound: 1.0,
@@ -58,6 +58,9 @@ class _AnimatedButtonState extends State<AnimatedButton>
 
   @override
   Widget build(BuildContext context) {
+    final bool isCherry = widget.color.value == AppColors.cherry.value;
+    final bool isOlive = widget.color.value == AppColors.olive.value;
+
     return GestureDetector(
       onTapDown: (_) {
         if (widget.onTap == null || widget.isLoading) return;
@@ -78,8 +81,24 @@ class _AnimatedButtonState extends State<AnimatedButton>
           height: widget.height,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: widget.color,
+            gradient: isCherry
+                ? const LinearGradient(
+                    colors: [Color(0xFF9E2A2F), Color(0xFF7A1518)],
+                  )
+                : isOlive
+                    ? const LinearGradient(
+                        colors: [Color(0xFF6B8A1E), Color(0xFF4F6815)],
+                      )
+                    : null,
+            color: (isCherry || isOlive) ? null : widget.color,
             borderRadius: BorderRadius.circular(AppRadii.button),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A8B1A1F),
+                blurRadius: 20,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: AnimatedSwitcher(
@@ -104,7 +123,7 @@ class _AnimatedButtonState extends State<AnimatedButton>
                       ],
                       Text(
                         widget.label,
-                             style: GoogleFonts.inter(
+                        style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: widget.textColor,

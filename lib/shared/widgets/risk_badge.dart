@@ -23,24 +23,24 @@ class RiskBadge extends StatelessWidget {
   static Color textColor(String level) {
     switch (level) {
       case 'high':
-        return AppColors.cherry;
+        return AppColors.butter;
       case 'moderate':
-        return AppColors.riskModerateText;
+        return AppColors.espresso;
       case 'low':
       default:
-        return AppColors.olive;
+        return AppColors.butter;
     }
   }
 
   static Color bgColor(String level) {
     switch (level) {
       case 'high':
-        return AppColors.cherryBlush;
+        return AppColors.cherry;
       case 'moderate':
         return AppColors.butter;
       case 'low':
       default:
-        return AppColors.oliveMist;
+        return AppColors.olive;
     }
   }
 
@@ -48,16 +48,18 @@ class RiskBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = riskLevel.toLowerCase();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: bgColor(level),
-        borderRadius: BorderRadius.circular(AppRadii.badge),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: level == 'moderate'
+            ? Border.all(color: AppColors.sand, width: 0.8)
+            : null,
       ),
       child: Text(
         label(level),
-          style: GoogleFonts.inter(
-          fontSize: 11,
+        style: GoogleFonts.inter(
+          fontSize: 12,
           fontWeight: FontWeight.w500,
           color: textColor(level),
           height: 1.2,

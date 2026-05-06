@@ -12,7 +12,7 @@ import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+import '../../../shared/widgets/customer_flow_frame.dart';
 import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
 
@@ -28,8 +28,9 @@ class ResultScreen extends StatefulWidget {
 }
 
 class _ResultScreenState extends State<ResultScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _nutrientController;
+  late final AnimationController _entryController;
   late final TextEditingController _dishNameController;
 
   bool _saved = false;
@@ -46,14 +47,18 @@ class _ResultScreenState extends State<ResultScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..forward();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
 
-    // Check allergens against user profile after build
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkAllergens());
   }
 
   @override
   void dispose() {
     _nutrientController.dispose();
+    _entryController.dispose();
     _dishNameController.dispose();
     super.dispose();
   }
@@ -88,9 +93,8 @@ class _ResultScreenState extends State<ResultScreen>
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _save() async {
@@ -122,9 +126,7 @@ class _ResultScreenState extends State<ResultScreen>
   Widget build(BuildContext context) {
     final result = _parseResult();
     final riskColor = NutrientCard.riskColor(result.overallRisk);
-    final riskBg = NutrientCard.riskBg(result.overallRisk);
 
-    // Allergy data from args
     final allergens = List<String>.from(
       widget.args['allergens'] as List? ?? [],
     );
@@ -135,424 +137,453 @@ class _ResultScreenState extends State<ResultScreen>
     final allergenSource = widget.args['allergenSource'] as String? ?? 'none';
     final allergyError = widget.args['allergyError'] as String?;
 
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            CherryHeader(
-              title: AppStrings.nutritionAnalysis,
-              subtitle: AppStrings.overallRiskLevel,
-              showBack: true,
+    return CustomerFlowFrame(
+      title: AppStrings.nutritionAnalysis,
+      subtitle: AppStrings.overallRiskLevel,
+      badgeIcon: Icons.monitor_heart_rounded,
+      badgeLabel: 'Nutrition analysis',
+      highlights: const ['Calories', 'Risk level', 'Allergens flagged'],
+      onBack: () => context.pop(),
+      bodyPadding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: _entryController, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic)),
+          child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: AppColors.parchment,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x0F2C1A1B),
+              blurRadius: 12,
+              offset: Offset(0, 4),
             ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // ── Image ──────────────────────────────────────────────────────
+              Builder(
+                builder: (_) {
+                  final imageBytes = widget.args['imageBytes'] as Uint8List?;
+                  final imagePath =
+                      (widget.args['imagePath'] as String?)?.trim();
+                  final hasImage =
+                      imageBytes != null ||
+                      (imagePath != null && imagePath.isNotEmpty);
+                  if (!hasImage) return const SizedBox.shrink();
+                  return Column(
                     children: [
-                      // ── Image ──
-                      Builder(
-                        builder: (_) {
-                          final imageBytes =
-                              widget.args['imageBytes'] as Uint8List?;
-                          final imagePath =
-                              (widget.args['imagePath'] as String?)?.trim();
-                          final hasImage =
-                              imageBytes != null ||
-                              (imagePath != null && imagePath.isNotEmpty);
-                          if (!hasImage) return const SizedBox.shrink();
-                          return Column(
-                            children: [
-                              Hero(
-                                tag: 'scan_image',
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadii.screenCard,
-                                  ),
-                                  child: AspectRatio(
-                                    aspectRatio: 16 / 10,
-                                    child: imageBytes != null
-                                        ? Image.memory(
-                                            imageBytes,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Image.file(
-                                            File(imagePath!),
-                                            fit: BoxFit.cover,
-                                          ),
+                      Hero(
+                        tag: 'scan_image',
+                        child: AspectRatio(
+                          aspectRatio: 16 / 10,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppRadii.screenCard),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                imageBytes != null
+                                    ? Image.memory(imageBytes, fit: BoxFit.cover)
+                                    : Image.file(File(imagePath!), fit: BoxFit.cover),
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        stops: const [0.7, 1.0],
+                                        colors: [
+                                          Colors.transparent,
+                                          riskColor.withValues(alpha: 0.35),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 14),
-                            ],
-                          );
-                        },
-                      ),
-
-                      // ── Dish name ──
-                      TextField(
-                        controller: _dishNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Dish name',
-                          prefixIcon: Icon(
-                            Icons.restaurant_menu,
-                            color: AppColors.cocoa,
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 14),
+                    ],
+                  );
+                },
+              ),
 
-                      // ── 🚨 Allergen warning banner (only if matches found) ──
-                      if (_matchingAllergens.isNotEmpty) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF0F0),
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.innerCard,
-                            ),
-                            border: Border.all(
-                              color: AppColors.cherry,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                color: AppColors.cherry,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '⚠️ Allergen Alert',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.cherry,
-                                        height: 1.2,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'This dish may contain: ${_matchingAllergens.join(', ')}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.espresso,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
+              // ── Dish name ───────────────────────────────────────────────────
+              TextField(
+                controller: _dishNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Dish name',
+                  prefixIcon: Icon(
+                    Icons.restaurant_menu,
+                    color: AppColors.cocoa,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
 
-                      // ── Detected dish + allergens section ──
-                      if (allergyDish != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.oat,
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.innerCard,
-                            ),
-                            border: Border.all(
-                              color: AppColors.sand,
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.restaurant,
-                                    size: 16,
-                                    color: AppColors.cocoa,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Detected: $allergyDish',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.espresso,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (allergens.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Allergens',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.cocoa,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: allergens.map((a) {
-                                    final isMatch = _matchingAllergens.any(
-                                      (m) => m.toLowerCase() == a.toLowerCase(),
-                                    );
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isMatch
-                                            ? AppColors.cherry
-                                            : AppColors.butter,
-                                        borderRadius: BorderRadius.circular(
-                                          AppRadii.chip,
-                                        ),
-                                        border: Border.all(
-                                          color: AppColors.sand,
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        a,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: isMatch
-                                              ? AppColors.butter
-                                              : AppColors.espresso,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                              if (ingredients.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Ingredients',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.cocoa,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  ingredients.join(', '),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.cocoa,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                              if (allergenSource == 'fallback') ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  '* Data from local database',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.cocoa,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-
-                      if (allergyDish == null && allergyError != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E6),
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.innerCard,
-                            ),
-                            border: Border.all(color: AppColors.sand, width: 1),
-                          ),
-                          child: Text(
-                            'Allergy analysis could not load for this scan. ${allergyError.trim()}',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-
-                      // ── Risk badge ──
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: riskBg,
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.innerCard,
-                          ),
-                          border: Border.all(color: AppColors.sand, width: 0.5),
-                        ),
-                        child: Row(
+              // ── Allergen warning banner ─────────────────────────────────────
+              if (_matchingAllergens.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF0F0),
+                    borderRadius:
+                        BorderRadius.circular(AppRadii.innerCard),
+                    border: Border.all(color: AppColors.cherry, width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.cherry,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.parchment.withValues(
-                                  alpha: 0.8,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Icon(
-                                Icons.shield_outlined,
-                                color: riskColor,
+                            Text(
+                              '⚠️ Allergen Alert',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.cherry,
+                                height: 1.2,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    AppStrings.overallRiskLevel,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.cocoa,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  RiskBadge(result.overallRisk),
-                                ],
+                            const SizedBox(height: 4),
+                            Text(
+                              'This dish may contain: ${_matchingAllergens.join(', ')}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.espresso,
+                                height: 1.5,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      // ── What this means ──
-                      Text(
-                        AppStrings.whatThisMeans,
-                        style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.espresso,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        result.message,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.cocoa,
-                          height: 1.6,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // ── Nutrient cards ──
-                      NutrientCard(
-                        name: AppStrings.cholesterolLabel,
-                        value: result.cholesterol.value,
-                        unit: result.cholesterol.unit,
-                        dailyPct: result.cholesterol.dailyValuePct,
-                        riskLevel: result.cholesterol.riskLevel,
-                        controller: _nutrientController,
-                        delay: const Duration(milliseconds: 0),
-                      ),
-                      const SizedBox(height: 12),
-                      NutrientCard(
-                        name: AppStrings.saturatedFatLabel,
-                        value: result.saturatedFat.value,
-                        unit: result.saturatedFat.unit,
-                        dailyPct: result.saturatedFat.dailyValuePct,
-                        riskLevel: result.saturatedFat.riskLevel,
-                        controller: _nutrientController,
-                        delay: const Duration(milliseconds: 150),
-                      ),
-                      const SizedBox(height: 12),
-                      NutrientCard(
-                        name: AppStrings.sodiumLabel,
-                        value: result.sodium.value,
-                        unit: result.sodium.unit,
-                        dailyPct: result.sodium.dailyValuePct,
-                        riskLevel: result.sodium.riskLevel,
-                        controller: _nutrientController,
-                        delay: const Duration(milliseconds: 300),
-                      ),
-                      const SizedBox(height: 12),
-                      NutrientCard(
-                        name: AppStrings.sugarLabel,
-                        value: result.sugar.value,
-                        unit: result.sugar.unit,
-                        dailyPct: result.sugar.dailyValuePct,
-                        riskLevel: result.sugar.riskLevel,
-                        controller: _nutrientController,
-                        delay: const Duration(milliseconds: 450),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // ── Actions ──
-                      AnimatedButton(
-                        label: AppStrings.saveToHistory,
-                        color: _saved ? AppColors.olive : AppColors.cherry,
-                        textColor: AppColors.butter,
-                        onTap: _save,
-                        height: 52,
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: () => context.go(AppRoutes.customerScan),
-                        child: Text(AppStrings.scanAnotherDish),
-                      ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+              ],
+
+              // ── Detected dish + allergens section ───────────────────────────
+              if (allergyDish != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.oat,
+                    borderRadius:
+                        BorderRadius.circular(AppRadii.innerCard),
+                    border: Border.all(color: AppColors.sand, width: 0.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Dish name row ───────────────────────────────────
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.restaurant_rounded,
+                            color: AppColors.oliveDark,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              allergyDish,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.espresso,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ── Allergens chips ─────────────────────────────────
+                      if (allergens.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          'Allergens',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.cocoa,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: allergens.map((a) {
+                            final isMatch = _matchingAllergens.any(
+                              (m) => m.toLowerCase() == a.toLowerCase(),
+                            );
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMatch
+                                    ? AppColors.cherry
+                                    : AppColors.butter,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadii.chip),
+                                border: Border.all(
+                                  color: AppColors.sand,
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                a,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isMatch
+                                      ? AppColors.butter
+                                      : AppColors.espresso,
+                                  height: 1.2,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+
+                      // ── Ingredients list ────────────────────────────────
+                      if (ingredients.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          'Ingredients',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.cocoa,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          ingredients.join(', '),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.cocoa,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+
+                      // ── Fallback note ───────────────────────────────────
+                      if (allergenSource == 'fallback') ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '* Data from local database',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.cocoa,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              // ── Allergy error banner ────────────────────────────────────────
+              if (allergyDish == null && allergyError != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E6),
+                    borderRadius:
+                        BorderRadius.circular(AppRadii.innerCard),
+                    border: Border.all(color: AppColors.sand, width: 1),
+                  ),
+                  child: Text(
+                    'Allergy analysis could not load for this scan. ${allergyError.trim()}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.espresso,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              // ── Risk badge ──────────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: result.overallRisk.toLowerCase() == 'low'
+                        ? [
+                            const Color(0xFF6B8A1E).withValues(alpha: 0.12),
+                            const Color(0xFF4F6815).withValues(alpha: 0.12),
+                          ]
+                        : result.overallRisk.toLowerCase() == 'moderate'
+                            ? [
+                                AppColors.butter.withValues(alpha: 0.12),
+                                AppColors.butterDeep.withValues(alpha: 0.12),
+                              ]
+                            : [
+                                const Color(0xFF9E2A2F).withValues(alpha: 0.12),
+                                const Color(0xFF7A1518).withValues(alpha: 0.12),
+                              ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                  border: Border.all(color: AppColors.sand, width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.parchment.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.shield_outlined, color: riskColor),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppStrings.overallRiskLevel,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.cocoa,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          RiskBadge(result.overallRisk),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // ── What this means ─────────────────────────────────────────────
+              Text(
+                AppStrings.whatThisMeans,
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.espresso,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                result.message,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.cocoa,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // ── Nutrient cards ──────────────────────────────────────────────
+              NutrientCard(
+                name: AppStrings.cholesterolLabel,
+                value: result.cholesterol.value,
+                unit: result.cholesterol.unit,
+                dailyPct: result.cholesterol.dailyValuePct,
+                riskLevel: result.cholesterol.riskLevel,
+                controller: _nutrientController,
+                delay: const Duration(milliseconds: 0),
+              ),
+              const SizedBox(height: 12),
+              NutrientCard(
+                name: AppStrings.saturatedFatLabel,
+                value: result.saturatedFat.value,
+                unit: result.saturatedFat.unit,
+                dailyPct: result.saturatedFat.dailyValuePct,
+                riskLevel: result.saturatedFat.riskLevel,
+                controller: _nutrientController,
+                delay: const Duration(milliseconds: 150),
+              ),
+              const SizedBox(height: 12),
+              NutrientCard(
+                name: AppStrings.sodiumLabel,
+                value: result.sodium.value,
+                unit: result.sodium.unit,
+                dailyPct: result.sodium.dailyValuePct,
+                riskLevel: result.sodium.riskLevel,
+                controller: _nutrientController,
+                delay: const Duration(milliseconds: 300),
+              ),
+              const SizedBox(height: 12),
+              NutrientCard(
+                name: AppStrings.sugarLabel,
+                value: result.sugar.value,
+                unit: result.sugar.unit,
+                dailyPct: result.sugar.dailyValuePct,
+                riskLevel: result.sugar.riskLevel,
+                controller: _nutrientController,
+                delay: const Duration(milliseconds: 450),
+              ),
+              const SizedBox(height: 18),
+
+              // ── Actions ─────────────────────────────────────────────────────
+              AnimatedButton(
+                label: AppStrings.saveToHistory,
+                color: _saved ? AppColors.olive : AppColors.cherry,
+                textColor: AppColors.butter,
+                onTap: _save,
+                height: 52,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => context.go(AppRoutes.customerScan),
+                child: Text(AppStrings.scanAnotherDish),
+              ),
+            ],
+          ),
+        ),
+      ),
         ),
       ),
     );

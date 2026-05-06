@@ -23,9 +23,20 @@ class _HistoryScreenState extends State<HistoryScreen>
     with SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String _query = '';
+  late final AnimationController _entryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+  }
 
   @override
   void dispose() {
+    _entryController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -102,82 +113,133 @@ class _HistoryScreenState extends State<HistoryScreen>
               showBack: false,
             ),
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+              child: FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: _entryController,
+                  curve: Curves.easeOut,
                 ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 10),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (v) => setState(() => _query = v),
-                        decoration: InputDecoration(
-                          hintText: AppStrings.searchScans,
-                          prefixIcon:
-                              const Icon(Icons.search, color: AppColors.cocoa),
-                        ),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.03),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _entryController,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: AppColors.parchment,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x0F2C1A1B),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: items.isEmpty
-                          ? Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                              child: EmptyState(
-                                icon: Icons.history,
-                                title: AppStrings.noScansYet,
-                                subtitle: AppStrings.noScansSubtitle,
-                                actionLabel: AppStrings.scanYourDish,
-                                onAction: () => context.go(AppRoutes.customerScan),
+                    child: Column(
+                      children: [
+                        // ── Search bar ───────────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 10),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) => setState(() => _query = v),
+                            decoration: InputDecoration(
+                              hintText: AppStrings.searchScans,
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: AppColors.cocoa,
                               ),
-                            )
-                          : ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(24, 4, 24, 24),
-                              children: [
-                                for (final entry in sections.entries) ...[
-                                  if (entry.key.isNotEmpty)
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(top: 12, bottom: 8),
-                                      child: Text(
-                                        entry.key,
-                                        style: GoogleFonts.dmSerifDisplay(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.espresso,
-                                          height: 1.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ...entry.value.map((it) {
-                                    return _HistoryRow(
-                                      item: it,
-                                      onTap: () => context.go(
-                                        AppRoutes.customerHistoryDetail(it.id),
-                                      ),
-                                      onDelete: () async {
-                                        final removed = await context
-                                            .read<ScanHistoryProvider>()
-                                            .removeScan(it.id);
-                                        if (removed != null && mounted) {
-                                          _snackUndo(removed);
-                                        }
-                                      },
-                                    );
-                                  }),
-                                ],
-                              ],
                             ),
+                          ),
+                        ),
+
+                        // ── List ─────────────────────────────────────────
+                        Expanded(
+                          child: items.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      24, 18, 24, 24),
+                                  child: EmptyState(
+                                    icon: Icons.history,
+                                    title: AppStrings.noScansYet,
+                                    subtitle: AppStrings.noScansSubtitle,
+                                    actionLabel: AppStrings.scanYourDish,
+                                    onAction: () =>
+                                        context.go(AppRoutes.customerScan),
+                                  ),
+                                )
+                              : ListView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      24, 4, 24, 80),
+                                  children: () {
+                                    int staggerIndex = 0;
+                                    final widgets = <Widget>[];
+
+                                    for (final entry in sections.entries) {
+                                      // Section header
+                                      if (entry.key.isNotEmpty) {
+                                        widgets.add(
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                top: 12, bottom: 8),
+                                            child: Text(
+                                              entry.key,
+                                              style: GoogleFonts.dmSerifDisplay(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w400,
+                                                color: AppColors.espresso,
+                                                letterSpacing: 0.2,
+                                                height: 1.2,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      // Items
+                                      for (final it in entry.value) {
+                                        final index = staggerIndex++;
+                                        widgets.add(
+                                          _StaggerIn(
+                                            controller: _entryController,
+                                            index: index,
+                                            child: _HistoryRow(
+                                              item: it,
+                                              onTap: () => context.go(
+                                                AppRoutes.customerHistoryDetail(
+                                                    it.id),
+                                              ),
+                                              onDelete: () async {
+                                                final removed = await context
+                                                    .read<ScanHistoryProvider>()
+                                                    .removeScan(it.id);
+                                                if (removed != null &&
+                                                    mounted) {
+                                                  _snackUndo(removed);
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+
+                                    return widgets;
+                                  }(),
+                                ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -188,6 +250,7 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 }
 
+// ── History row ────────────────────────────────────────────────────────────────
 class _HistoryRow extends StatelessWidget {
   final ScanHistoryItem item;
   final VoidCallback onTap;
@@ -227,6 +290,13 @@ class _HistoryRow extends StatelessWidget {
             color: AppColors.parchment,
             borderRadius: BorderRadius.circular(AppRadii.innerCard),
             border: Border.all(color: AppColors.sand, width: 0.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F2C1A1B),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -270,6 +340,44 @@ class _HistoryRow extends StatelessWidget {
   }
 }
 
+// ── Stagger animation ──────────────────────────────────────────────────────────
+class _StaggerIn extends StatelessWidget {
+  final AnimationController controller;
+  final int index;
+  final Widget child;
+
+  const _StaggerIn({
+    required this.controller,
+    required this.index,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = index > 7 ? 7 : index;
+    final start = (0.1 * clamped).clamp(0.0, 0.8);
+    final curve = CurvedAnimation(
+      parent: controller,
+      curve: Interval(
+        start,
+        (start + 0.6).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.04),
+          end: Offset.zero,
+        ).animate(curve),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ── Thumbnail ──────────────────────────────────────────────────────────────────
 class _Thumb extends StatelessWidget {
   final String? path;
 
@@ -294,8 +402,11 @@ class _Thumb extends StatelessWidget {
             : Image.file(
                 File(p),
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) {
-                  return const Icon(Icons.image_outlined, color: AppColors.cocoa);
+                errorBuilder: (_, __, ___) {
+                  return const Icon(
+                    Icons.image_outlined,
+                    color: AppColors.cocoa,
+                  );
                 },
               ),
       ),

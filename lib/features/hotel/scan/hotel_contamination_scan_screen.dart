@@ -114,7 +114,7 @@ class _HotelContaminationScanScreenState extends State<HotelContaminationScanScr
             ),
           ),
           Consumer<ContaminationProvider>(
-            builder: (_, provider, __) =>
+            builder: (_, provider, _) =>
                 provider.isLoading ? _buildAnalysingOverlay() : const SizedBox(),
           ),
         ],
