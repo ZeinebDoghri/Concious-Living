@@ -39,14 +39,6 @@ Designed for both **kitchen staff** and **customers**, ConsciousPlate is the fir
 
 ---
 
-## 🗂️ Directory Structure
-
-```
-
-```
-
----
-
 ## 📸 How It Works
 
 1. **Capture** — The user takes a photo of a plate, buffet, dish, or product label
