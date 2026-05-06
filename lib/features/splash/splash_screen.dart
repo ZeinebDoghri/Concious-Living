@@ -7,8 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/constants.dart';
+import '../../core/constants.dart' hide AppColors;
 import '../../core/firebase_service.dart';
+import '../../theme/role_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,6 +21,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _orbitController;
+  Timer? _navigationTimer;
 
   @override
   void initState() {
@@ -29,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 6),
     )..repeat();
 
-    Timer(const Duration(milliseconds: 3000), _navigate);
+    _navigationTimer = Timer(const Duration(milliseconds: 3000), _navigate);
   }
 
   Future<void> _navigate() async {
@@ -68,6 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _orbitController.dispose();
     super.dispose();
   }
@@ -75,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A14),
+      backgroundColor: AppColors.backgroundColor,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -102,27 +105,27 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 // Logo badge
                 Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [Color(0xFFB03A3F), Color(0xFF6B1215)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.cherry.withValues(alpha: 0.55),
-                        blurRadius: 40,
-                        spreadRadius: 4,
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const RadialGradient(
+                          colors: [AppColors.primary, Color(0xFF6B1515)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.55),
+                            blurRadius: 40,
+                            spreadRadius: 4,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.eco_rounded,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                )
+                      child: const Icon(
+                        Icons.eco_rounded,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    )
                     .animate()
                     .scale(
                       begin: const Offset(0.4, 0.4),
@@ -136,14 +139,14 @@ class _SplashScreenState extends State<SplashScreen>
 
                 // App name
                 Text(
-                  AppStrings.appNameUpper,
-                  style: GoogleFonts.sora(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 4,
-                  ),
-                )
+                      AppStrings.appNameUpper,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: 4,
+                      ),
+                    )
                     .animate()
                     .fadeIn(delay: 500.ms, duration: 600.ms)
                     .slideY(
@@ -162,12 +165,10 @@ class _SplashScreenState extends State<SplashScreen>
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: AppColors.textSecondary,
                     letterSpacing: 1.2,
                   ),
-                )
-                    .animate()
-                    .fadeIn(delay: 800.ms, duration: 600.ms),
+                ).animate().fadeIn(delay: 800.ms, duration: 600.ms),
 
                 const SizedBox(height: 48),
 
@@ -175,15 +176,14 @@ class _SplashScreenState extends State<SplashScreen>
                 SizedBox(
                   width: 120,
                   child: LinearProgressIndicator(
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppColors.cherry),
+                    backgroundColor: AppColors.borderLight,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.secondary,
+                    ),
                     minHeight: 2,
                     borderRadius: BorderRadius.circular(2),
                   ),
-                )
-                    .animate()
-                    .fadeIn(delay: 1000.ms, duration: 400.ms),
+                ).animate().fadeIn(delay: 1000.ms, duration: 400.ms),
               ],
             ),
           ),
@@ -199,7 +199,7 @@ class _SplashScreenState extends State<SplashScreen>
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.2),
+                color: AppColors.textSecondary.withValues(alpha: 0.5),
                 letterSpacing: 1.5,
               ),
             ).animate().fadeIn(delay: 1200.ms, duration: 600.ms),
@@ -221,36 +221,43 @@ class _GlowPainter extends CustomPainter {
     final cx = size.width * 0.5;
     final cy = size.height * 0.42;
 
-    // Cherry glow
+    // Burgundy glow
     canvas.drawCircle(
       Offset(cx, cy),
       size.width * 0.6,
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            AppColors.cherry.withValues(alpha: 0.18 + 0.05 * math.sin(t * 2 * math.pi)),
-            Colors.transparent,
-          ],
-        ).createShader(
-          Rect.fromCircle(center: Offset(cx, cy), radius: size.width * 0.6),
-        ),
+        ..shader =
+            RadialGradient(
+              colors: [
+                AppColors.primary.withValues(
+                  alpha: 0.08 + 0.03 * math.sin(t * 2 * math.pi),
+                ),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(center: Offset(cx, cy), radius: size.width * 0.6),
+            ),
     );
 
-    // Olive accent glow (offset)
+    // Amber accent glow (offset)
     final ox = cx + math.sin(t * 2 * math.pi) * 60;
     final oy = cy + math.cos(t * 2 * math.pi) * 40;
     canvas.drawCircle(
       Offset(ox, oy),
       size.width * 0.35,
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            AppColors.olive.withValues(alpha: 0.10),
-            Colors.transparent,
-          ],
-        ).createShader(
-          Rect.fromCircle(center: Offset(ox, oy), radius: size.width * 0.35),
-        ),
+        ..shader =
+            RadialGradient(
+              colors: [
+                AppColors.secondary.withValues(alpha: 0.05),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(ox, oy),
+                radius: size.width * 0.35,
+              ),
+            ),
     );
   }
 
@@ -274,13 +281,13 @@ class _OrbitPainter extends CustomPainter {
       final angle = (i / dots) * 2 * math.pi + t * 2 * math.pi;
       final x = cx + math.cos(angle) * radius;
       final y = cy + math.sin(angle) * (radius * 0.4);
-      final alpha = (0.15 + 0.1 * math.sin(angle)).clamp(0.05, 0.25);
+      final alpha = (0.08 + 0.06 * math.sin(angle)).clamp(0.02, 0.15);
       final dotR = 2.5 + math.sin(angle + t * math.pi) * 1.0;
 
       canvas.drawCircle(
         Offset(x, y),
         dotR,
-        Paint()..color = Colors.white.withValues(alpha: alpha),
+        Paint()..color = AppColors.primary.withValues(alpha: alpha),
       );
     }
   }

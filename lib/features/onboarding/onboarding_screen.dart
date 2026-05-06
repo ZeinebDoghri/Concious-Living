@@ -7,7 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/constants.dart';
+import '../../core/constants.dart' hide AppColors;
+import '../../theme/role_colors.dart';
 
 // ── Page data ─────────────────────────────────────────────────────────────────
 class _Page {
@@ -34,37 +35,37 @@ class _Page {
 
 const _pages = [
   _Page(
-    bg: Color(0xFF0D1A0A),
-    accentA: Color(0xFF5A7A18),
-    accentB: Color(0xFF10B981),
+    bg: AppColors.backgroundColor,
+    accentA: AppColors.primary,
+    accentB: AppColors.success,
     icon: Icons.eco_rounded,
     emoji: '🍃',
-    tag: 'SCAN & ANALYSE',
-    title: 'Votre assistant\nnutrition IA',
+    tag: 'SCAN & ANALYZE',
+    title: 'Your AI\nnutrition assistant',
     body:
-        'Photographiez n\'importe quel plat. Notre IA détecte instantanément le cholestérol, sodium, sucre et graisses saturées.',
+        'Photograph any dish. AI instantly detects cholesterol, sodium, sugar, and saturated fat.',
   ),
   _Page(
-    bg: Color(0xFF1A0A0D),
-    accentA: Color(0xFF8B1A1F),
-    accentB: Color(0xFFEF4444),
+    bg: AppColors.backgroundColor,
+    accentA: AppColors.primary,
+    accentB: AppColors.danger,
     icon: Icons.favorite_rounded,
     emoji: '❤️',
-    tag: 'SANTÉ PERSONNALISÉE',
-    title: 'Suivez votre\nsanté en temps réel',
+    tag: 'PERSONAL HEALTH',
+    title: 'Track your\nhealth in real time',
     body:
-        'Alertes allergens, objectifs quotidiens, rapports hebdomadaires. Votre profil santé vous protège à chaque repas.',
+        'Allergen alerts, daily goals, and weekly reports keep every meal aligned with your profile.',
   ),
   _Page(
-    bg: Color(0xFF0A0D1A),
-    accentA: Color(0xFF3B5BB5),
-    accentB: Color(0xFF10B981),
+    bg: AppColors.backgroundColor,
+    accentA: AppColors.secondary,
+    accentB: AppColors.success,
     icon: Icons.recycling_rounded,
     emoji: '♻️',
-    tag: 'IA COMPOST',
-    title: 'Zéro gaspillage\navec l\'IA Compost',
+    tag: 'COMPOST AI',
+    title: 'Reduce waste\nwith Compost AI',
     body:
-        'Mask2Former identifie en temps réel ce qui est compostable. Une révolution verte pour la restauration durable.',
+        'Mask2Former identifies compostable waste in real time for more sustainable kitchens.',
   ),
 ];
 
@@ -134,7 +135,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final page = _pages[_index];
-    final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
       backgroundColor: page.bg,
@@ -173,19 +173,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   child: AnimatedOpacity(
                     opacity: _index < _pages.length - 1 ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 300),
                     child: GestureDetector(
                       onTap: _complete,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.12),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -193,7 +199,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.6),
+                            color: AppColors.primary,
                           ),
                         ),
                       ),
@@ -225,7 +231,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         decoration: BoxDecoration(
                           color: active
                               ? _pages[_index].accentB
-                              : Colors.white.withValues(alpha: 0.2),
+                              : AppColors.borderLight,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -271,56 +277,56 @@ class _PageContent extends StatelessWidget {
           children: [
             // Hero illustration
             AnimatedBuilder(
-              animation: pulseAnim,
-              builder: (context, _) {
-                final scale = 1.0 + pulseAnim.value * 0.04;
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          page.accentA.withValues(alpha: 0.35),
-                          page.accentB.withValues(alpha: 0.10),
-                          Colors.transparent,
-                        ],
-                        radius: 0.8,
-                      ),
-                    ),
-                    child: Center(
+                  animation: pulseAnim,
+                  builder: (context, _) {
+                    final scale = 1.0 + pulseAnim.value * 0.04;
+                    return Transform.scale(
+                      scale: scale,
                       child: Container(
-                        width: 120,
-                        height: 120,
+                        width: 180,
+                        height: 180,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [page.accentA, page.accentB],
+                          gradient: RadialGradient(
+                            colors: [
+                              page.accentA.withValues(alpha: 0.35),
+                              page.accentB.withValues(alpha: 0.10),
+                              Colors.transparent,
+                            ],
+                            radius: 0.8,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: page.accentB.withValues(alpha: 0.4),
-                              blurRadius: 32,
-                              spreadRadius: 4,
-                            ),
-                          ],
                         ),
                         child: Center(
-                          child: Text(
-                            page.emoji,
-                            style: const TextStyle(fontSize: 52),
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [page.accentA, page.accentB],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: page.accentB.withValues(alpha: 0.4),
+                                  blurRadius: 32,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                page.emoji,
+                                style: const TextStyle(fontSize: 52),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            )
+                    );
+                  },
+                )
                 .animate(target: isCurrent ? 1 : 0)
                 .scale(
                   begin: const Offset(0.7, 0.7),
@@ -357,16 +363,19 @@ class _PageContent extends StatelessWidget {
 
             // Title
             Text(
-              page.title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.sora(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                height: 1.2,
-                letterSpacing: -0.5,
-              ),
-            ).animate().fadeIn(delay: 300.ms, duration: 500.ms).slideY(
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    height: 1.2,
+                    letterSpacing: -0.5,
+                  ),
+                )
+                .animate()
+                .fadeIn(delay: 300.ms, duration: 500.ms)
+                .slideY(
                   begin: 0.2,
                   end: 0,
                   delay: 300.ms,
@@ -383,7 +392,7 @@ class _PageContent extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.6),
+                color: AppColors.textSecondary,
                 height: 1.7,
               ),
             ).animate().fadeIn(delay: 450.ms, duration: 500.ms),
@@ -456,7 +465,9 @@ class _NextButtonState extends State<_NextButton> {
               ),
               const SizedBox(width: 8),
               Icon(
-                widget.isLast ? Icons.check_rounded : Icons.arrow_forward_rounded,
+                widget.isLast
+                    ? Icons.check_rounded
+                    : Icons.arrow_forward_rounded,
                 color: Colors.white,
                 size: 18,
               ),
@@ -487,12 +498,18 @@ class _BgPainter extends CustomPainter {
       Offset(size.width * 0.15, size.height * 0.15),
       size.width * 0.55,
       Paint()
-        ..shader = RadialGradient(
-          colors: [accentA.withValues(alpha: 0.25 + t * 0.08), Colors.transparent],
-        ).createShader(Rect.fromCircle(
-          center: Offset(size.width * 0.15, size.height * 0.15),
-          radius: size.width * 0.55,
-        )),
+        ..shader =
+            RadialGradient(
+              colors: [
+                accentA.withValues(alpha: 0.25 + t * 0.08),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width * 0.15, size.height * 0.15),
+                radius: size.width * 0.55,
+              ),
+            ),
     );
 
     // Bottom-right blob
@@ -500,12 +517,18 @@ class _BgPainter extends CustomPainter {
       Offset(size.width * 0.85, size.height * 0.75),
       size.width * 0.5,
       Paint()
-        ..shader = RadialGradient(
-          colors: [accentB.withValues(alpha: 0.18 + t * 0.05), Colors.transparent],
-        ).createShader(Rect.fromCircle(
-          center: Offset(size.width * 0.85, size.height * 0.75),
-          radius: size.width * 0.5,
-        )),
+        ..shader =
+            RadialGradient(
+              colors: [
+                accentB.withValues(alpha: 0.18 + t * 0.05),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width * 0.85, size.height * 0.75),
+                radius: size.width * 0.5,
+              ),
+            ),
     );
   }
 

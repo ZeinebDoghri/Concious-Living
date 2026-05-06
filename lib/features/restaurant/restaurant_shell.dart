@@ -6,8 +6,8 @@ import '../../core/constants.dart';
 
 // Branch mapping: visual index → StatefulShellRoute branch index
 // Branches in router: 0=Dashboard 1=Scan 2=Alertes 3=Dechets 4=Compost 5=Stocks 6=Profil
-// New nav: 0=Dashboard  1=Scan  2=Dechets  3=Profil
-const _branchMap = [0, 1, 3, 6];
+// New nav: 0=Dashboard  1=Scan  2=Alertes  3=Dechets  4=Compost  5=Stocks  6=Profil
+const _branchMap = [0, 1, 2, 3, 4, 5, 6];
 
 class _Item {
   final IconData iconOff;
@@ -19,7 +19,10 @@ class _Item {
 const _items = [
   _Item(Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
   _Item(Icons.document_scanner_outlined, Icons.document_scanner_rounded, 'Scan'),
+  _Item(Icons.warning_amber_outlined, Icons.warning_amber_rounded, 'Alertes'),
   _Item(Icons.delete_outline_rounded, Icons.delete_rounded, 'Dechets'),
+  _Item(Icons.compost_outlined, Icons.compost_rounded, 'Compost'),
+  _Item(Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Stocks'),
   _Item(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
 ];
 
@@ -140,6 +143,7 @@ class _FloatingNav extends StatelessWidget {
         ],
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: List.generate(_items.length, (i) {
           return _NavTile(
             item: _items[i],
@@ -153,7 +157,7 @@ class _FloatingNav extends StatelessWidget {
 }
 
 // ── Standard nav tile ──────────────────────────────────────────────────────────
-class _NavTile extends StatelessWidget {
+class _NavTile extends StatefulWidget {
   final _Item item;
   final bool isActive;
   final VoidCallback onTap;
@@ -165,44 +169,82 @@ class _NavTile extends StatelessWidget {
   });
 
   @override
+  State<_NavTile> createState() => _NavTileState();
+}
+
+class _NavTileState extends State<_NavTile> with SingleTickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+      value: widget.isActive ? 1.0 : 0.0,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_NavTile old) {
+    super.didUpdateWidget(old);
+    if (old.isActive != widget.isActive) {
+      if (widget.isActive) {
+        _scaleController.forward();
+      } else {
+        _scaleController.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            padding: EdgeInsets.symmetric(
-              horizontal: isActive ? 16 : 10,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.olive : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isActive ? item.iconOn : item.iconOff,
-                  color: isActive ? AppColors.butter : AppColors.fog,
-                  size: 20,
-                ),
-                if (isActive) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    item.label,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.butter,
-                    ),
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isActive ? 16 : 10,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: widget.isActive ? AppColors.olive : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.isActive ? widget.item.iconOn : widget.item.iconOff,
+                color: widget.isActive ? AppColors.butter : AppColors.fog,
+                size: 20,
+              ),
+              if (widget.isActive) ...[
+                const SizedBox(width: 8),
+                Text(
+                  widget.item.label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.butter,
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

@@ -7,13 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
 
-// ── Brand tokens ───────────────────────────────────────────────────────────────
-const _kOat      = Color(0xFFEDE0D3);
-const _kCherry   = Color(0xFF75070C);
-const _kOlive    = Color(0xFF4F6815);
-const _kButterD  = Color(0xFFE8C84A);
-const _kEspresso = Color(0xFF2C1A1B);
-
 // Hotel nav: 0=Dashboard  1=Scan  2=Profile
 // Router branch indices must match StatefulShellRoute branches order:
 //   branch 0 = hotel/dashboard
@@ -29,9 +22,9 @@ class _Item {
 }
 
 const _items = [
-  _Item(Icons.hotel_rounded,             'Dashboard', _kCherry),
-  _Item(Icons.document_scanner_rounded,  'Scan',      _kButterD),
-  _Item(Icons.person_rounded,            'Profile',   _kOlive),
+  _Item(Icons.hotel_rounded,             'Dashboard', AppColors.cherry),
+  _Item(Icons.document_scanner_rounded,  'Scan',      AppColors.butterDeep),
+  _Item(Icons.person_rounded,            'Profile',   AppColors.olive),
 ];
 
 // ── Shell widget ───────────────────────────────────────────────────────────────
@@ -87,7 +80,7 @@ class _HotelShellState extends State<HotelShell> with TickerProviderStateMixin {
     final vi     = _visualIndex;
 
     return Scaffold(
-      backgroundColor: _kOat,
+      backgroundColor: AppColors.oat,
       extendBody: true,
       body: AnimatedBuilder(
         animation: _pageAnim,
@@ -184,13 +177,13 @@ class _HotelFloatingNavState extends State<_HotelFloatingNav>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  _kEspresso.withValues(alpha: 0.92),
+                  AppColors.espresso.withValues(alpha: 0.92),
                   const Color(0xFF1A0C0D).withValues(alpha: 0.97),
                 ],
               ),
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: _kCherry.withValues(alpha: 0.20),
+                color: AppColors.cherry.withValues(alpha: 0.20),
                 width: 1,
               ),
               boxShadow: [
@@ -200,7 +193,7 @@ class _HotelFloatingNavState extends State<_HotelFloatingNav>
                   offset: const Offset(0, 10),
                 ),
                 BoxShadow(
-                  color: _kCherry.withValues(alpha: 0.08),
+                  color: AppColors.cherry.withValues(alpha: 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, -2),
                 ),
@@ -377,7 +370,7 @@ class _ScanCenterButtonState extends State<_ScanCenterButton>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: _kButterD.withValues(
+                      color: AppColors.butterDeep.withValues(
                         alpha: widget.isActive
                             ? 0.60 + _pulse.value * 0.25
                             : 0.28 + _pulse.value * 0.15,
@@ -395,12 +388,12 @@ class _ScanCenterButtonState extends State<_ScanCenterButton>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.document_scanner_rounded,
-                      color: Color(0xFF2C1A1B), size: 22),
+                      color: AppColors.espresso, size: 22),
                   SizedBox(height: 2),
                   Text(
                     'SCAN',
                     style: TextStyle(
-                      color: Color(0xFF2C1A1B),
+                      color: AppColors.espresso,
                       fontSize: 8,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
