@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
@@ -52,9 +53,46 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
   }
 
   Future<void> _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email')),
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your password')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    // TODO: implement sign-in logic
-    setState(() => _isLoading = false);
+    try {
+      final userProvider = context.read<UserProvider>();
+      final user = await userProvider.login(
+        email: email,
+        password: password,
+        role: 'customer',
+      );
+
+      if (!mounted) return;
+
+      // Navigate to home with allergens loaded
+      context.go(AppRoutes.customerHome);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
