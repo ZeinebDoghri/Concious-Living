@@ -16,6 +16,7 @@ import 'providers/user_provider.dart';
 import 'providers/venue_type_provider.dart';
 import 'theme/app_theme.dart';
 import 'features/customer/allergens/allergy_service.dart';
+import 'features/customer/nutrition/calorie_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +57,7 @@ class _ConsciousLivingAppState extends State<ConsciousLivingApp> {
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => CompostProvider()),
         ChangeNotifierProvider(create: (_) => ContaminationProvider()),
+        ChangeNotifierProvider(create: (_) => CalorieProvider()),
       ],
       child: MaterialApp.router(
         title: AppStrings.appName,

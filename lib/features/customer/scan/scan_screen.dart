@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'dart:typed_data';
 
 import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 import '../allergens/allergy_service.dart';
+import '../nutrition/calorie_provider.dart';
+import '../nutrition/calorie_inference_service.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -26,8 +30,10 @@ class _ScanScreenState extends State<ScanScreen>
   final _allergyService = AllergyService();
 
   XFile? _selected;
+  Uint8List? _selectedBytes;
   bool _isAnalysing = false;
   String? _allergyError;
+  String? _calorieError;
 
   late final AnimationController _pulseController;
 
@@ -39,8 +45,11 @@ class _ScanScreenState extends State<ScanScreen>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    // Wake up the allergy API in the background as soon as screen loads
+    // Wake up both APIs in the background as soon as screen loads
     _allergyService.warmUpApi();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CalorieProvider>().warmUpApi();
+    });
   }
 
   @override
@@ -65,13 +74,19 @@ class _ScanScreenState extends State<ScanScreen>
 
       setState(() {
         _selected = file;
+        _selectedBytes = null;
         _isAnalysing = true;
         _allergyError = null;
+        _calorieError = null;
       });
 
       final imageBytes = await file.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _selectedBytes = imageBytes;
+      });
 
-      // Run both APIs in parallel to save time
+      // Run all three APIs in parallel to save time
       final results = await Future.wait([
         ApiService.predictNutrients(imageBytes),
         // Wrap in an async closure so we can return a nullable AllergyResult
@@ -87,6 +102,17 @@ class _ScanScreenState extends State<ScanScreen>
             return null;
           }
         })(),
+        // Calorie inference in parallel
+        (() async {
+          try {
+            final calorieService = CalorieInferenceService();
+            return await calorieService.predict(imageBytes);
+          } catch (e) {
+            _calorieError = e.toString();
+            debugPrint('[CalorieAPI] $e');
+            return null;
+          }
+        })(),
       ]);
 
       if (!mounted) return;
@@ -94,6 +120,7 @@ class _ScanScreenState extends State<ScanScreen>
 
       final nutrientResult = results[0];
       final allergyResult = results[1] as AllergyResult?;
+      final calorieResult = results[2] as NutritionResult?;
 
       context.go(
         AppRoutes.customerResult,
@@ -109,6 +136,9 @@ class _ScanScreenState extends State<ScanScreen>
           'allergenSource': allergyResult?.allergenSource ?? 'none',
           'allergyError': _allergyError,
           'top5': allergyResult?.top5 ?? [],
+          // Calorie data — null if API failed
+          'calorieResult': calorieResult?.toJson(),
+          'calorieError': _calorieError,
         },
       );
     } catch (e) {
@@ -161,6 +191,7 @@ class _ScanScreenState extends State<ScanScreen>
                           const SizedBox(height: 16),
                           _PreviewFrame(
                             imagePath: image?.path,
+                            imageBytes: _selectedBytes,
                             pulse: _pulseController,
                           ),
                           const SizedBox(height: 18),
@@ -201,9 +232,14 @@ class _ScanScreenState extends State<ScanScreen>
 
 class _PreviewFrame extends StatelessWidget {
   final String? imagePath;
+  final Uint8List? imageBytes;
   final Animation<double> pulse;
 
-  const _PreviewFrame({required this.imagePath, required this.pulse});
+  const _PreviewFrame({
+    required this.imagePath,
+    required this.imageBytes,
+    required this.pulse,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +258,9 @@ class _PreviewFrame extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (path != null)
+              if (imageBytes != null)
+                Image.memory(imageBytes!, fit: BoxFit.cover)
+              else if (path != null && !kIsWeb)
                 Image.file(File(path), fit: BoxFit.cover)
               else
                 Container(

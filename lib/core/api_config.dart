@@ -9,4 +9,7 @@ class ApiConfig {
 
   // Food contamination API (Keras classifier + YOLO detector)
   static const String contaminationApiBase = 'https://ahmedbh03-2modelsfinal.hf.space';
+
+  // Calorie & Nutrition API (CalorieSwinV2)
+  static const String calorieApi = 'https://chamsun-myapi.hf.space';
 }

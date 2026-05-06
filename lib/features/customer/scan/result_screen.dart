@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +16,7 @@ import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/cherry_header.dart';
 import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
+import '../nutrition/calorie_inference_service.dart';
 
 import 'dart:typed_data';
 
@@ -87,6 +89,18 @@ class _ResultScreenState extends State<ResultScreen>
     return NutrientResult.fromJson(const <String, dynamic>{});
   }
 
+  NutritionResult? _parseCalorieResult() {
+    final raw = widget.args['calorieResult'];
+    if (raw is Map<String, dynamic>) {
+      try {
+        return NutritionResult.fromJson(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   void _snack(String message) {
     ScaffoldMessenger.of(
       context,
@@ -134,6 +148,9 @@ class _ResultScreenState extends State<ResultScreen>
     final allergyDish = widget.args['allergyDish'] as String?;
     final allergenSource = widget.args['allergenSource'] as String? ?? 'none';
     final allergyError = widget.args['allergyError'] as String?;
+    final calorieResult = _parseCalorieResult();
+    final calorieError = widget.args['calorieError'] as String?;
+    final calorieErrorText = calorieError?.trim() ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.oat,
@@ -186,10 +203,19 @@ class _ResultScreenState extends State<ResultScreen>
                                             imageBytes,
                                             fit: BoxFit.cover,
                                           )
-                                        : Image.file(
-                                            File(imagePath!),
-                                            fit: BoxFit.cover,
-                                          ),
+                                        : (!kIsWeb && imagePath != null)
+                                            ? Image.file(
+                                                File(imagePath!),
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Container(
+                                                color: AppColors.oat,
+                                                alignment: Alignment.center,
+                                                child: const Icon(
+                                                  Icons.image_not_supported_outlined,
+                                                  color: AppColors.cocoa,
+                                                ),
+                                              ),
                                   ),
                                 ),
                               ),
@@ -420,6 +446,215 @@ class _ResultScreenState extends State<ResultScreen>
                         const SizedBox(height: 14),
                       ],
 
+                      // ── Calorie & Nutrition Summary ──
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.butter.withValues(alpha: 0.72),
+                              AppColors.parchment,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            AppRadii.innerCard,
+                          ),
+                          border: Border.all(
+                            color: AppColors.butter,
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.espresso.withValues(alpha: 0.04),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cherry.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.local_fire_department,
+                                    size: 16,
+                                    color: AppColors.cherry,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Calorie & Nutrition Analysis',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.espresso,
+                                          height: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Estimated energy and macros from the scan',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w400,
+                                          color: AppColors.cocoa,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (calorieResult != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.espresso.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(AppRadii.badge),
+                                    ),
+                                    child: Text(
+                                      calorieResult.calorieLevel.isNotEmpty
+                                          ? calorieResult.calorieLevel
+                                          : 'Estimated',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.espresso,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            if (calorieResult != null) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Calories',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.cocoa,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: calorieResult.calories.toStringAsFixed(0),
+                                                style: GoogleFonts.dmSerifDisplay(
+                                                  fontSize: 30,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.espresso,
+                                                  height: 1.0,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: ' kcal',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.cocoa,
+                                                  height: 1.0,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Mass ${calorieResult.mass.toStringAsFixed(0)} g',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.cocoa,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _MetricChip(
+                                    label: 'Protein',
+                                    value: '${calorieResult.protein.toStringAsFixed(1)} g',
+                                    color: AppColors.cherry,
+                                  ),
+                                  _MetricChip(
+                                    label: 'Fat',
+                                    value: '${calorieResult.fat.toStringAsFixed(1)} g',
+                                    color: AppColors.olive,
+                                  ),
+                                  _MetricChip(
+                                    label: 'Carbs',
+                                    value: '${calorieResult.carb.toStringAsFixed(1)} g',
+                                    color: AppColors.espresso,
+                                  ),
+                                ],
+                              ),
+                            ] else ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFBF2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadii.innerCard,
+                                  ),
+                                  border: Border.all(
+                                    color: AppColors.sand,
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  calorieErrorText.isNotEmpty
+                                      ? 'Calorie analysis could not load for this scan. $calorieErrorText'
+                                      : 'Calorie analysis is unavailable for this scan.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.espresso,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
                       // ── Risk badge ──
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -554,6 +789,115 @@ class _ResultScreenState extends State<ResultScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Helper widget for displaying a stat box in the calorie card.
+class _StatBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.parchment,
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.cocoa,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+            if (unit.isNotEmpty)
+              Text(
+                unit,
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.cocoa,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MetricChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.parchment,
+        borderRadius: BorderRadius.circular(AppRadii.badge),
+        border: Border.all(color: color.withValues(alpha: 0.24), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.cocoa,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+              height: 1.2,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -995,12 +995,7 @@ class _DarkAlertCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: data.color, width: 3),
-          top:    BorderSide(color: _kBorder, width: 1),
-          right:  BorderSide(color: _kBorder, width: 1),
-          bottom: BorderSide(color: _kBorder, width: 1),
-        ),
+        border: Border.all(color: _kBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
