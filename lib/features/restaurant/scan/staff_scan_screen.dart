@@ -24,12 +24,22 @@ class StaffScanScreen extends StatefulWidget {
 
 class _StaffScanScreenState extends State<StaffScanScreen>
     with TickerProviderStateMixin {
-  static const _dark  = Color(0xFF0A0F1E);
-  static const _card  = Color(0xFF141B2D);
+  // ── Palette matching the warm beige dashboard ──────────────────────────────
+  static const _bg        = Color(0xFFF5EFE6); // warm cream background
+  static const _card      = Color(0xFFFFFFFF); // white cards
+  static const _cardSoft  = Color(0xFFFAF6F0); // off-white card variant
+  static const _header    = Color(0xFF1A3C34); // dark teal (matches dashboard header)
+  static const _textDark  = Color(0xFF1C1C1E);
+  static const _textMid   = Color(0xFF6B7280);
+  static const _textSoft  = Color(0xFF9CA3AF);
+  static const _accentRed = Color(0xFFB94040); // muted warm red (allergen chip)
+  static const _accentAmber = Color(0xFFD97706); // amber/gold
+  static const _accentGreen = Color(0xFF2D7A5F); // sage/teal green (freshness)
+  static const _accentButter = Color(0xFFF5C842); // butter yellow
 
-  final _picker         = ImagePicker();
-  final _compostService = CompostInferenceService();
-  final _wasteService   = WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
+  final _picker               = ImagePicker();
+  final _compostService       = CompostInferenceService();
+  final _wasteService         = WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
   final _contaminationService = FoodContaminationService();
 
   XFile?  _lastFile;
@@ -51,7 +61,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    // Ping API in background (all platforms use FastAPI backend)
     _compostService.init();
     _contaminationService.init();
   }
@@ -61,7 +70,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     _scanLine.dispose();
     _pulse.dispose();
     _compostService.dispose();
-    // Contamination service uses stateless HTTP calls.
     _wasteService.dispose();
     super.dispose();
   }
@@ -84,11 +92,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
 
       final imageBytes = await file.readAsBytes();
 
-      // ── Run 4 models in parallel ─────────────────────────────────────
       setState(() => _step = '4 analyses IA en parallèle…');
 
       final futures = await Future.wait<dynamic>([
-        // 1. Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
+        // 1. Compost segmentation
         _compostService
             .classify(imageBytes)
             .then((r) => r.toMap())
@@ -102,7 +109,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               };
             }),
 
-        // 2. Freshness HuggingFace API (NEW)
+        // 2. Freshness HuggingFace API
         () async {
           try {
             final request = http.MultipartRequest(
@@ -138,7 +145,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           }
         }(),
 
-        // 3. Waste pipeline API (server-side)
+        // 3. Waste pipeline API
         _wasteService.analyze(imageBytes).then((result) {
           final payload = result.toJson();
           payload['detectedItems'] = result.massEstimates
@@ -171,17 +178,16 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       if (!mounted) return;
       setState(() => _isAnalysing = false);
 
-      // Navigate to result page with freshness, compost, and waste results
       context.go(
         AppRoutes.restaurantScanResult,
         extra: <String, dynamic>{
-          'imagePath':       file.path,
-          'imageBytes':      imageBytes,
-          'compostResult':   futures[0] as Map<String, dynamic>,
-          'freshnessResult': futures[1] as Map<String, dynamic>,
-          'wasteResult':     futures[2] as Map<String, dynamic>,
+          'imagePath':           file.path,
+          'imageBytes':          imageBytes,
+          'compostResult':       futures[0] as Map<String, dynamic>,
+          'freshnessResult':     futures[1] as Map<String, dynamic>,
+          'wasteResult':         futures[2] as Map<String, dynamic>,
           'contaminationResult': futures[3] as Map<String, dynamic>,
-          'isFusion':        true,
+          'isFusion':            true,
         },
       );
     } catch (e) {
@@ -197,10 +203,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: _bg,
       body: Stack(
         children: [
-          _Background(),
           SafeArea(
             child: Column(
               children: [
@@ -216,9 +221,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     );
   }
 
+  // ── Header (dark teal, matching dashboard) ─────────────────────────────────
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+    return Container(
+      decoration: const BoxDecoration(
+        color: _header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Row(
         children: [
           GestureDetector(
@@ -226,10 +236,8 @@ class _StaffScanScreenState extends State<StaffScanScreen>
             child: Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12)),
               ),
               child: const Icon(Icons.arrow_back_ios_new,
                   color: Colors.white, size: 16),
@@ -252,18 +260,17 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   'Freshness · Gaspillage · Compost · Insectes — en parallèle',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.55),
+                    color: Colors.white.withValues(alpha: 0.65),
                   ),
                 ),
               ],
             ),
           ),
-          // AI badge
+          // AI badge — butter yellow accent matching dashboard chips
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)]),
+              color: _accentButter,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -271,7 +278,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white),
+                  color: _header),
             ),
           ),
         ],
@@ -279,10 +286,11 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     );
   }
 
+  // ── Viewfinder ─────────────────────────────────────────────────────────────
   Widget _buildViewfinder() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: AspectRatio(
           aspectRatio: 1,
           child: Stack(
@@ -298,7 +306,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                         height: double.infinity,
                       )
                     : Container(
-                        color: const Color(0xFF0D1524),
+                        decoration: BoxDecoration(
+                          color: _card,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFE5DDD4),
+                            width: 1.5,
+                          ),
+                        ),
                         child: Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -306,25 +321,37 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                               AnimatedBuilder(
                                 animation: _pulse,
                                 builder: (_, child) => Transform.scale(
-                                  scale: 1.0 + _pulse.value * 0.08,
+                                  scale: 1.0 + _pulse.value * 0.06,
                                   child: child,
                                 ),
-                                child: Icon(
-                                  Icons.document_scanner_rounded,
-                                  size: 64,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.18),
+                                child: Container(
+                                  width: 80, height: 80,
+                                  decoration: BoxDecoration(
+                                    color: _accentGreen.withValues(alpha: 0.10),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.document_scanner_rounded,
+                                    size: 38,
+                                    color: _accentGreen.withValues(alpha: 0.65),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 16),
                               Text(
-                                'Prenez une photo\nou importez depuis la galerie',
-                                textAlign: TextAlign.center,
+                                'Prenez une photo',
+                                style: GoogleFonts.sora(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'ou importez depuis la galerie',
                                 style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.38),
-                                  height: 1.6,
+                                  fontSize: 12,
+                                  color: _textMid,
                                 ),
                               ),
                             ],
@@ -332,31 +359,31 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                         ),
                       ),
               ),
-              // Scan corner brackets
-              ..._corners(),
-              // Animated scan line
+              // Animated scan line (green accent on light bg)
               if (!_isAnalysing)
-                AnimatedBuilder(
-                  animation: _scanLine,
-                  builder: (_, _) {
-                    final t = _scanLine.value;
-                    return Positioned(
-                      top: t * (double.infinity < 0
-                          ? 0
-                          : 300), // handled by LayoutBuilder below
-                      left: 24, right: 24,
-                      child: Container(
-                        height: 2,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              const Color(0xFF10B981),
-                              Colors.transparent,
-                            ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return AnimatedBuilder(
+                      animation: _scanLine,
+                      builder: (_, __) {
+                        return Positioned(
+                          top: _scanLine.value * (constraints.maxHeight - 4),
+                          left: 20, right: 20,
+                          child: Container(
+                            height: 2,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  _accentGreen.withValues(alpha: 0.7),
+                                  Colors.transparent,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -376,60 +403,75 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     return Wrap(
       spacing: 6,
       children: [
-        _aiChip('🌡️ Fraîcheur', const Color(0xFF8B1A1F)),
-        _aiChip('🗑️ Gaspillage', const Color(0xFF5A7A18)),
-        _aiChip('🌱 Compost', const Color(0xFF059669)),
+        _aiChip('🌡️ Fraîcheur', _accentRed),
+        _aiChip('🗑️ Gaspillage', _accentAmber),
+        _aiChip('🌱 Compost', _accentGreen),
       ],
     );
   }
 
   Widget _aiChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6, offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         label,
         style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color),
       ),
     );
   }
 
-  List<Widget> _corners() {
-    return [];  // Simplified — decorative corners via ClipRRect above
-  }
-
+  // ── Capture dock (white card, matches dashboard card style) ────────────────
   Widget _buildCaptureDock() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.06), width: 1),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 20,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Drag handle
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDDD6CC),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
             // Mode indicator chips
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _modeIndicator(Icons.thermostat_rounded,
-                    'Freshness', const Color(0xFFEF4444)),
+                _modeIndicator(Icons.thermostat_rounded, 'Freshness', _accentRed),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.delete_rounded,
-                    'Waste', const Color(0xFFD97706)),
+                _modeIndicator(Icons.delete_rounded,     'Waste',     _accentAmber),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.eco_rounded,
-                    'Compost', const Color(0xFF10B981)),
+                _modeIndicator(Icons.eco_rounded,        'Compost',   _accentGreen),
               ],
             ),
             const SizedBox(height: 20),
@@ -450,67 +492,58 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            // Additional buttons for expiry and freshness checks
+            const SizedBox(height: 20),
+            // Additional outlined action buttons
             Column(
               children: [
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantExpiryDate),
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  label: const Text('Check Expiry Date'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
+                _outlinedAction(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Check Expiry Date',
+                  onTap: () => context.go(AppRoutes.restaurantExpiryDate),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantFreshnessCheck),
-                  icon: const Icon(Icons.favorite_outline),
-                  label: const Text('Freshness Check'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
+                _outlinedAction(
+                  icon: Icons.favorite_outline,
+                  label: 'Freshness Check',
+                  onTap: () => context.go(AppRoutes.restaurantFreshnessCheck),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => context.go(AppRoutes.restaurantContaminationScan),
-                  icon: const Icon(Icons.search_rounded),
-                  label: const Text('🔍 Contamination Scan'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.butter,
-                    side: BorderSide(
-                      color: AppColors.butter.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.input),
-                    ),
-                  ),
+                _outlinedAction(
+                  icon: Icons.search_rounded,
+                  label: '🔍 Contamination Scan',
+                  onTap: () => context.go(AppRoutes.restaurantContaminationScan),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _outlinedAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 17),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _header,
+        side: BorderSide(color: _header.withValues(alpha: 0.25), width: 1.2),
+        backgroundColor: _cardSoft,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        textStyle: GoogleFonts.inter(
+          fontSize: 13, fontWeight: FontWeight.w500,
+        ),
+        minimumSize: const Size(double.infinity, 0),
+        alignment: Alignment.centerLeft,
       ),
     );
   }
@@ -519,9 +552,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -544,20 +577,17 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       child: AnimatedBuilder(
         animation: _pulse,
         builder: (_, child) => Container(
-          width: 76,
-          height: 76,
+          width: 76, height: 76,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: const Color(0xFF10B981)
-                  .withValues(alpha: 0.5 + _pulse.value * 0.3),
+              color: _accentGreen.withValues(alpha: 0.4 + _pulse.value * 0.25),
               width: 3,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981)
-                    .withValues(alpha: 0.2 + _pulse.value * 0.15),
-                blurRadius: 20 + _pulse.value * 10,
+                color: _accentGreen.withValues(alpha: 0.15 + _pulse.value * 0.10),
+                blurRadius: 18 + _pulse.value * 8,
               ),
             ],
           ),
@@ -568,7 +598,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [Color(0xFF2D9A72), Color(0xFF1A6B4E)],
             ),
           ),
           child: const Icon(Icons.camera_alt_rounded,
@@ -591,20 +621,24 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           Container(
             width: 52, height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.07),
+              color: _cardSoft,
               shape: BoxShape.circle,
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: const Color(0xFFDDD6CC)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 6, offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: Icon(icon,
-                color: Colors.white.withValues(alpha: 0.75), size: 22),
+            child: Icon(icon, color: _textMid, size: 22),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: Colors.white.withValues(alpha: 0.5),
+              color: _textSoft,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -613,9 +647,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     );
   }
 
+  // ── Analysing overlay ──────────────────────────────────────────────────────
   Widget _buildAnalysingOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.78),
+      color: Colors.black.withValues(alpha: 0.45),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 40),
@@ -623,8 +658,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           decoration: BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 30,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -636,7 +676,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 style: GoogleFonts.sora(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: _textDark,
                 ),
               ),
               const SizedBox(height: 8),
@@ -648,21 +688,20 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.55),
+                    color: _textMid,
                     height: 1.5,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              // 3 spinning indicators
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _MiniLoader('Freshness', const Color(0xFFEF4444)),
+                  _MiniLoader('Freshness', _accentRed),
                   const SizedBox(width: 16),
-                  _MiniLoader('Waste', const Color(0xFFD97706)),
+                  _MiniLoader('Waste',     _accentAmber),
                   const SizedBox(width: 16),
-                  _MiniLoader('Compost', const Color(0xFF10B981)),
+                  _MiniLoader('Compost',   _accentGreen),
                 ],
               ),
             ],
@@ -674,33 +713,6 @@ class _StaffScanScreenState extends State<StaffScanScreen>
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-class _Background extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: CustomPaint(painter: _BgPainter()),
-    );
-  }
-}
-
-class _BgPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    paint.color = const Color(0xFF0A0F1E);
-    canvas.drawRect(Offset.zero & size, paint);
-
-    // Soft glow blobs
-    paint.color = const Color(0xFF10B981).withValues(alpha: 0.06);
-    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.2), 180, paint);
-    paint.color = const Color(0xFF7C3AED).withValues(alpha: 0.05);
-    canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.7), 160, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 class _AnimatedBrain extends StatefulWidget {
   @override
@@ -716,12 +728,15 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
     )..repeat();
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -732,17 +747,23 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           gradient: SweepGradient(
-            colors: [Color(0xFF10B981), Colors.transparent],
+            colors: [Color(0xFF2D7A5F), Colors.transparent],
           ),
         ),
         child: Container(
           margin: const EdgeInsets.all(4),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Color(0xFF141B2D),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2D7A5F).withValues(alpha: 0.15),
+                blurRadius: 8,
+              ),
+            ],
           ),
           child: const Icon(Icons.psychology_rounded,
-              color: Color(0xFF10B981), size: 28),
+              color: Color(0xFF2D7A5F), size: 28),
         ),
       ),
     );
@@ -751,7 +772,7 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
 
 class _MiniLoader extends StatefulWidget {
   final String label;
-  final Color color;
+  final Color  color;
   const _MiniLoader(this.label, this.color);
 
   @override
@@ -772,7 +793,10 @@ class _MiniLoaderState extends State<_MiniLoader>
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -790,7 +814,9 @@ class _MiniLoaderState extends State<_MiniLoader>
         Text(
           widget.label,
           style: GoogleFonts.inter(
-              fontSize: 9, color: widget.color, fontWeight: FontWeight.w600),
+              fontSize: 9,
+              color: widget.color,
+              fontWeight: FontWeight.w600),
         ),
       ],
     );
