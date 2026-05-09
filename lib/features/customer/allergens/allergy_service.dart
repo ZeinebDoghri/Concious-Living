@@ -46,25 +46,68 @@ class AllergyResult {
           .toList(growable: false);
     }
 
+    final top5 = asMapList(
+      json['top5'] ?? json['top_5'] ?? json['predictions'],
+    );
+    String labelFromTop5() {
+      if (top5.isEmpty) return '';
+      final first = top5.first;
+      return asString(
+        first['dish'] ??
+            first['label'] ??
+            first['class'] ??
+            first['class_name'] ??
+            first['name'] ??
+            first['food'],
+      );
+    }
+
     return AllergyResult(
       dish: asString(
         json['dish'] ??
             json['dish_name'] ??
             json['predicted_dish'] ??
-            json['label'],
+            json['prediction'] ??
+            json['predicted_class'] ??
+            json['class'] ??
+            json['class_name'] ??
+            json['food'] ??
+            json['label'] ??
+            labelFromTop5(),
         'Dish',
       ),
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      confidence:
+          (json['confidence'] ??
+                  json['score'] ??
+                  json['probability'] ??
+                  (top5.isNotEmpty ? top5.first['confidence'] : null) ??
+                  (top5.isNotEmpty ? top5.first['score'] : null) as num?)
+              ?.toDouble() ??
+          0.0,
       ingredients: asStringList(json['ingredients'] ?? json['ingredient_list']),
       allergens: asStringList(
-        json['allergens'] ?? json['allergy_list'] ?? json['labels'],
+        json['allergens'] ??
+            json['allergy_list'] ??
+            json['detected_allergens'] ??
+            json['allergen_list'],
       ),
-      top5: asMapList(json['top5'] ?? json['top_5'] ?? json['predictions']),
+      top5: top5,
       allergenSource: asString(
         json['allergen_source'] ?? json['allergenSource'] ?? json['source'],
         'none',
       ),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'dish': dish,
+      'confidence': confidence,
+      'ingredients': ingredients,
+      'allergens': allergens,
+      'top5': top5,
+      'allergenSource': allergenSource,
+    };
   }
 }
 

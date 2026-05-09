@@ -16,13 +16,15 @@ class RestaurantProfileScreen extends StatefulWidget {
   const RestaurantProfileScreen({super.key});
 
   @override
-  State<RestaurantProfileScreen> createState() => _RestaurantProfileScreenState();
+  State<RestaurantProfileScreen> createState() =>
+      _RestaurantProfileScreenState();
 }
 
 class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
-  static const _oliveMutedText = Color(0xFFD4E8A8);
+  static const _restaurantMutedText = Color(0xFFFFE4E4);
   static const _prefsExpiryWarningsKey = 'restaurant_expiry_warnings';
-  static const _prefsWasteThresholdAlertsKey = 'restaurant_waste_threshold_alerts';
+  static const _prefsWasteThresholdAlertsKey =
+      'restaurant_waste_threshold_alerts';
 
   bool _expiryWarnings = true;
   bool _wasteThresholdAlerts = true;
@@ -38,7 +40,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     if (!mounted) return;
     setState(() {
       _expiryWarnings = prefs.getBool(_prefsExpiryWarningsKey) ?? true;
-      _wasteThresholdAlerts = prefs.getBool(_prefsWasteThresholdAlertsKey) ?? true;
+      _wasteThresholdAlerts =
+          prefs.getBool(_prefsWasteThresholdAlertsKey) ?? true;
     });
   }
 
@@ -94,7 +97,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                 AppStrings.ok,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.olive,
+                  color: FreshGuardTheme.restaurantDeep,
                 ),
               ),
             ),
@@ -128,7 +131,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     final alertsProvider = context.watch<AlertsProvider>();
     final inventoryProvider = context.watch<InventoryProvider>();
 
-    final restaurantName = _fmtText(user?.restaurantName, fallback: AppStrings.appName);
+    final restaurantName = _fmtText(
+      user?.restaurantName,
+      fallback: AppStrings.appName,
+    );
     final cuisineType = _fmtText(user?.cuisineType);
     final covers = user?.covers ?? 0;
     final managerName = _fmtText(user?.name);
@@ -138,13 +144,15 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     final freshPct = _freshnessPct(inventoryProvider);
 
     final pendingAlerts = alertsProvider.pendingCount;
-    final expiringCount = inventoryProvider.items.where((e) => e.status == 'expiring').length;
+    final expiringCount = inventoryProvider.items
+        .where((e) => e.status == 'expiring')
+        .length;
 
     final logoUrl = (user?.avatarPath ?? '').trim();
     final hasLogo = logoUrl.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: FreshGuardTheme.restaurantSurface,
       body: Column(
         children: [
           SizedBox(
@@ -152,7 +160,18 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
             width: double.infinity,
             child: Stack(
               children: [
-                Container(color: AppColors.olive),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        FreshGuardTheme.restaurantPrimary,
+                        FreshGuardTheme.restaurantDeep,
+                      ],
+                    ),
+                  ),
+                ),
                 Positioned.fill(child: CustomPaint(painter: _ArcPainter())),
                 SafeArea(
                   bottom: false,
@@ -167,7 +186,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             child: Container(
                               width: 84,
                               height: 84,
-                              color: AppColors.oliveMist,
+                              color: FreshGuardTheme.restaurantSoftPink,
                               alignment: Alignment.center,
                               child: hasLogo
                                   ? Image.network(
@@ -176,17 +195,28 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                       height: 84,
                                       fit: BoxFit.cover,
                                       errorBuilder: (context, _, error) {
-                                        return const Icon(Icons.restaurant, size: 36, color: AppColors.olive);
+                                        return const Icon(
+                                          Icons.restaurant,
+                                          size: 36,
+                                          color: FreshGuardTheme.restaurantDeep,
+                                        );
                                       },
                                     )
-                                  : const Icon(Icons.restaurant, size: 36, color: AppColors.olive),
+                                  : const Icon(
+                                      Icons.restaurant,
+                                      size: 36,
+                                      color: FreshGuardTheme.restaurantDeep,
+                                    ),
                             ),
                           ),
                           const SizedBox(height: 10),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppColors.cherryBlush,
+                              color: Colors.white.withValues(alpha: 0.22),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -194,7 +224,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.cherry,
+                                color: Colors.white,
                                 height: 1.2,
                               ),
                             ),
@@ -206,7 +236,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             style: GoogleFonts.dmSerifDisplay(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.butter,
+                              color: Colors.white,
                               height: 1.15,
                             ),
                           ),
@@ -216,7 +246,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
-                              color: _oliveMutedText,
+                              color: _restaurantMutedText,
                               height: 1.2,
                             ),
                           ),
@@ -226,7 +256,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w400,
-                              color: _oliveMutedText,
+                              color: _restaurantMutedText,
                               height: 1.2,
                             ),
                           ),
@@ -234,7 +264,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _StatPill(label: '$resolvedAlerts Alerts resolved'),
+                              _StatPill(
+                                label: '$resolvedAlerts Alerts resolved',
+                              ),
                               const SizedBox(width: 10),
                               _StatPill(label: '$freshPct% Freshness'),
                               const SizedBox(width: 10),
@@ -276,7 +308,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '$pendingAlerts',
                                   label: 'Alerts',
-                                  numberColor: AppColors.cherry,
+                                  numberColor: FreshGuardTheme.danger,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -292,7 +324,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '12kg',
                                   label: 'Waste',
-                                  numberColor: AppColors.olive,
+                                  numberColor: FreshGuardTheme.restaurantDeep,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -300,7 +332,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '$freshPct%',
                                   label: 'Fresh',
-                                  numberColor: AppColors.olive,
+                                  numberColor: FreshGuardTheme.restaurantDeep,
                                 ),
                               ),
                             ],
@@ -326,15 +358,19 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('/restaurant/profile/edit'),
+                              onPressed: () =>
+                                  context.push('/restaurant/profile/edit'),
                               icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.olive,
+                              color: FreshGuardTheme.restaurantDeep,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
                           ],
                         ),
-                        _InfoRow(label: 'Restaurant name', value: restaurantName),
+                        _InfoRow(
+                          label: 'Restaurant name',
+                          value: restaurantName,
+                        ),
                         const Divider(color: AppColors.sand, height: 1),
                         _InfoRow(label: 'Manager', value: managerName),
                         const Divider(color: AppColors.sand, height: 1),
@@ -344,9 +380,15 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         const Divider(color: AppColors.sand, height: 1),
                         _InfoRow(label: 'Cuisine type', value: cuisineType),
                         const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Number of covers', value: covers.toString()),
+                        _InfoRow(
+                          label: 'Number of covers',
+                          value: covers.toString(),
+                        ),
                         const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Registration date', value: _registrationDateText()),
+                        _InfoRow(
+                          label: 'Registration date',
+                          value: _registrationDateText(),
+                        ),
                       ],
                     ),
                   ),
@@ -367,9 +409,11 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('/restaurant/profile/edit?step=2'),
+                              onPressed: () => context.push(
+                                '/restaurant/profile/edit?step=2',
+                              ),
                               icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.olive,
+                              color: FreshGuardTheme.restaurantDeep,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
@@ -397,9 +441,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           ),
                           chipBuilder: (r) => _Chip(
                             text: r,
-                            bg: AppColors.oliveMist,
-                            border: AppColors.olive,
-                            fg: AppColors.olive,
+                            bg: FreshGuardTheme.restaurantSoftPink,
+                            border: FreshGuardTheme.restaurantPrimary,
+                            fg: FreshGuardTheme.restaurantDeep,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -417,13 +461,19 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         Row(
                           children: [
                             Icon(
-                              (user?.allergyHandling ?? false) ? Icons.check_circle : Icons.cancel,
+                              (user?.allergyHandling ?? false)
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
                               size: 16,
-                              color: (user?.allergyHandling ?? false) ? AppColors.olive : AppColors.cherry,
+                              color: (user?.allergyHandling ?? false)
+                                  ? FreshGuardTheme.fresh
+                                  : FreshGuardTheme.danger,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              (user?.allergyHandling ?? false) ? 'Yes, we handle allergies' : 'No',
+                              (user?.allergyHandling ?? false)
+                                  ? 'Yes, we handle allergies'
+                                  : 'No',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -473,8 +523,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         const SizedBox(height: 6),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.olive,
-                          activeTrackColor: AppColors.olive.withValues(alpha: 0.25),
+                          activeThumbColor: FreshGuardTheme.restaurantDeep,
+                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                              .withValues(alpha: 0.25),
                           title: Text(
                             'Allergen alerts',
                             style: GoogleFonts.inter(
@@ -487,13 +538,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyAllergens: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyAllergens: v),
+                            );
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.olive,
-                          activeTrackColor: AppColors.olive.withValues(alpha: 0.25),
+                          activeThumbColor: FreshGuardTheme.restaurantDeep,
+                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                              .withValues(alpha: 0.25),
                           title: Text(
                             'Expiry warnings',
                             style: GoogleFonts.inter(
@@ -507,8 +561,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.olive,
-                          activeTrackColor: AppColors.olive.withValues(alpha: 0.25),
+                          activeThumbColor: FreshGuardTheme.restaurantDeep,
+                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                              .withValues(alpha: 0.25),
                           title: Text(
                             'Daily waste report',
                             style: GoogleFonts.inter(
@@ -521,13 +576,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyWeeklyReport: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyWeeklyReport: v),
+                            );
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.olive,
-                          activeTrackColor: AppColors.olive.withValues(alpha: 0.25),
+                          activeThumbColor: FreshGuardTheme.restaurantDeep,
+                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                              .withValues(alpha: 0.25),
                           title: Text(
                             'Waste threshold alerts',
                             style: GoogleFonts.inter(
@@ -548,7 +606,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                       children: [
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.people_outline, color: AppColors.olive),
+                          leading: const Icon(
+                            Icons.people_outline,
+                            color: FreshGuardTheme.restaurantDeep,
+                          ),
                           title: Text(
                             'Manage staff',
                             style: GoogleFonts.inter(
@@ -561,7 +622,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.bar_chart, color: AppColors.olive),
+                          leading: const Icon(
+                            Icons.bar_chart,
+                            color: FreshGuardTheme.restaurantDeep,
+                          ),
                           title: Text(
                             'View full reports',
                             style: GoogleFonts.inter(
@@ -574,7 +638,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.info_outline, color: AppColors.fog),
+                          leading: const Icon(
+                            Icons.info_outline,
+                            color: AppColors.fog,
+                          ),
                           title: Text(
                             'About the project',
                             style: GoogleFonts.inter(
@@ -588,13 +655,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         const Divider(color: AppColors.sand, height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.logout, color: AppColors.olive),
+                          leading: const Icon(
+                            Icons.logout,
+                            color: FreshGuardTheme.restaurantDeep,
+                          ),
                           title: Text(
                             'Sign out',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.olive,
+                              color: FreshGuardTheme.restaurantDeep,
                             ),
                           ),
                           onTap: () => _signOut(context),

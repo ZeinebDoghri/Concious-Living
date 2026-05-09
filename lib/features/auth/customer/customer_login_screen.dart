@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,36 +7,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
-import '../../../shared/widgets/animated_button.dart';
+import '../../../providers/venue_type_provider.dart';
 
-// ─── FreshGuard Customer Theme tokens ────────────────────────────────────────
-// primary        #5B4E8A   hero bg, CTA, active nav
-// primaryDark    #2D2350   hero plate circle, AI pill bg
-// primaryLight   #C4B8F0   light accent text
-// heroCircle1    #6E60A0   large decorative circle (opacity 0.25)
-// heroCircle2    #4A3D78   small decorative circle (opacity 0.20)
-// surface        #F4F2FA   floating card panel bg
-// surfaceTint    #EDE9F7   field bg, stat card bg
-// fieldBorder    #C8C0E8   input borders
-// textPrimary    #2D2350
-// textSecondary  #A090C0
-// freshGreen     #2E8B69
-// warningAmber   #E8872A
-// dangerRed      #E24B4A
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _FG {
-  static const primary       = Color(0xFF5B4E8A);
-  static const primaryDark   = Color(0xFF2D2350);
-  static const primaryLight  = Color(0xFFC4B8F0);
-  static const heroCircle1   = Color(0xFF6E60A0);
-  static const heroCircle2   = Color(0xFF4A3D78);
-  static const surface       = Color(0xFFF4F2FA);
-  static const surfaceTint   = Color(0xFFEDE9F7);
-  static const fieldBorder   = Color(0xFFC8C0E8);
-  static const textPrimary   = Color(0xFF2D2350);
-  static const textSecondary = Color(0xFFA090C0);
-}
+// Customer (violet/lavender) role colors
+const _primary = Color(0xFFA78BFA);
+const _deep = Color(0xFF7C3AED);
+const _softBg = Color(0xFFEDE9FE);
+const _textTitle = Color(0xFF2D1B69);
+const _textMuted = Color(0xFF8B7BC0);
 
 class CustomerLoginScreen extends StatefulWidget {
   const CustomerLoginScreen({super.key});
@@ -50,44 +30,49 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
 
   bool _obscure   = true;
   bool _isLoading = false;
+  bool _pressed = false;
 
-  late final AnimationController _cardController;
-  late final Animation<Offset>   _cardSlide;
+  late final AnimationController _blobController;
+  late final Animation<Offset> _cardSlide;
 
   @override
   void initState() {
     super.initState();
-    _cardController = AnimationController(
+    _blobController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
-    )..forward();
+      duration: const Duration(seconds: 12),
+    )..repeat();
 
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end:   Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
-    );
+    // card slide-up on load
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _blobController,
+            curve: const Interval(0, 0.04, curve: Curves.easeOutQuart),
+          ),
+        );
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _cardController.dispose();
+    _blobController.dispose();
     super.dispose();
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _readableError(Object e) {
     final message = e.toString();
-    if (message.startsWith('Exception: '))  return message.substring('Exception: '.length);
-    if (message.startsWith('StateError: ')) return message.substring('StateError: '.length);
+    if (message.startsWith('Exception: '))
+      return message.substring('Exception: '.length);
+    if (message.startsWith('StateError: '))
+      return message.substring('StateError: '.length);
     return message;
   }
 
@@ -109,10 +94,12 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
     setState(() => _isLoading = true);
 
     try {
+      await context.read<VenueTypeProvider>().clear();
+      if (!mounted) return;
       await context.read<UserProvider>().login(
-        email:    email,
+        email: email,
         password: password,
-        role:     'customer',
+        role: 'customer',
       );
       if (!mounted) return;
       context.go(AppRoutes.customerHome);
@@ -125,380 +112,317 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  /// Playfair Display text style
-  TextStyle _playfair({
-    double fontSize = 16,
-    FontWeight weight = FontWeight.w600,
-    Color color = _FG.textPrimary,
-    double height = 1.2,
-  }) =>
-      GoogleFonts.playfairDisplay(
-        fontSize: fontSize,
-        fontWeight: weight,
-        color: color,
-        height: height,
-      );
-
-  /// Inter text style
-  TextStyle _inter({
-    double fontSize = 13,
-    FontWeight weight = FontWeight.w400,
-    Color color = _FG.textSecondary,
-    double height = 1.5,
-    double letterSpacing = 0,
-  }) =>
-      GoogleFonts.inter(
-        fontSize: fontSize,
-        fontWeight: weight,
-        color: color,
-        height: height,
-        letterSpacing: letterSpacing,
-      );
-
-  InputDecoration _fieldDecor({
-    required String label,
-    required IconData prefixIcon,
-    Widget? suffix,
-  }) =>
-      InputDecoration(
-        labelText: label,
-        labelStyle: _inter(fontSize: 12, weight: FontWeight.w500, color: _FG.textSecondary, letterSpacing: 0.06),
-        floatingLabelStyle: _inter(fontSize: 11, weight: FontWeight.w500, color: _FG.primary),
-        filled: true,
-        fillColor: _FG.surfaceTint,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        prefixIcon: Icon(prefixIcon, color: _FG.textSecondary, size: 18),
-        suffixIcon: suffix,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _FG.fieldBorder, width: 0.8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _FG.primary, width: 1.2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE24B4A), width: 1.2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE24B4A), width: 1.2),
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      );
-
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH = screenH * 0.42;
+
     return Scaffold(
-      backgroundColor: _FG.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Hero ────────────────────────────────────────────────────────
-            SizedBox(
-              height: 220,
-              width: double.infinity,
-              child: Stack(
-                clipBehavior: Clip.hardEdge,
-                children: [
-                  // Solid primary background
-                  Positioned.fill(
-                    child: Container(color: _FG.primary),
+      backgroundColor: _primary,
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        children: [
+          // ── Hero zone ────────────────────────────────────────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroH,
+            child: Stack(
+              children: [
+                Container(color: _primary),
+                AnimatedBuilder(
+                  animation: _blobController,
+                  builder: (_, __) => CustomPaint(
+                    painter: _BlobPainter(_blobController.value, _primary),
+                    size: Size(double.infinity, heroH),
                   ),
-
-                  // Decorative circle 1 — large, top-right
-                  Positioned(
-                    top: -50,
-                    right: -60,
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _FG.heroCircle1,
-                      ),
-                      // opacity applied via ColorFiltered to stay const-compatible
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                  ),
-
-                  // Decorative circle 2 — small, bottom-left
-                  Positioned(
-                    bottom: 30,
-                    left: -20,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _FG.heroCircle2,
-                      ),
-                    ),
-                  ),
-
-                  // Food plate circle — bleeds off bottom-right
-                  Positioned(
-                    right: -12,
-                    bottom: -20,
-                    child: Container(
-                      width: 150,
-                      height: 150,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _FG.primaryDark,
-                      ),
-                      child: const Center(
-                        child: Text('🥗', style: TextStyle(fontSize: 60)),
-                      ),
-                    ),
-                  ),
-
-                  // Back button
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: SafeArea(
-                      bottom: false,
-                      child: IconButton(
-                        onPressed: () => context.go(AppRoutes.roleSelector),
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                        color: Colors.white,
-                        splashColor: Colors.white24,
-                      ),
-                    ),
-                  ),
-
-                  // Greeting text
-                  Positioned(
-                    left: 20,
-                    bottom: 32,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'AI FOOD SAFETY',
-                          style: _inter(
-                            fontSize: 9,
-                            color: Colors.white70,
-                            letterSpacing: 0.08,
-                          ).copyWith(letterSpacing: 1.0),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppStrings.welcomeBack,
-                          style: _playfair(fontSize: 22, color: Colors.white),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppStrings.signInToContinue,
-                          style: _inter(fontSize: 11, color: Colors.white60),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Floating card panel ─────────────────────────────────────────
-            Expanded(
-              child: SlideTransition(
-                position: _cardSlide,
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: _FG.surface,
-                    borderRadius: BorderRadius.only(
-                      topLeft:  Radius.circular(28),
-                      topRight: Radius.circular(28),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Section tag
-                        Text(
-                          'WELCOME BACK',
-                          style: _inter(
-                            fontSize: 9,
-                            weight: FontWeight.w500,
-                            color: _FG.primary,
-                            letterSpacing: 0.12,
-                          ).copyWith(letterSpacing: 1.2),
+                        IconButton(
+                          onPressed: () => context.go(AppRoutes.roleSelector),
+                          icon: const Icon(Icons.arrow_back_ios_new),
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppStrings.customerSignInTitle,
-                          style: _playfair(fontSize: 20, color: _FG.textPrimary),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppStrings.customerSignInSubtitle,
-                          style: _inter(fontSize: 12, color: _FG.textSecondary, height: 1.5),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Role pills
-                        Container(
-                          decoration: BoxDecoration(
-                            color: _FG.surfaceTint,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: _FG.fieldBorder, width: 0.5),
-                          ),
-                          padding: const EdgeInsets.all(3),
-                          child: Row(
+                        const Spacer(),
+                        Center(
+                          child: Column(
                             children: [
-                              _rolePill('Restaurant', active: false),
-                              _rolePill('Hotel', active: false),
-                              _rolePill('Guest', active: true),
+                              Text(
+                                'Welcome back',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Your health journey continues',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // Email field
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          style: _inter(fontSize: 13, color: _FG.textPrimary),
-                          decoration: _fieldDecor(
-                            label: AppStrings.emailAddress,
-                            prefixIcon: Icons.email_outlined,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Password field
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscure,
-                          style: _inter(fontSize: 13, color: _FG.textPrimary),
-                          decoration: _fieldDecor(
-                            label: AppStrings.password,
-                            prefixIcon: Icons.lock_outline,
-                            suffix: IconButton(
-                              onPressed: () => setState(() => _obscure = !_obscure),
-                              icon: Icon(
-                                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                color: _FG.textSecondary,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-
-                        // Forgot password
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => context.go(AppRoutes.customerForgot),
-                            style: TextButton.styleFrom(
-                              foregroundColor: _FG.primary,
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(0, 32),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              AppStrings.forgotPassword,
-                              style: _inter(fontSize: 11, weight: FontWeight.w500, color: _FG.primary),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // CTA button
-                        AnimatedButton(
-                          label: '${AppStrings.signIn} →',
-                          color: _FG.primary,
-                          textColor: Colors.white,
-                          onTap: _signIn,
-                          isLoading: _isLoading,
-                          height: 52,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Divider
-                        Row(
-                          children: [
-                            const Expanded(child: Divider(color: _FG.fieldBorder, thickness: 0.5)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                AppStrings.orSignInWith,
-                                style: _inter(fontSize: 11, color: _FG.textSecondary),
-                              ),
-                            ),
-                            const Expanded(child: Divider(color: _FG.fieldBorder, thickness: 0.5)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Google / create account button
-                        OutlinedButton(
-                          onPressed: () => context.go(AppRoutes.customerRegister),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            foregroundColor: _FG.textPrimary,
-                            side: const BorderSide(color: _FG.fieldBorder, width: 0.8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            textStyle: _inter(fontSize: 13, weight: FontWeight.w500, color: _FG.textPrimary),
-                          ),
-                          child: Text(
-                            AppStrings.createAccount,
-                            style: _inter(fontSize: 13, weight: FontWeight.w500, color: _FG.textPrimary),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Not a customer link
-                        Center(
-                          child: TextButton(
-                            onPressed: () => context.go(AppRoutes.roleSelector),
-                            style: TextButton.styleFrom(
-                              foregroundColor: _FG.textSecondary,
-                            ),
-                            child: Text(
-                              AppStrings.notACustomer,
-                              style: _inter(fontSize: 11, color: _FG.textSecondary),
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // ── Floating card ────────────────────────────────────────────
+          Positioned(
+            top: heroH - 24,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SlideTransition(
+              position: _cardSlide,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                  boxShadow: AppShadows.lg(_primary),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Email
+                      _buildInput(
+                        controller: _emailController,
+                        label: AppStrings.emailAddress,
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password
+                      _buildInput(
+                        controller: _passwordController,
+                        label: AppStrings.password,
+                        icon: Icons.lock_outline,
+                        obscure: _obscure,
+                        onToggleObscure: () =>
+                            setState(() => _obscure = !_obscure),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Forgot password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => context.go(AppRoutes.customerForgot),
+                          child: Text(
+                            AppStrings.forgotPassword,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // CTA
+                      _buildCta(label: 'Sign In', onTap: _signIn),
+
+                      const SizedBox(height: 20),
+
+                      // Create account link
+                      Center(
+                        child: TextButton(
+                          onPressed: () =>
+                              context.go(AppRoutes.customerRegister),
+                          child: Text(
+                            'Create account',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool? obscure,
+    VoidCallback? onToggleObscure,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure ?? false,
+      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        filled: true,
+        fillColor: _softBg,
+        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        suffixIcon: onToggleObscure != null
+            ? IconButton(
+                onPressed: onToggleObscure,
+                icon: Icon(
+                  obscure! ? Icons.visibility : Icons.visibility_off,
+                  color: _textMuted,
+                  size: 20,
+                ),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _rolePill(String label, {required bool active}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? _FG.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: _inter(
-            fontSize: 9,
-            weight: FontWeight.w500,
-            color: active ? Colors.white : _FG.textSecondary,
+  Widget _buildCta({
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          height: 54,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            gradient: const LinearGradient(
+              colors: [_primary, _deep],
+              begin: Alignment.centerLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _primary.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
+          alignment: Alignment.center,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );
   }
+}
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color primary;
+  _BlobPainter(this.t, this.primary);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    final c1 = Offset(
+      size.width * 0.15 + math.cos(angle) * 20,
+      size.height * 0.35 + math.sin(angle) * 15,
+    );
+    canvas.drawCircle(
+      c1,
+      size.width * 0.5,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)),
+    );
+    final c2 = Offset(
+      size.width * 0.85 + math.sin(angle * 0.7) * 18,
+      size.height * 0.6 + math.cos(angle * 0.7) * 22,
+    );
+    canvas.drawCircle(
+      c2,
+      size.width * 0.4,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)),
+    );
+    final c3 = Offset(
+      size.width * 0.5 + math.cos(angle * 1.4) * 14,
+      size.height * 0.2 + math.sin(angle * 1.4) * 10,
+    );
+    canvas.drawCircle(
+      c3,
+      size.width * 0.3,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) => old.t != t;
 }

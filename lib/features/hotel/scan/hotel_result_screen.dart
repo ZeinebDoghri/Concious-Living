@@ -9,14 +9,14 @@ import '../../restaurant/scan/annotated_contamination_image.dart';
 import '../../restaurant/scan/food_contamination_service.dart';
 
 // Hotel brand colors
-const _kCherry = Color(0xFF75070C);
-const _kEmerald = Color(0xFF4F6815);
-const _kRose = Color(0xFF75070C);
-const _kAmber = Color(0xFFE8C84A);
-const _kSlate = Color(0xFF8C7B7C);
-const _kSurface = Color(0xFFEDE0D3);
-const _kCard = Color(0xFFFAF5EE);
-const _kBorder = Color(0xFFD9C9B4);
+const _kCherry = Color(0xFF7DC5A0);
+const _kEmerald = Color(0xFF52C98A);
+const _kRose = Color(0xFFFF7070);
+const _kAmber = Color(0xFFFFAB5B);
+const _kSlate = Color(0xFF7AAA90);
+const _kSurface = Color(0xFFF4FAF7);
+const _kCard = Color(0xFFFFFFFF);
+const _kBorder = Color(0xFFDFF2E9);
 
 class HotelResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -78,10 +78,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     if (!_isFusion) {
       return Scaffold(
         backgroundColor: _kSurface,
-        appBar: AppBar(
-          title: const Text('Result'),
-          backgroundColor: _kCherry,
-        ),
+        appBar: AppBar(title: const Text('Result'), backgroundColor: _kCherry),
         body: const Center(child: Text('No fusion data')),
       );
     }
@@ -92,8 +89,8 @@ class _HotelResultScreenState extends State<HotelResultScreen>
   Widget _buildFusion() {
     final compostPct =
         (_compostResult['compostablePct'] as num?)?.toDouble() ?? 0.0;
-    final status =
-        ((_freshnessResult['status'] as String?) ?? 'fresh').toLowerCase();
+    final status = ((_freshnessResult['status'] as String?) ?? 'fresh')
+        .toLowerCase();
     final contamination = _contaminationResult.isNotEmpty
         ? FoodAnalysisResult.fromJson(_contaminationResult)
         : null;
@@ -149,8 +146,8 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Résultats d\'analyse',
-                            style: GoogleFonts.sora(
+                            'Analysis results',
+                            style: GoogleFonts.playfairDisplay(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -158,7 +155,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Fraîcheur · Déchets · Compost · Insectes',
+                            'Freshness · Waste · Compost · Contamination',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.75),
@@ -178,7 +175,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
               child: Column(
                 children: [
                   _SectionCard(
-                    title: '♻️ Compost IA',
+                    title: 'Compost AI',
                     subtitle: 'mask2former_fp32 · Swin-B · mIoU 0.86',
                     color: _kEmerald,
                     delay: 0,
@@ -187,9 +184,10 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                       compostPct: compostPct,
                       nonCompostPct:
                           (_compostResult['nonCompostablePct'] as num?)
-                                  ?.toDouble() ??
-                              0.0,
-                      bgPct: (_compostResult['backgroundPct'] as num?)
+                              ?.toDouble() ??
+                          0.0,
+                      bgPct:
+                          (_compostResult['backgroundPct'] as num?)
                               ?.toDouble() ??
                           0.0,
                       ms: ms,
@@ -197,7 +195,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                   ),
                   const SizedBox(height: 12),
                   _SectionCard(
-                    title: '🌡️ Fraîcheur',
+                    title: 'Freshness',
                     subtitle: 'Deep transfer learning model',
                     color: _kRose,
                     delay: 100,
@@ -205,7 +203,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                   ),
                   const SizedBox(height: 12),
                   _SectionCard(
-                    title: '🗑️ Déchets détectés',
+                    title: 'Waste detected',
                     subtitle: 'Real-time pipeline',
                     color: _kAmber,
                     delay: 200,
@@ -324,26 +322,20 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                 const SizedBox(height: 12),
                 Text(
                   'Detected: ${contamination.detectionCount} items',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: _kSlate,
-                  ),
+                  style: GoogleFonts.inter(fontSize: 11, color: _kSlate),
                 ),
                 const SizedBox(height: 8),
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: contamination.detections.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (_, i) {
                     final det = contamination.detections[i];
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          det.label,
-                          style: GoogleFonts.inter(fontSize: 11),
-                        ),
+                        Text(det.label, style: GoogleFonts.inter(fontSize: 11)),
                         Text(
                           '${(det.confidence * 100).toStringAsFixed(0)}%',
                           style: GoogleFonts.inter(
@@ -384,66 +376,59 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: _kCard,
-        border: Border.all(color: _kBorder),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              border: Border(
-                bottom: BorderSide(
-                  color: color.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: _kSlate,
-                        ),
-                      ),
-                    ],
+          decoration: BoxDecoration(
+            color: _kCard,
+            border: Border.all(color: _kBorder),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
                   ),
+                  border: Border.all(color: color.withValues(alpha: 0.2)),
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: _kSlate,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(padding: const EdgeInsets.all(12), child: child),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: child,
-          ),
-        ],
-      ),
-    ).animate().fadeIn(duration: Duration(milliseconds: delay)).slideY(
-          begin: 0.2,
-          duration: Duration(milliseconds: 600 + delay),
-        );
+        )
+        .animate()
+        .fadeIn(duration: Duration(milliseconds: delay))
+        .slideY(begin: 0.2, duration: Duration(milliseconds: 600 + delay));
   }
 }
 
@@ -490,24 +475,41 @@ class _CompostCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _Dot(color: _kEmerald),
-          const SizedBox(width: 4),
-          Text('Compostable',
-              style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-          const SizedBox(width: 14),
-          _Dot(color: _kRose),
-          const SizedBox(width: 4),
-          Text('Non-compost.',
-              style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-        ]),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _Dot(color: _kEmerald),
+            const SizedBox(width: 4),
+            Text(
+              'Compostable',
+              style: GoogleFonts.inter(fontSize: 11, color: _kSlate),
+            ),
+            const SizedBox(width: 14),
+            _Dot(color: _kRose),
+            const SizedBox(width: 4),
+            Text(
+              'Non-compostable',
+              style: GoogleFonts.inter(fontSize: 11, color: _kSlate),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
-        _ConfidenceBar(label: 'Compostable', percentage: compostPct, color: _kEmerald),
+        _ConfidenceBar(
+          label: 'Compostable',
+          percentage: compostPct,
+          color: _kEmerald,
+        ),
         const SizedBox(height: 6),
-        _ConfidenceBar(label: 'Non-Compostable', percentage: nonCompostPct, color: _kRose),
+        _ConfidenceBar(
+          label: 'Non-Compostable',
+          percentage: nonCompostPct,
+          color: _kRose,
+        ),
         const SizedBox(height: 12),
-        Text('Inference: ${ms}ms',
-            style: GoogleFonts.inter(fontSize: 10, color: _kSlate)),
+        Text(
+          'Inference: ${ms}ms',
+          style: GoogleFonts.inter(fontSize: 10, color: _kSlate),
+        ),
       ],
     );
   }
@@ -554,8 +556,7 @@ class _FreshnessCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isFresh ? Colors.green.shade50 : Colors.orange.shade50,
             border: Border.all(
-              color:
-                  isFresh ? Colors.green.shade300 : Colors.orange.shade300,
+              color: isFresh ? Colors.green.shade300 : Colors.orange.shade300,
             ),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -589,29 +590,39 @@ class _WasteCard extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (_, i) {
               final item = items[i];
               final name = item['name'] ?? 'Unknown';
-              final kg = (item['quantityKg'] as num?)?.toStringAsFixed(2) ?? '0';
+              final kg =
+                  (item['quantityKg'] as num?)?.toStringAsFixed(2) ?? '0';
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(name,
-                      style: GoogleFonts.inter(
-                          fontSize: 12, fontWeight: FontWeight.w500)),
-                  Text('~${kg}kg',
-                      style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: _kSlate,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    name,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '~${kg}kg',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: _kSlate,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               );
             },
           )
         else
-          Text('No waste detected',
-              style: GoogleFonts.inter(fontSize: 12, color: _kSlate)),
+          Text(
+            'No waste detected',
+            style: GoogleFonts.inter(fontSize: 12, color: _kSlate),
+          ),
       ],
     );
   }
@@ -636,13 +647,15 @@ class _ConfidenceBar extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label,
-                style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-            Text('${(percentage).toStringAsFixed(1)}%',
-                style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _kSlate)),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
+            Text(
+              '${(percentage).toStringAsFixed(1)}%',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _kSlate,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -669,10 +682,7 @@ class _Dot extends StatelessWidget {
     return Container(
       width: 8,
       height: 8,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 }

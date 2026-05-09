@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,12 +9,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
+import '../../shared/animations/animated_gradient.dart';
+import '../../shared/animations/organic_blobs.dart';
+import '../../shared/animations/pressable.dart';
+import '../../theme/brand_palette.dart';
 
-// ── Page data ─────────────────────────────────────────────────────────────────
+// ── Page data — v4 colors ─────────────────────────────────────────────────────
 class _Page {
-  final Color bg;
-  final Color accentA;
-  final Color accentB;
+  final List<Color> gradientColors;
+  final Color accent;
+  final Color deep;
+  final Color surface;
   final IconData icon;
   final String emoji;
   final String tag;
@@ -21,9 +27,10 @@ class _Page {
   final String body;
 
   const _Page({
-    required this.bg,
-    required this.accentA,
-    required this.accentB,
+    required this.gradientColors,
+    required this.accent,
+    required this.deep,
+    required this.surface,
     required this.icon,
     required this.emoji,
     required this.tag,
@@ -34,37 +41,40 @@ class _Page {
 
 const _pages = [
   _Page(
-    bg: Color(0xFF0D1A0A),
-    accentA: Color(0xFF5A7A18),
-    accentB: Color(0xFF10B981),
-    icon: Icons.eco_rounded,
-    emoji: '🍃',
-    tag: 'SCAN & ANALYSE',
-    title: 'Votre assistant\nnutrition IA',
+    gradientColors: [kCust2, kCust1, Color(0xFFD8B8F8)],
+    accent: kCust1,
+    deep: kCust2,
+    surface: kCust3,
+    icon: Icons.qr_code_scanner_rounded,
+    emoji: '🔍',
+    tag: 'SCAN ANYTHING',
+    title: 'Scan Anything',
     body:
-        'Photographiez n\'importe quel plat. Notre IA détecte instantanément le cholestérol, sodium, sucre et graisses saturées.',
+        'Point your camera at any food label.\nOur AI instantly reads ingredients,\nnutrients, and allergens.',
   ),
   _Page(
-    bg: Color(0xFF1A0A0D),
-    accentA: Color(0xFF8B1A1F),
-    accentB: Color(0xFFEF4444),
-    icon: Icons.favorite_rounded,
-    emoji: '❤️',
-    tag: 'SANTÉ PERSONNALISÉE',
-    title: 'Suivez votre\nsanté en temps réel',
+    gradientColors: [kRest2, kRest1, Color(0xFFF8C0A0)],
+    accent: kRest1,
+    deep: kRest2,
+    surface: kRest3,
+    icon: Icons.health_and_safety_rounded,
+    emoji: '🛡️',
+    tag: 'KNOW YOUR ALLERGIES',
+    title: 'Know Your Allergies',
     body:
-        'Alertes allergens, objectifs quotidiens, rapports hebdomadaires. Votre profil santé vous protège à chaque repas.',
+        'Get instant alerts before you eat.\nYour allergen profile protects you\nat every single meal.',
   ),
   _Page(
-    bg: Color(0xFF0A0D1A),
-    accentA: Color(0xFF3B5BB5),
-    accentB: Color(0xFF10B981),
-    icon: Icons.recycling_rounded,
-    emoji: '♻️',
-    tag: 'IA COMPOST',
-    title: 'Zéro gaspillage\navec l\'IA Compost',
+    gradientColors: [kHotel2, kHotel1, Color(0xFF9CD6B6)],
+    accent: kHotel1,
+    deep: kHotel2,
+    surface: kHotel3,
+    icon: Icons.insights_rounded,
+    emoji: '📊',
+    tag: 'TRACK NUTRITION',
+    title: 'Track Nutrition',
     body:
-        'Mask2Former identifie en temps réel ce qui est compostable. Une révolution verte pour la restauration durable.',
+        'See your full daily nutritional picture.\nCalories, macros, freshness — all in\none beautiful dashboard.',
   ),
 ];
 
@@ -79,22 +89,17 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   late final PageController _pageController;
-  late final AnimationController _bgAnim;
-  late final AnimationController _pulseAnim;
+  late final AnimationController _blobAnim;
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _bgAnim = AnimationController(
+    _blobAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _pulseAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 8),
+    )..repeat();
 
     _pageController.addListener(() {
       final i = (_pageController.page ?? 0).round().clamp(0, _pages.length - 1);
@@ -105,8 +110,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void dispose() {
     _pageController.dispose();
-    _bgAnim.dispose();
-    _pulseAnim.dispose();
+    _blobAnim.dispose();
     super.dispose();
   }
 
@@ -126,7 +130,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     HapticFeedback.selectionClick();
     await _pageController.animateToPage(
       _index + 1,
-      duration: const Duration(milliseconds: 500),
+      duration: AppDurations.hero,
       curve: Curves.easeOutCubic,
     );
   }
@@ -134,67 +138,97 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final page = _pages[_index];
-    final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: page.bg,
-      body: AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        color: page.bg,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // ── Animated background mesh ─────────────────────────────────────
-            AnimatedBuilder(
-              animation: _pulseAnim,
-              builder: (context, _) => CustomPaint(
-                painter: _BgPainter(
-                  accentA: page.accentA,
-                  accentB: page.accentB,
-                  t: _pulseAnim.value,
-                ),
-              ),
-            ),
-
-            // ── Page content ─────────────────────────────────────────────────
-            PageView.builder(
-              controller: _pageController,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _pages.length,
-              itemBuilder: (context, i) => _PageContent(
-                page: _pages[i],
-                isCurrent: i == _index,
-                pulseAnim: _pulseAnim,
-              ),
-            ),
-
-            // ── Skip button ──────────────────────────────────────────────────
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: AnimatedOpacity(
-                    opacity: _index < _pages.length - 1 ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: GestureDetector(
-                      onTap: _complete,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.12),
+      backgroundColor: page.surface,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Animated gradient hero (top 260px) ──────────────────────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedGradientHero(
+              colors: page.gradientColors,
+              height: 260,
+              child: Stack(
+                children: [
+                  AnimatedBlobs(color: Colors.white, count: 3),
+                  Center(
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.25),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.4),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              _pages[_index].emoji,
+                              style: const TextStyle(fontSize: 44),
+                            ),
                           ),
                         ),
-                        child: Text(
-                          'Ignorer',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.6),
-                          ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Page content scrollable ──────────────────────────────────────────
+          PageView.builder(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _pages.length,
+            itemBuilder: (context, i) => _PageContent(
+              page: _pages[i],
+              isCurrent: i == _index,
+              blobAnim: _blobAnim,
+            ),
+          ),
+
+          // ── Skip button ────────────────────────────────────────────────────
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                child: AnimatedOpacity(
+                  opacity: _index < _pages.length - 1 ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Pressable(
+                    onTap: _complete,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: page.accent.withOpacity(0.20),
+                        ),
+                      ),
+                      child: Text(
+                        'Skip',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: page.deep,
                         ),
                       ),
                     ),
@@ -202,48 +236,85 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
             ),
+          ),
 
-            // ── Bottom controls ──────────────────────────────────────────────
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: math.max(MediaQuery.paddingOf(context).bottom + 16, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Dots
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_pages.length, (i) {
-                      final active = i == _index;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 280),
-                        curve: Curves.easeOutCubic,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        height: 4,
-                        width: active ? 28 : 4,
-                        decoration: BoxDecoration(
-                          color: active
-                              ? _pages[_index].accentB
-                              : Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
+          // ── Bottom controls ────────────────────────────────────────────────
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: math.max(MediaQuery.paddingOf(context).bottom + 16, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // v4 Animated dots
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_pages.length, (i) {
+                    final active = i == _index;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      height: 6,
+                      width: active ? 22 : 6,
+                      decoration: BoxDecoration(
+                        color: active ? page.deep : kBorder,
+                        borderRadius: BorderRadius.circular(active ? 11 : 3),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+
+                // Pressable gradient CTA button
+                Pressable(
+                  onTap: _next,
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [page.deep, page.accent],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: page.accent.withOpacity(0.35),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
-                      );
-                    }),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _index == _pages.length - 1
+                              ? 'Get Started'
+                              : 'Continue',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          _index == _pages.length - 1
+                              ? Icons.check_rounded
+                              : Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Next / Get Started button
-                  _NextButton(
-                    isLast: _index == _pages.length - 1,
-                    accent: _pages[_index].accentB,
-                    onTap: _next,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -253,93 +324,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 class _PageContent extends StatelessWidget {
   final _Page page;
   final bool isCurrent;
-  final AnimationController pulseAnim;
+  final AnimationController blobAnim;
 
   const _PageContent({
     required this.page,
     required this.isCurrent,
-    required this.pulseAnim,
+    required this.blobAnim,
   });
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 80, 28, 160),
+        padding: const EdgeInsets.fromLTRB(28, 276, 28, 160),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Hero illustration
-            AnimatedBuilder(
-              animation: pulseAnim,
-              builder: (context, _) {
-                final scale = 1.0 + pulseAnim.value * 0.04;
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          page.accentA.withValues(alpha: 0.35),
-                          page.accentB.withValues(alpha: 0.10),
-                          Colors.transparent,
-                        ],
-                        radius: 0.8,
-                      ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [page.accentA, page.accentB],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: page.accentB.withValues(alpha: 0.4),
-                              blurRadius: 32,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            page.emoji,
-                            style: const TextStyle(fontSize: 52),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            )
-                .animate(target: isCurrent ? 1 : 0)
-                .scale(
-                  begin: const Offset(0.7, 0.7),
-                  end: const Offset(1.0, 1.0),
-                  duration: 600.ms,
-                  curve: Curves.elasticOut,
-                ),
-
-            const SizedBox(height: 40),
-
-            // Tag
+            // ── Tag chip ─────────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: page.accentB.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
+                color: page.accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(
-                  color: page.accentB.withValues(alpha: 0.3),
-                  width: 0.8,
+                  color: page.accent.withValues(alpha: 0.25),
+                  width: 1,
                 ),
               ),
               child: Text(
@@ -347,26 +356,28 @@ class _PageContent extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: page.accentB,
+                  color: page.deep,
                   letterSpacing: 1.5,
                 ),
               ),
             ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // Title
+            // ── Title ────────────────────────────────────────────────────────
             Text(
-              page.title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.sora(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                height: 1.2,
-                letterSpacing: -0.5,
-              ),
-            ).animate().fadeIn(delay: 300.ms, duration: 500.ms).slideY(
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.lora(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: kText2,
+                    height: 1.2,
+                  ),
+                )
+                .animate()
+                .fadeIn(delay: 300.ms, duration: 500.ms)
+                .slideY(
                   begin: 0.2,
                   end: 0,
                   delay: 300.ms,
@@ -376,15 +387,15 @@ class _PageContent extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Body
+            // ── Body ─────────────────────────────────────────────────────────
             Text(
               page.body,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.6),
-                height: 1.7,
+                color: kText3,
+                height: 1.6,
               ),
             ).animate().fadeIn(delay: 450.ms, duration: 500.ms),
           ],
@@ -394,15 +405,15 @@ class _PageContent extends StatelessWidget {
   }
 }
 
-// ── Next button ────────────────────────────────────────────────────────────────
+// ── Next / Get Started button ──────────────────────────────────────────────────
 class _NextButton extends StatefulWidget {
   final bool isLast;
-  final Color accent;
+  final Color deep;
   final VoidCallback onTap;
 
   const _NextButton({
     required this.isLast,
-    required this.accent,
+    required this.deep,
     required this.onTap,
   });
 
@@ -428,26 +439,16 @@ class _NextButtonState extends State<_NextButton> {
         child: Container(
           height: 56,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [widget.accent, widget.accent.withValues(alpha: 0.75)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: widget.accent.withValues(alpha: 0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            color: widget.deep,
+            borderRadius: BorderRadius.circular(AppRadii.input),
+            boxShadow: AppShadows.md(widget.deep),
           ),
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                widget.isLast ? 'Get Started' : 'Next',
+                widget.isLast ? AppStrings.getStarted : AppStrings.next,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -456,7 +457,9 @@ class _NextButtonState extends State<_NextButton> {
               ),
               const SizedBox(width: 8),
               Icon(
-                widget.isLast ? Icons.check_rounded : Icons.arrow_forward_rounded,
+                widget.isLast
+                    ? Icons.check_rounded
+                    : Icons.arrow_forward_rounded,
                 color: Colors.white,
                 size: 18,
               ),
@@ -466,50 +469,4 @@ class _NextButtonState extends State<_NextButton> {
       ),
     );
   }
-}
-
-// ── Background mesh painter ────────────────────────────────────────────────────
-class _BgPainter extends CustomPainter {
-  final Color accentA;
-  final Color accentB;
-  final double t;
-
-  const _BgPainter({
-    required this.accentA,
-    required this.accentB,
-    required this.t,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Top-left blob
-    canvas.drawCircle(
-      Offset(size.width * 0.15, size.height * 0.15),
-      size.width * 0.55,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [accentA.withValues(alpha: 0.25 + t * 0.08), Colors.transparent],
-        ).createShader(Rect.fromCircle(
-          center: Offset(size.width * 0.15, size.height * 0.15),
-          radius: size.width * 0.55,
-        )),
-    );
-
-    // Bottom-right blob
-    canvas.drawCircle(
-      Offset(size.width * 0.85, size.height * 0.75),
-      size.width * 0.5,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [accentB.withValues(alpha: 0.18 + t * 0.05), Colors.transparent],
-        ).createShader(Rect.fromCircle(
-          center: Offset(size.width * 0.85, size.height * 0.75),
-          radius: size.width * 0.5,
-        )),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_BgPainter old) =>
-      old.t != t || old.accentA != accentA || old.accentB != accentB;
 }

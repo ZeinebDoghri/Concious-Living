@@ -8,8 +8,8 @@ class NutrientCard extends StatelessWidget {
   final String name;
   final double value;
   final String unit;
-  final double dailyPct; // 0..100
-  final String riskLevel; // low|moderate|high
+  final double dailyPct;
+  final String riskLevel;
   final AnimationController controller;
   final Duration delay;
 
@@ -26,26 +26,14 @@ class NutrientCard extends StatelessWidget {
 
   static Color riskColor(String level) {
     switch (level.toLowerCase()) {
-      case 'high':
-        return AppColors.cherry;
-      case 'moderate':
-        return AppColors.riskModerateText;
-      case 'low':
-      default:
-        return AppColors.olive;
+      case 'high': return FreshGuardTheme.danger;
+      case 'moderate': return FreshGuardTheme.warning;
+      case 'low': default: return FreshGuardTheme.fresh;
     }
   }
 
   static Color riskBg(String level) {
-    switch (level.toLowerCase()) {
-      case 'high':
-        return AppColors.cherryBlush;
-      case 'moderate':
-        return AppColors.butter;
-      case 'low':
-      default:
-        return AppColors.oliveMist;
-    }
+    return riskColor(level).withValues(alpha: 0.10);
   }
 
   Animation<double> _barAnimation() {
@@ -53,17 +41,16 @@ class NutrientCard extends StatelessWidget {
     final start = (delay.inMilliseconds / totalMs).clamp(0.0, 1.0);
     return CurvedAnimation(
       parent: controller,
-      curve: Interval(start, 1.0, curve: Curves.easeOutCubic),
+      curve: Interval(start, 1.0, curve: Curves.easeOutQuart),
     );
   }
 
   Animation<double> _badgeAnimation() {
     final totalMs = controller.duration?.inMilliseconds ?? 1400;
-    final start =
-        ((delay.inMilliseconds + 520) / totalMs).clamp(0.0, 1.0);
+    final start = ((delay.inMilliseconds + 520) / totalMs).clamp(0.0, 1.0);
     return CurvedAnimation(
       parent: controller,
-      curve: Interval(start, 1.0, curve: Curves.easeOutCubic),
+      curve: Interval(start, 1.0, curve: Curves.easeOutQuart),
     );
   }
 
@@ -71,16 +58,15 @@ class NutrientCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final barAnim = _barAnimation();
     final badgeAnim = _badgeAnimation();
-
     final target = (dailyPct / 100).clamp(0.0, 1.0);
     final barColor = riskColor(riskLevel);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.parchment,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        boxShadow: AppShadows.sm(barColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,37 +75,39 @@ class NutrientCard extends StatelessWidget {
             children: [
               Text(
                 name,
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.espresso,
-                  height: 1.2,
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: 14, fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface, height: 1.2,
                 ),
               ),
               const Spacer(),
-              Text(
-                '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)} $unit',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.cherry,
-                  height: 1.2,
-                ),
+              AnimatedBuilder(
+                animation: barAnim,
+                builder: (context, _) {
+                  final v = (barAnim.value * value).clamp(0.0, value);
+                  return Text(
+                    '${v.toStringAsFixed(v % 1 == 0 ? 0 : 1)} $unit',
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 14, fontWeight: FontWeight.w700,
+                      color: barColor, height: 1.2,
+                    ),
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           AnimatedBuilder(
             animation: barAnim,
             builder: (context, _) {
               final v = (barAnim.value * target).clamp(0.0, target);
               return ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
                 child: LinearProgressIndicator(
                   value: v,
-                  backgroundColor: AppColors.sand,
+                  backgroundColor: barColor.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(barColor),
-                  minHeight: 8,
+                  minHeight: 6,
                 ),
               );
             },
@@ -134,25 +122,20 @@ class NutrientCard extends StatelessWidget {
                   return Text(
                     '${pct.toInt()}%',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.cocoa,
-                      height: 1.2,
+                      fontSize: 10, fontWeight: FontWeight.w600,
+                      color: barColor, height: 1.2,
                     ),
                   );
                 },
               ),
-              const Spacer(),
               Text(
-                AppStrings.ofDailyLimit,
+                ' ${AppStrings.ofDailyLimit}',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.cocoa,
-                  height: 1.2,
+                  fontSize: 10, fontWeight: FontWeight.w400,
+                  color: Theme.of(context).textTheme.labelMedium?.color, height: 1.2,
                 ),
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
               FadeTransition(
                 opacity: badgeAnim,
                 child: RiskBadge(riskLevel),

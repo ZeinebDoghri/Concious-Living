@@ -1,7 +1,4 @@
-import 'dart:io';
 import 'dart:convert';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +12,17 @@ import '../../../features/restaurant/scan/food_contamination_service.dart';
 import '../../../features/restaurant/waste/compost_inference_service.dart';
 import '../../../features/restaurant/waste/waste_pipeline_service.dart';
 
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary = Color(0xFFF2A7A7);
+const _rDeep = Color(0xFFE47878);
+const _rSurface = Color(0xFFFFF5F5);
+const _rSoftBg = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextMuted = Color(0xFFB08080);
+const _fresh = Color(0xFF52C98A);
+const _warning = Color(0xFFFFAB5B);
+const _danger = Color(0xFFFF7070);
+
 class StaffScanScreen extends StatefulWidget {
   const StaffScanScreen({super.key});
 
@@ -24,27 +32,16 @@ class StaffScanScreen extends StatefulWidget {
 
 class _StaffScanScreenState extends State<StaffScanScreen>
     with TickerProviderStateMixin {
-  // ── Palette matching the warm beige dashboard ──────────────────────────────
-  static const _bg        = Color(0xFFF5EFE6); // warm cream background
-  static const _card      = Color(0xFFFFFFFF); // white cards
-  static const _cardSoft  = Color(0xFFFAF6F0); // off-white card variant
-  static const _header    = Color(0xFF1A3C34); // dark teal (matches dashboard header)
-  static const _textDark  = Color(0xFF1C1C1E);
-  static const _textMid   = Color(0xFF6B7280);
-  static const _textSoft  = Color(0xFF9CA3AF);
-  static const _accentRed = Color(0xFFB94040); // muted warm red (allergen chip)
-  static const _accentAmber = Color(0xFFD97706); // amber/gold
-  static const _accentGreen = Color(0xFF2D7A5F); // sage/teal green (freshness)
-  static const _accentButter = Color(0xFFF5C842); // butter yellow
-
-  final _picker               = ImagePicker();
-  final _compostService       = CompostInferenceService();
-  final _wasteService         = WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
+  final _picker = ImagePicker();
+  final _compostService = CompostInferenceService();
+  final _wasteService = WastePipelineService(
+    baseUrl: ApiConfig.wastePipelineApi,
+  );
   final _contaminationService = FoodContaminationService();
 
-  XFile?  _lastFile;
-  bool    _isAnalysing = false;
-  String  _step        = '';
+  Uint8List? _lastBytes;
+  bool _isAnalysing = false;
+  String _step = '';
 
   late final AnimationController _scanLine;
   late final AnimationController _pulse;
@@ -74,6 +71,43 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     super.dispose();
   }
 
+  Future<Map<String, dynamic>> _predictFreshnessBytes(
+    Uint8List imageBytes,
+    String filename,
+  ) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
+      );
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: filename.isEmpty ? 'image.jpg' : filename,
+        ),
+      );
+      final streamed = await request.send().timeout(
+        const Duration(seconds: 60),
+      );
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+      debugPrint(
+        '[Restaurant Scan] Freshness API error: ${response.statusCode}',
+      );
+    } catch (e) {
+      debugPrint('[Restaurant Scan] Freshness error: $e');
+    }
+    return <String, dynamic>{
+      'status': 'unknown',
+      'confidence': 0.0,
+      'label': 'Not detected',
+    };
+  }
+
   // ── Capture & analyse ──────────────────────────────────────────────────────
   Future<void> _pick(ImageSource source) async {
     if (_isAnalysing) return;
@@ -81,121 +115,96 @@ class _StaffScanScreenState extends State<StaffScanScreen>
 
     try {
       final file = await _picker.pickImage(
-          source: source, imageQuality: 90, maxWidth: 1440);
+        source: source,
+        imageQuality: 90,
+        maxWidth: 1440,
+      );
       if (file == null || !mounted) return;
 
       setState(() {
-        _lastFile    = file;
         _isAnalysing = true;
-        _step        = 'Préparation de l\'image…';
+        _step = 'Préparation de l\'image…';
       });
 
       final imageBytes = await file.readAsBytes();
+      _lastBytes = imageBytes;
 
-      setState(() => _step = '4 analyses IA en parallèle…');
+      // ── Run ALL models in parallel ─────────────────────────────────────
+      setState(() => _step = '3 analyses IA en parallèle…');
 
       final futures = await Future.wait<dynamic>([
-        // 1. Compost segmentation
-        _compostService
-            .classify(imageBytes)
-            .then((r) => r.toMap())
+        // Freshness API (server-side)
+        _predictFreshnessBytes(imageBytes, file.name),
+
+        // Waste detection API (server-side)
+        _wasteService
+            .analyze(imageBytes)
+            .then((result) {
+              final payload = result.toJson();
+              payload['detectedItems'] = result.massEstimates
+                  .map((e) => {'name': e.label, 'quantityKg': e.estimatedKg})
+                  .toList(growable: false);
+              return payload;
+            })
             .catchError((e) {
-              debugPrint('[Scan] Compost API error: $e');
-              return <String, dynamic>{
-                'compostablePct':    0.0,
-                'nonCompostablePct': 0.0,
-                'backgroundPct':     100.0,
-                'inferenceTimeMs':   0,
-              };
+              debugPrint('[Restaurant Scan] Waste pipeline error: $e');
+              return <String, dynamic>{'detectedItems': [], 'confidence': 0.0};
             }),
 
-        // 2. Freshness HuggingFace API
-        () async {
-          try {
-            final request = http.MultipartRequest(
-              'POST',
-              Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
-            );
-            request.files.add(
-              http.MultipartFile.fromBytes(
-                'image',
-                imageBytes,
-                filename: file.path.split('/').last,
-              ),
-            );
-            final streamed = await request.send().timeout(const Duration(seconds: 60));
-            final response = await http.Response.fromStream(streamed);
-            if (response.statusCode == 200) {
-              return jsonDecode(response.body) as Map<String, dynamic>;
-            } else {
-              debugPrint('[Scan] Freshness API error: ${response.statusCode}');
-              return <String, dynamic>{
-                'status': 'unknown',
-                'confidence': 0.0,
-                'label': 'Non détecté',
-              };
-            }
-          } catch (e) {
-            debugPrint('[Scan] Freshness error: $e');
-            return <String, dynamic>{
-              'status': 'unknown',
-              'confidence': 0.0,
-              'label': 'Non détecté',
-            };
-          }
-        }(),
-
-        // 3. Waste pipeline API
-        _wasteService.analyze(imageBytes).then((result) {
-          final payload = result.toJson();
-          payload['detectedItems'] = result.massEstimates
-              .map((e) => {
-                    'name': e.label,
-                    'quantityKg': e.estimatedKg,
-                  })
-              .toList(growable: false);
-          return payload;
-        }).catchError((e) {
-          debugPrint('[Scan] Waste pipeline error: $e');
-          return <String, dynamic>{'detectedItems': [], 'confidence': 0.0};
-        }),
-
-        // 4. Food contamination YOLO model
-        _contaminationService.analyze(imageBytes).then((result) => result.toJson()).catchError((e) {
-          debugPrint('[Scan] Contamination API error: $e');
+        // Compost segmentation — SegFormer-B3 via FastAPI (all platforms)
+        _compostService.classify(imageBytes).then((r) => r.toMap()).catchError((
+          e,
+        ) {
+          debugPrint('[Restaurant Scan] Compost API error: $e');
           return <String, dynamic>{
-            'label': 'clean',
-            'confidence': 0.0,
-            'clean_pct': 100.0,
-            'contaminated_pct': 0.0,
-            'yolo_overrode': false,
-            'detections': const [],
-            'detection_count': 0,
+            'compostablePct': 0.0,
+            'nonCompostablePct': 0.0,
+            'backgroundPct': 100.0,
+            'inferenceTimeMs': 0,
           };
         }),
+        _contaminationService
+            .analyze(imageBytes)
+            .then((result) => result.toJson())
+            .catchError((e) {
+              debugPrint('[Restaurant Scan] Contamination API error: $e');
+              return <String, dynamic>{
+                'label': 'clean',
+                'confidence': 0.0,
+                'clean_pct': 100.0,
+                'contaminated_pct': 0.0,
+                'yolo_overrode': false,
+                'detections': const [],
+                'detection_count': 0,
+              };
+            }),
       ]);
 
       if (!mounted) return;
       setState(() => _isAnalysing = false);
 
+      // Navigate to unified result screen
       context.go(
         AppRoutes.restaurantScanResult,
         extra: <String, dynamic>{
-          'imagePath':           file.path,
-          'imageBytes':          imageBytes,
-          'compostResult':       futures[0] as Map<String, dynamic>,
-          'freshnessResult':     futures[1] as Map<String, dynamic>,
-          'wasteResult':         futures[2] as Map<String, dynamic>,
+          'imagePath': file.path,
+          'imageBytes': imageBytes,
+          'freshnessResult': futures[0] as Map<String, dynamic>,
+          'wasteResult': futures[1] as Map<String, dynamic>,
+          'compostResult': futures[2] as Map<String, dynamic>,
           'contaminationResult': futures[3] as Map<String, dynamic>,
-          'isFusion':            true,
+          'isFusion': true,
+          // Legacy compat
+          'result': futures[0],
+          'scanMode': 'freshness',
         },
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAnalysing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -203,7 +212,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _rSurface,
       body: Stack(
         children: [
           SafeArea(
@@ -225,7 +234,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
-        color: _header,
+        color: _rDeep,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -234,13 +243,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           GestureDetector(
             onTap: () => context.pop(),
             child: Container(
-              width: 38, height: 38,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
+                color: _rSoftBg,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 16),
+              child: Icon(Icons.arrow_back_ios_new, color: _rDeep, size: 16),
             ),
           ),
           const SizedBox(width: 14),
@@ -250,18 +260,15 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               children: [
                 Text(
                   'Smart Scan',
-                  style: GoogleFonts.sora(
-                    fontSize: 19,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: _rTextTitle,
                   ),
                 ),
                 Text(
-                  'Freshness · Gaspillage · Compost · Insectes — en parallèle',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.65),
-                  ),
+                  'Freshness · Gaspillage · Compost — en parallèle',
+                  style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
                 ),
               ],
             ),
@@ -270,15 +277,16 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: _accentButter,
+              gradient: const LinearGradient(colors: [_rPrimary, _rDeep]),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '✦ IA',
               style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: _header),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -298,20 +306,20 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               // Image preview or placeholder
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: _lastFile != null && !kIsWeb
-                    ? Image.file(
-                        File(_lastFile!.path),
+                child: _lastBytes != null
+                    ? Image.memory(
+                        _lastBytes!,
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
                       )
                     : Container(
                         decoration: BoxDecoration(
-                          color: _card,
+                          color: _rSoftBg,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: const Color(0xFFE5DDD4),
-                            width: 1.5,
+                            color: _rPrimary.withValues(alpha: 0.4),
+                            width: 2,
                           ),
                         ),
                         child: Center(
@@ -324,17 +332,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                                   scale: 1.0 + _pulse.value * 0.06,
                                   child: child,
                                 ),
-                                child: Container(
-                                  width: 80, height: 80,
-                                  decoration: BoxDecoration(
-                                    color: _accentGreen.withValues(alpha: 0.10),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.document_scanner_rounded,
-                                    size: 38,
-                                    color: _accentGreen.withValues(alpha: 0.65),
-                                  ),
+                                child: Icon(
+                                  Icons.document_scanner_rounded,
+                                  size: 64,
+                                  color: _rPrimary.withValues(alpha: 0.5),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -343,15 +344,16 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                                 style: GoogleFonts.sora(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: _textDark,
+                                  color: _rTextTitle,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 'ou importez depuis la galerie',
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: _textMid,
+                                  fontSize: 13,
+                                  color: _rTextMuted,
+                                  height: 1.6,
                                 ),
                               ),
                             ],
@@ -359,39 +361,48 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                         ),
                       ),
               ),
-              // Animated scan line (green accent on light bg)
+              // Animated scan line
               if (!_isAnalysing)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return AnimatedBuilder(
-                      animation: _scanLine,
-                      builder: (_, __) {
-                        return Positioned(
-                          top: _scanLine.value * (constraints.maxHeight - 4),
-                          left: 20, right: 20,
-                          child: Container(
-                            height: 2,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  _accentGreen.withValues(alpha: 0.7),
-                                  Colors.transparent,
-                                ],
+                Positioned.fill(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return AnimatedBuilder(
+                        animation: _scanLine,
+                        builder: (_, __) {
+                          final maxTop = (constraints.maxHeight - 2).clamp(
+                            0.0,
+                            double.infinity,
+                          );
+                          return Transform.translate(
+                            offset: Offset(0, _scanLine.value * maxTop),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
                               ),
-                              borderRadius: BorderRadius.circular(2),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        _rPrimary.withValues(alpha: 0.8),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               // AI labels overlay
-              Positioned(
-                bottom: 14, left: 14,
-                child: _buildAiLabels(),
-              ),
+              Positioned(bottom: 14, left: 14, child: _buildAiLabels()),
             ],
           ),
         ),
@@ -403,9 +414,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     return Wrap(
       spacing: 6,
       children: [
-        _aiChip('🌡️ Fraîcheur', _accentRed),
-        _aiChip('🗑️ Gaspillage', _accentAmber),
-        _aiChip('🌱 Compost', _accentGreen),
+        _aiChip('Freshness', _danger),
+        _aiChip('🗑️ Gaspillage', _warning),
+        _aiChip('🌱 Compost', _fresh),
       ],
     );
   }
@@ -414,37 +425,32 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 6, offset: const Offset(0, 2),
-          ),
-        ],
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,
         style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: color),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
 
-  // ── Capture dock (white card, matches dashboard card style) ────────────────
   Widget _buildCaptureDock() {
     return Container(
-      decoration: const BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: _rPrimary.withValues(alpha: 0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Color(0x14000000),
+            color: _rPrimary.withValues(alpha: 0.12),
             blurRadius: 20,
-            offset: Offset(0, -4),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -467,11 +473,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _modeIndicator(Icons.thermostat_rounded, 'Freshness', _accentRed),
+                _modeIndicator(Icons.thermostat_rounded, 'Freshness', _danger),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.delete_rounded,     'Waste',     _accentAmber),
+                _modeIndicator(Icons.event_available_rounded, 'Expiry', _rDeep),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.eco_rounded,        'Compost',   _accentGreen),
+                _modeIndicator(Icons.delete_rounded, 'Gaspillage', _warning),
+                const SizedBox(width: 8),
+                _modeIndicator(Icons.eco_rounded, 'Compost', _fresh),
               ],
             ),
             const SizedBox(height: 20),
@@ -486,32 +494,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                 ),
                 _captureButton(),
                 _sideButton(
-                  icon: Icons.tips_and_updates_outlined,
-                  label: 'Conseils',
-                  onTap: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Additional outlined action buttons
-            Column(
-              children: [
-                _outlinedAction(
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Check Expiry Date',
+                  icon: Icons.event_available_rounded,
+                  label: 'Expiry',
                   onTap: () => context.go(AppRoutes.restaurantExpiryDate),
-                ),
-                const SizedBox(height: 8),
-                _outlinedAction(
-                  icon: Icons.favorite_outline,
-                  label: 'Freshness Check',
-                  onTap: () => context.go(AppRoutes.restaurantFreshnessCheck),
-                ),
-                const SizedBox(height: 8),
-                _outlinedAction(
-                  icon: Icons.search_rounded,
-                  label: '🔍 Contamination Scan',
-                  onTap: () => context.go(AppRoutes.restaurantContaminationScan),
                 ),
               ],
             ),
@@ -522,37 +507,11 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     );
   }
 
-  Widget _outlinedAction({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 17),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _header,
-        side: BorderSide(color: _header.withValues(alpha: 0.25), width: 1.2),
-        backgroundColor: _cardSoft,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500,
-        ),
-        minimumSize: const Size(double.infinity, 0),
-        alignment: Alignment.centerLeft,
-      ),
-    );
-  }
-
   Widget _modeIndicator(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
@@ -564,7 +523,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           Text(
             label,
             style: GoogleFonts.inter(
-                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -581,13 +543,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: _accentGreen.withValues(alpha: 0.4 + _pulse.value * 0.25),
+              color: _rPrimary.withValues(alpha: 0.5 + _pulse.value * 0.3),
               width: 3,
             ),
             boxShadow: [
               BoxShadow(
-                color: _accentGreen.withValues(alpha: 0.15 + _pulse.value * 0.10),
-                blurRadius: 18 + _pulse.value * 8,
+                color: _rPrimary.withValues(alpha: 0.2 + _pulse.value * 0.15),
+                blurRadius: 20 + _pulse.value * 10,
               ),
             ],
           ),
@@ -597,12 +559,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           margin: const EdgeInsets.all(6),
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [Color(0xFF2D9A72), Color(0xFF1A6B4E)],
-            ),
+            gradient: RadialGradient(colors: [_rPrimary, _rDeep]),
           ),
-          child: const Icon(Icons.camera_alt_rounded,
-              color: Colors.white, size: 30),
+          child: const Icon(
+            Icons.camera_alt_rounded,
+            color: Colors.white,
+            size: 30,
+          ),
         ),
       ),
     );
@@ -619,26 +582,21 @@ class _StaffScanScreenState extends State<StaffScanScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 52, height: 52,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: _cardSoft,
+              color: _rSoftBg,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFDDD6CC)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 6, offset: const Offset(0, 2),
-                ),
-              ],
+              border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
             ),
-            child: Icon(icon, color: _textMid, size: 22),
+            child: Icon(icon, color: _rDeep, size: 22),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: _textSoft,
+              color: _rTextMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -650,18 +608,18 @@ class _StaffScanScreenState extends State<StaffScanScreen>
   // ── Analysing overlay ──────────────────────────────────────────────────────
   Widget _buildAnalysingOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.45),
+      color: _rSoftBg.withValues(alpha: 0.86),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 40),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: _card,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 30,
+                color: _rPrimary.withValues(alpha: 0.2),
+                blurRadius: 32,
                 offset: const Offset(0, 8),
               ),
             ],
@@ -673,10 +631,10 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               const SizedBox(height: 20),
               Text(
                 'Analyse IA en cours',
-                style: GoogleFonts.sora(
+                style: GoogleFonts.playfairDisplay(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: _textDark,
+                  color: _rTextTitle,
                 ),
               ),
               const SizedBox(height: 8),
@@ -688,7 +646,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: _textMid,
+                    color: _rTextMuted,
                     height: 1.5,
                   ),
                 ),
@@ -697,11 +655,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _MiniLoader('Freshness', _accentRed),
+                  _MiniLoader('Freshness', _danger),
                   const SizedBox(width: 16),
-                  _MiniLoader('Waste',     _accentAmber),
+                  _MiniLoader('Waste', _warning),
                   const SizedBox(width: 16),
-                  _MiniLoader('Compost',   _accentGreen),
+                  _MiniLoader('Compost', _fresh),
+                  const SizedBox(width: 16),
+                  _MiniLoader('Safety', _rDeep),
                 ],
               ),
             ],
@@ -743,27 +703,19 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
     return RotationTransition(
       turns: _ctrl,
       child: Container(
-        width: 56, height: 56,
+        width: 56,
+        height: 56,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          gradient: SweepGradient(
-            colors: [Color(0xFF2D7A5F), Colors.transparent],
-          ),
+          gradient: SweepGradient(colors: [_rPrimary, Colors.transparent]),
         ),
         child: Container(
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2D7A5F).withValues(alpha: 0.15),
-                blurRadius: 8,
-              ),
-            ],
           ),
-          child: const Icon(Icons.psychology_rounded,
-              color: Color(0xFF2D7A5F), size: 28),
+          child: const Icon(Icons.psychology_rounded, color: _rDeep, size: 28),
         ),
       ),
     );
@@ -804,7 +756,8 @@ class _MiniLoaderState extends State<_MiniLoader>
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 20, height: 20,
+          width: 20,
+          height: 20,
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
             color: widget.color,
@@ -814,9 +767,10 @@ class _MiniLoaderState extends State<_MiniLoader>
         Text(
           widget.label,
           style: GoogleFonts.inter(
-              fontSize: 9,
-              color: widget.color,
-              fontWeight: FontWeight.w600),
+            fontSize: 9,
+            color: widget.color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

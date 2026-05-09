@@ -7,7 +7,16 @@ import '../../../core/constants.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/freshness_badge.dart';
-import '../../../shared/widgets/olive_header.dart';
+
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary   = Color(0xFFF2A7A7);
+const _rDeep      = Color(0xFFE47878);
+const _rSurface   = Color(0xFFFFF5F5);
+const _rSoftBg    = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextMuted = Color(0xFFB08080);
+const _warning    = Color(0xFFFFAB5B);
+const _danger     = Color(0xFFFF7070);
 
 class InventoryItemScreen extends StatelessWidget {
   final String id;
@@ -28,10 +37,10 @@ class InventoryItemScreen extends StatelessWidget {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: AppColors.olive,
-              onPrimary: AppColors.butter,
-              surface: AppColors.parchment,
-              onSurface: AppColors.espresso,
+              primary: _rDeep,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF3D1515),
             ),
           ),
           child: child!,
@@ -49,6 +58,47 @@ class InventoryItemScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildHeader(BuildContext context, String title) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_rSoftBg, _rSurface],
+        ),
+        border: Border(
+          bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
+              ),
+              child: Icon(Icons.arrow_back_ios_new, color: _rDeep, size: 16),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            title,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: _rTextTitle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<InventoryProvider>();
@@ -56,16 +106,16 @@ class InventoryItemScreen extends StatelessWidget {
 
     if (it == null) {
       return Scaffold(
-        backgroundColor: AppColors.oat,
+        backgroundColor: _rSurface,
         body: SafeArea(
           child: Column(
             children: [
-              OliveHeader(title: AppStrings.inventoryItem, showBack: true),
+              _buildHeader(context, AppStrings.inventoryItem),
               Expanded(
                 child: Center(
                   child: Text(
                     AppStrings.genericError,
-                    style: GoogleFonts.inter(color: AppColors.cocoa),
+                    style: GoogleFonts.inter(color: _rTextMuted),
                   ),
                 ),
               ),
@@ -78,19 +128,18 @@ class InventoryItemScreen extends StatelessWidget {
     final date = DateFormat('MMM d, y').format(it.expiryDate);
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _rSurface,
       body: SafeArea(
         child: Column(
           children: [
-            OliveHeader(title: AppStrings.inventoryItem, showBack: true),
+            _buildHeader(context, AppStrings.inventoryItem),
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
                   ),
                 ),
                 child: SingleChildScrollView(
@@ -100,10 +149,10 @@ class InventoryItemScreen extends StatelessWidget {
                     children: [
                       Text(
                         it.name,
-                        style: GoogleFonts.dmSerifDisplay(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.espresso,
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: _rTextTitle,
                           height: 1.2,
                         ),
                       ),
@@ -117,13 +166,13 @@ class InventoryItemScreen extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.cocoa,
+                              color: _rTextMuted,
                               height: 1.2,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       _InfoTile(
                         label: AppStrings.quantity,
                         value:
@@ -140,11 +189,11 @@ class InventoryItemScreen extends StatelessWidget {
                         value: FreshnessBadge.label(it.status),
                         valueColor: FreshnessBadge.textColor(it.status),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       AnimatedButton(
                         label: AppStrings.updateExpiry,
-                        color: AppColors.olive,
-                        textColor: AppColors.butter,
+                        color: _rDeep,
+                        textColor: Colors.white,
                         onTap: () => _pickExpiry(context),
                         height: 52,
                       ),
@@ -154,9 +203,10 @@ class InventoryItemScreen extends StatelessWidget {
                           Expanded(
                             child: AnimatedButton(
                               label: AppStrings.keep,
-                              color: AppColors.olive,
-                              textColor: AppColors.butter,
-                              onTap: () => provider.updateStatus(id, 'fresh'),
+                              color: const Color(0xFF52C98A),
+                              textColor: Colors.white,
+                              onTap: () =>
+                                  provider.updateStatus(id, 'fresh'),
                               height: 48,
                             ),
                           ),
@@ -164,9 +214,10 @@ class InventoryItemScreen extends StatelessWidget {
                           Expanded(
                             child: AnimatedButton(
                               label: AppStrings.useToday,
-                              color: AppColors.riskModerateText,
-                              textColor: AppColors.butter,
-                              onTap: () => provider.updateStatus(id, 'expiring'),
+                              color: _warning,
+                              textColor: Colors.white,
+                              onTap: () =>
+                                  provider.updateStatus(id, 'expiring'),
                               height: 48,
                             ),
                           ),
@@ -175,8 +226,8 @@ class InventoryItemScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                       AnimatedButton(
                         label: AppStrings.remove,
-                        color: AppColors.cherry,
-                        textColor: AppColors.butter,
+                        color: _danger,
+                        textColor: Colors.white,
                         onTap: () async {
                           await provider.removeItem(id);
                           if (!context.mounted) return;
@@ -188,7 +239,7 @@ class InventoryItemScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -212,9 +263,10 @@ class _InfoTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: _rSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
       ),
       child: Row(
         children: [
@@ -224,7 +276,7 @@ class _InfoTile extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.cocoa,
+                color: _rTextMuted,
                 height: 1.2,
               ),
             ),
@@ -237,7 +289,7 @@ class _InfoTile extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: valueColor ?? AppColors.espresso,
+                color: valueColor ?? _rTextTitle,
                 height: 1.2,
               ),
             ),

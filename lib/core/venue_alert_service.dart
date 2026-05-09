@@ -11,7 +11,7 @@
 ///   customerId    String   — uid of the customer
 ///   customerName  String
 ///   room          String?  — hotel room number if known
-///   allergens     List<String>
+///   allergens     `List<String>`
 ///   productName   String   — the scanned item
 ///   riskLevel     String   — 'low' | 'moderate' | 'high'
 ///   scannedAt     Timestamp

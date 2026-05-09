@@ -36,9 +36,12 @@ class ScanHistoryItem {
       id: (json['id'] ?? '') as String,
       dishName: (json['dishName'] ?? '') as String,
       imagePath: json['imagePath'] as String?,
-      scannedAt: DateTime.tryParse((json['scannedAt'] ?? '') as String) ??
+      scannedAt:
+          DateTime.tryParse((json['scannedAt'] ?? '') as String) ??
           DateTime.now(),
-      result: NutrientResult.fromJson((json['result'] ?? {}) as Map<String, dynamic>),
+      result: NutrientResult.fromJson(
+        (json['result'] ?? {}) as Map<String, dynamic>,
+      ),
     );
   }
 
