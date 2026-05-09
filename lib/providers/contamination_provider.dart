@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:conscious_living/features/restaurant/scan/food_contamination_service.dart';
 

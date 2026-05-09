@@ -15,10 +15,18 @@ import '../../restaurant/scan/food_contamination_service.dart';
 import '../../restaurant/waste/compost_inference_service.dart';
 import '../../restaurant/waste/waste_pipeline_service.dart';
 
-// Hotel brand colors
-const _kCherry = Color(0xFF75070C);
-const _dark = Color(0xFF0A0F1E);
-const _card = Color(0xFF141B2D);
+const kOat = Color(0xFFF4FAF7);
+const kParchment = Color(0xFFFFFFFF);
+const kSand = Color(0xFFDFF2E9);
+const kCherry = Color(0xFF7DC5A0);
+const kCherryMid = Color(0xFF4A8A6A);
+const kCherryB = Color(0xFFDFF2E9);
+const kButterD = Color(0xFFFFAB5B);
+const kOlive = Color(0xFF52C98A);
+const kEspresso = Color(0xFF0D2E1E);
+const kCocoa = Color(0xFF3A6A52);
+const kFog = Color(0xFF7AAA90);
+const kViewfinderHotel = Color(0xFFDFF2E9);
 
 class HotelScanScreen extends StatefulWidget {
   const HotelScanScreen({super.key});
@@ -31,8 +39,9 @@ class _HotelScanScreenState extends State<HotelScanScreen>
     with TickerProviderStateMixin {
   final _picker = ImagePicker();
   final _compostService = CompostInferenceService();
-  final _wasteService =
-      WastePipelineService(baseUrl: ApiConfig.wastePipelineApi);
+  final _wasteService = WastePipelineService(
+    baseUrl: ApiConfig.wastePipelineApi,
+  );
   final _contaminationService = FoodContaminationService();
 
   XFile? _lastFile;
@@ -73,42 +82,43 @@ class _HotelScanScreenState extends State<HotelScanScreen>
 
     try {
       final file = await _picker.pickImage(
-          source: source, imageQuality: 90, maxWidth: 1440);
+        source: source,
+        imageQuality: 90,
+        maxWidth: 1440,
+      );
       if (file == null || !mounted) return;
 
       setState(() {
         _lastFile = file;
         _isAnalysing = true;
-        _step = 'Préparation de l\'image…';
+        _step = 'Preparing image...';
       });
 
       final imageBytes = await file.readAsBytes();
 
       // ── Run 4 models in parallel ─────────────────────────────────────
-      setState(() => _step = '4 analyses IA en parallèle…');
+      setState(() => _step = 'Running 4 AI checks in parallel...');
 
       final futures = await Future.wait<dynamic>([
         // 1. Compost segmentation
-        _compostService
-            .classify(imageBytes)
-            .then((r) => r.toMap())
-            .catchError((e) {
-              debugPrint('[Hotel Scan] Compost API error: $e');
-              return <String, dynamic>{
-                'compostablePct': 0.0,
-                'nonCompostablePct': 0.0,
-                'backgroundPct': 100.0,
-                'inferenceTimeMs': 0,
-              };
-            }),
+        _compostService.classify(imageBytes).then((r) => r.toMap()).catchError((
+          e,
+        ) {
+          debugPrint('[Hotel Scan] Compost API error: $e');
+          return <String, dynamic>{
+            'compostablePct': 0.0,
+            'nonCompostablePct': 0.0,
+            'backgroundPct': 100.0,
+            'inferenceTimeMs': 0,
+          };
+        }),
 
         // 2. Freshness HuggingFace API
         () async {
           try {
             final request = http.MultipartRequest(
               'POST',
-              Uri.parse(
-                  'https://jawher0000-freshness-check.hf.space/predict'),
+              Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
             );
             request.files.add(
               http.MultipartFile.fromBytes(
@@ -117,18 +127,20 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                 filename: file.path.split('/').last,
               ),
             );
-            final streamed =
-                await request.send().timeout(const Duration(seconds: 60));
+            final streamed = await request.send().timeout(
+              const Duration(seconds: 60),
+            );
             final response = await http.Response.fromStream(streamed);
             if (response.statusCode == 200) {
               return jsonDecode(response.body) as Map<String, dynamic>;
             } else {
               debugPrint(
-                  '[Hotel Scan] Freshness API error: ${response.statusCode}');
+                '[Hotel Scan] Freshness API error: ${response.statusCode}',
+              );
               return <String, dynamic>{
                 'status': 'unknown',
                 'confidence': 0.0,
-                'label': 'Non détecté',
+                'label': 'Not detected',
               };
             }
           } catch (e) {
@@ -136,42 +148,42 @@ class _HotelScanScreenState extends State<HotelScanScreen>
             return <String, dynamic>{
               'status': 'unknown',
               'confidence': 0.0,
-              'label': 'Non détecté',
+              'label': 'Not detected',
             };
           }
         }(),
 
         // 3. Waste pipeline API
-        _wasteService.analyze(imageBytes).then((result) {
-          final payload = result.toJson();
-          payload['detectedItems'] = result.massEstimates
-              .map((e) => {
-                    'name': e.label,
-                    'quantityKg': e.estimatedKg,
-                  })
-              .toList(growable: false);
-          return payload;
-        }).catchError((e) {
-          debugPrint('[Hotel Scan] Waste pipeline error: $e');
-          return <String, dynamic>{
-            'detectedItems': [],
-            'confidence': 0.0
-          };
-        }),
+        _wasteService
+            .analyze(imageBytes)
+            .then((result) {
+              final payload = result.toJson();
+              payload['detectedItems'] = result.massEstimates
+                  .map((e) => {'name': e.label, 'quantityKg': e.estimatedKg})
+                  .toList(growable: false);
+              return payload;
+            })
+            .catchError((e) {
+              debugPrint('[Hotel Scan] Waste pipeline error: $e');
+              return <String, dynamic>{'detectedItems': [], 'confidence': 0.0};
+            }),
 
         // 4. Food contamination YOLO model
-        _contaminationService.analyze(imageBytes).then((result) => result.toJson()).catchError((e) {
-          debugPrint('[Hotel Scan] Contamination API error: $e');
-          return <String, dynamic>{
-            'label': 'clean',
-            'confidence': 0.0,
-            'clean_pct': 100.0,
-            'contaminated_pct': 0.0,
-            'yolo_overrode': false,
-            'detections': const [],
-            'detection_count': 0,
-          };
-        }),
+        _contaminationService
+            .analyze(imageBytes)
+            .then((result) => result.toJson())
+            .catchError((e) {
+              debugPrint('[Hotel Scan] Contamination API error: $e');
+              return <String, dynamic>{
+                'label': 'clean',
+                'confidence': 0.0,
+                'clean_pct': 100.0,
+                'contaminated_pct': 0.0,
+                'yolo_overrode': false,
+                'detections': const [],
+                'detection_count': 0,
+              };
+            }),
       ]);
 
       if (!mounted) return;
@@ -192,21 +204,21 @@ class _HotelScanScreenState extends State<HotelScanScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() => _isAnalysing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: kOat,
       body: Stack(
         children: [
-          _Background(),
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildHeader(),
                 Expanded(child: _buildViewfinder()),
@@ -222,7 +234,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
           GestureDetector(
@@ -231,13 +243,11 @@ class _HotelScanScreenState extends State<HotelScanScreen>
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: kParchment,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12)),
+                border: Border.all(color: kSand),
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 16),
+              child: Icon(Icons.arrow_back_ios_new, color: kFog, size: 16),
             ),
           ),
           const SizedBox(width: 14),
@@ -247,18 +257,15 @@ class _HotelScanScreenState extends State<HotelScanScreen>
               children: [
                 Text(
                   'Smart Scan',
-                  style: GoogleFonts.sora(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: kEspresso,
                   ),
                 ),
                 Text(
-                  'Fraîcheur · Gaspillage · Compost · Insectes — en parallèle',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.55),
-                  ),
+                  'Freshness · Waste · Compost · Contamination in parallel',
+                  style: GoogleFonts.inter(fontSize: 11, color: kFog),
                 ),
               ],
             ),
@@ -266,16 +273,16 @@ class _HotelScanScreenState extends State<HotelScanScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                  colors: [_kCherry, Color(0xFF5B21B6)]),
+              gradient: LinearGradient(colors: [kCherry, kCherryMid]),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '✦ IA',
+              'AI',
               style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -284,15 +291,17 @@ class _HotelScanScreenState extends State<HotelScanScreen>
   }
 
   Widget _buildViewfinder() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: AspectRatio(
-          aspectRatio: 1,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
+              ColoredBox(
+                color: kViewfinderHotel,
                 child: _lastFile != null && !kIsWeb
                     ? Image.file(
                         File(_lastFile!.path),
@@ -300,70 +309,77 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                         width: double.infinity,
                         height: double.infinity,
                       )
-                    : Container(
-                        color: const Color(0xFF0D1524),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AnimatedBuilder(
-                                animation: _pulse,
-                                builder: (_, child) => Transform.scale(
-                                  scale: 1.0 + _pulse.value * 0.08,
-                                  child: child,
-                                ),
-                                child: Icon(
-                                  Icons.document_scanner_rounded,
-                                  size: 64,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.18),
-                                ),
+                    : Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedBuilder(
+                              animation: _pulse,
+                              builder: (_, child) => Transform.scale(
+                                scale: 1.0 + _pulse.value * 0.08,
+                                child: child,
                               ),
-                              const SizedBox(height: 14),
-                              Text(
-                                'Prenez une photo\nou importez depuis la galerie',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.38),
-                                  height: 1.6,
-                                ),
+                              child: Icon(
+                                Icons.document_scanner_rounded,
+                                size: 64,
+                                color: Colors.white.withValues(alpha: 0.16),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Prenez une photo\nou importez depuis la galerie',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white70,
+                                height: 1.6,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
               ),
+              ..._cornerBrackets(kCherry),
               if (!_isAnalysing)
-                AnimatedBuilder(
-                  animation: _scanLine,
-                  builder: (_, _) {
-                    final t = _scanLine.value;
-                    return Positioned(
-                      top: t * 300,
-                      left: 24,
-                      right: 24,
-                      child: Container(
-                        height: 2,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              _kCherry,
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                Positioned.fill(
+                  child: LayoutBuilder(
+                    builder: (_, box) {
+                      return AnimatedBuilder(
+                        animation: _scanLine,
+                        builder: (_, __) {
+                          final maxTop = (box.maxHeight - 24).clamp(
+                            0.0,
+                            double.infinity,
+                          );
+                          return Transform.translate(
+                            offset: Offset(0, _scanLine.value * maxTop),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  height: 2,
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.transparent,
+                                        kCherry,
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-              Positioned(
-                bottom: 14,
-                left: 14,
-                child: _buildAiLabels(),
-              ),
+              Positioned(bottom: 14, left: 14, child: _buildAiLabels()),
             ],
           ),
         ),
@@ -371,13 +387,66 @@ class _HotelScanScreenState extends State<HotelScanScreen>
     );
   }
 
+  List<Widget> _cornerBrackets(Color c) {
+    const o = 14.0;
+    const len = 28.0;
+    const w = 3.0;
+    final bs = BorderSide(color: c, width: w);
+    return [
+      Positioned(
+        top: o,
+        left: o,
+        child: Container(
+          width: len,
+          height: len,
+          decoration: BoxDecoration(
+            border: Border(left: bs, top: bs),
+          ),
+        ),
+      ),
+      Positioned(
+        top: o,
+        right: o,
+        child: Container(
+          width: len,
+          height: len,
+          decoration: BoxDecoration(
+            border: Border(right: bs, top: bs),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: o,
+        left: o,
+        child: Container(
+          width: len,
+          height: len,
+          decoration: BoxDecoration(
+            border: Border(left: bs, bottom: bs),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: o,
+        right: o,
+        child: Container(
+          width: len,
+          height: len,
+          decoration: BoxDecoration(
+            border: Border(right: bs, bottom: bs),
+          ),
+        ),
+      ),
+    ];
+  }
+
   Widget _buildAiLabels() {
     return Wrap(
       spacing: 6,
       children: [
-        _aiChip('🌡️ Fraîcheur', const Color(0xFF8B1A1F)),
-        _aiChip('🗑️ Gaspillage', const Color(0xFF5A7A18)),
-        _aiChip('🌱 Compost', const Color(0xFF059669)),
+        _aiChip('Freshness', kCherry),
+        _aiChip('Waste', kButterD),
+        _aiChip('🌱 Compost', kOlive),
       ],
     );
   }
@@ -392,21 +461,20 @@ class _HotelScanScreenState extends State<HotelScanScreen>
       child: Text(
         label,
         style: GoogleFonts.inter(
-            fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     );
   }
 
   Widget _buildCaptureDock() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: BoxDecoration(
-        color: _card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.06), width: 1),
-        ),
+        color: kParchment,
+        border: Border(top: BorderSide(color: kSand)),
       ),
       child: SafeArea(
         top: false,
@@ -416,14 +484,21 @@ class _HotelScanScreenState extends State<HotelScanScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _modeIndicator(Icons.thermostat_rounded, 'Freshness',
-                    const Color(0xFFEF4444)),
+                _hotelModeChip(
+                  Icons.thermostat_rounded,
+                  'Freshness',
+                  active: true,
+                ),
                 const SizedBox(width: 8),
-                _modeIndicator(
-                    Icons.delete_rounded, 'Waste', const Color(0xFFD97706)),
+                _hotelModeChip(
+                  Icons.event_available_rounded,
+                  'Expiry',
+                  active: false,
+                ),
                 const SizedBox(width: 8),
-                _modeIndicator(Icons.eco_rounded, 'Compost',
-                    const Color(0xFF10B981)),
+                _hotelModeChip(Icons.delete_rounded, 'Waste', active: false),
+                const SizedBox(width: 8),
+                _hotelModeChip(Icons.eco_rounded, 'Compost', active: false),
               ],
             ),
             const SizedBox(height: 20),
@@ -437,9 +512,9 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                 ),
                 _captureButton(),
                 _sideButton(
-                  icon: Icons.tips_and_updates_outlined,
-                  label: 'Conseils',
-                  onTap: () {},
+                  icon: Icons.event_available_rounded,
+                  label: 'Expiry',
+                  onTap: () => context.go(AppRoutes.hotelExpiryDate),
                 ),
               ],
             ),
@@ -449,23 +524,28 @@ class _HotelScanScreenState extends State<HotelScanScreen>
     );
   }
 
-  Widget _modeIndicator(IconData icon, String label, Color color) {
+  Widget _hotelModeChip(IconData icon, String label, {required bool active}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: active ? kCherry : kCherryB.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: kCherry.withValues(alpha: active ? 0.55 : 0.35),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 12, color: active ? Colors.white : kCherry),
           const SizedBox(width: 4),
           Text(
             label,
             style: GoogleFonts.inter(
-                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : kCherry,
+            ),
           ),
         ],
       ),
@@ -483,14 +563,12 @@ class _HotelScanScreenState extends State<HotelScanScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color:
-                  _kCherry.withValues(alpha: 0.5 + _pulse.value * 0.3),
+              color: kCherry.withValues(alpha: 0.5 + _pulse.value * 0.3),
               width: 3,
             ),
             boxShadow: [
               BoxShadow(
-                color: _kCherry.withValues(
-                    alpha: 0.2 + _pulse.value * 0.15),
+                color: kCherry.withValues(alpha: 0.2 + _pulse.value * 0.15),
                 blurRadius: 20 + _pulse.value * 10,
               ),
             ],
@@ -499,14 +577,12 @@ class _HotelScanScreenState extends State<HotelScanScreen>
         ),
         child: Container(
           margin: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              colors: [_kCherry, Color(0xFF5B21B6)],
-            ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: kCherry),
+          child: const Icon(
+            Icons.camera_alt_rounded,
+            color: Colors.white,
+            size: 30,
           ),
-          child: const Icon(Icons.camera_alt_rounded,
-              color: Colors.white, size: 30),
         ),
       ),
     );
@@ -522,24 +598,13 @@ class _HotelScanScreenState extends State<HotelScanScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.07),
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            child: Icon(icon,
-                color: Colors.white.withValues(alpha: 0.75), size: 22),
-          ),
-          const SizedBox(height: 6),
+          Icon(icon, color: kFog, size: 28),
+          const SizedBox(height: 8),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: Colors.white.withValues(alpha: 0.5),
+              color: kFog,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -550,16 +615,22 @@ class _HotelScanScreenState extends State<HotelScanScreen>
 
   Widget _buildAnalysingOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.78),
+      color: kEspresso.withValues(alpha: 0.35),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 40),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: _card,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08)),
+            color: kParchment,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: kSand),
+            boxShadow: [
+              BoxShadow(
+                color: kEspresso.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -567,11 +638,11 @@ class _HotelScanScreenState extends State<HotelScanScreen>
               _AnimatedBrain(),
               const SizedBox(height: 20),
               Text(
-                'Analyse IA en cours',
-                style: GoogleFonts.sora(
+                'AI analysis in progress',
+                style: GoogleFonts.playfairDisplay(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: kEspresso,
                 ),
               ),
               const SizedBox(height: 8),
@@ -583,7 +654,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.55),
+                    color: kCocoa,
                     height: 1.5,
                   ),
                 ),
@@ -592,11 +663,11 @@ class _HotelScanScreenState extends State<HotelScanScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _MiniLoader('Freshness', const Color(0xFFEF4444)),
+                  _MiniLoader('Freshness', kCherry),
                   const SizedBox(width: 16),
-                  _MiniLoader('Waste', const Color(0xFFD97706)),
+                  _MiniLoader('Waste', kButterD),
                   const SizedBox(width: 16),
-                  _MiniLoader('Compost', const Color(0xFF10B981)),
+                  _MiniLoader('Compost', kOlive),
                 ],
               ),
             ],
@@ -605,32 +676,6 @@ class _HotelScanScreenState extends State<HotelScanScreen>
       ),
     );
   }
-}
-
-class _Background extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: CustomPaint(painter: _BgPainter()),
-    );
-  }
-}
-
-class _BgPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    paint.color = const Color(0xFF0A0F1E);
-    canvas.drawRect(Offset.zero & size, paint);
-
-    paint.color = _kCherry.withValues(alpha: 0.06);
-    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.2), 180, paint);
-    paint.color = const Color(0xFF7C3AED).withValues(alpha: 0.05);
-    canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.7), 160, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _AnimatedBrain extends StatefulWidget {
@@ -666,18 +711,15 @@ class _AnimatedBrainState extends State<_AnimatedBrain>
         height: 56,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: SweepGradient(
-            colors: [_kCherry, Colors.transparent],
-          ),
+          gradient: SweepGradient(colors: [kCherry, Colors.transparent]),
         ),
         child: Container(
           margin: const EdgeInsets.all(4),
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: Color(0xFF141B2D),
+            color: kParchment,
           ),
-          child: const Icon(Icons.psychology_rounded,
-              color: _kCherry, size: 28),
+          child: Icon(Icons.psychology_rounded, color: kCherry, size: 28),
         ),
       ),
     );
@@ -729,9 +771,10 @@ class _MiniLoaderState extends State<_MiniLoader>
         Text(
           widget.label,
           style: GoogleFonts.inter(
-              fontSize: 9,
-              color: widget.color,
-              fontWeight: FontWeight.w600),
+            fontSize: 9,
+            color: widget.color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

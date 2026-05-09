@@ -12,21 +12,20 @@ import '../../../core/venue_alert_service.dart';
 import '../../../providers/user_provider.dart';
 
 // ── Brand palette ──────────────────────────────────────────────────────────────
-const _kOat      = Color(0xFFEDE0D3);
-const _kParchment= Color(0xFFFAF5EE);
-const _kSand     = Color(0xFFD9C9B4);
-const _kCherry   = Color(0xFF75070C);
-const _kCherryL  = Color(0xFF9E1A21);
-const _kCherryB  = Color(0xFFFBBCBF);
-const _kOlive    = Color(0xFF4F6815);
-const _kOliveM   = Color(0xFFD4E8A8);
-const _kButter   = Color(0xFFFFEDAB);
-const _kButterD  = Color(0xFFE8C84A);
-const _kCocoa    = Color(0xFF5C3D3F);
-const _kEspresso = Color(0xFF2C1A1B);
-const _kFog      = Color(0xFF8C7B7C);
-const _kInfo     = Color(0xFF185FA5);
-const _kInfoBg   = Color(0xFFE6F1FB);
+const _kOat = Color(0xFFF4FAF7);
+const _kParchment = Color(0xFFFFFFFF);
+const _kSand = Color(0xFFDFF2E9);
+const _kCherry = Color(0xFF7DC5A0);
+const _kCherryB = Color(0xFFDFF2E9);
+const _kOlive = Color(0xFF4A8A6A);
+const _kOliveM = Color(0xFFEDF7F3);
+const _kButter = Color(0xFFFFE566);
+const _kButterD = Color(0xFFFFAB5B);
+const _kCocoa = Color(0xFF3A6A52);
+const _kEspresso = Color(0xFF0D2E1E);
+const _kFog = Color(0xFF7AAA90);
+const _kInfo = Color(0xFF185FA5);
+const _kInfoBg = Color(0xFFE6F1FB);
 
 class HotelDashboardScreen extends StatefulWidget {
   const HotelDashboardScreen({super.key});
@@ -69,10 +68,10 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user      = context.watch<UserProvider>().currentUser;
+    final user = context.watch<UserProvider>().currentUser;
     final hotelName = user?.hotelName ?? 'Your Hotel';
-    final now       = DateTime.now();
-    final dateStr   = DateFormat('EEEE, MMMM d').format(now);
+    final now = DateTime.now();
+    final dateStr = DateFormat('EEEE, MMMM d').format(now);
 
     return Scaffold(
       backgroundColor: _kOat,
@@ -99,10 +98,9 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
             ),
 
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-
                   // ── Live KPI row ─────────────────────────────────────────
                   _LiveKpiRow(hotelName: hotelName)
                       .animate(controller: _enterCtrl)
@@ -113,7 +111,10 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
 
                   // ── 🔔 Cross-notification: customer scans at this hotel ───
                   if (user?.id != null)
-                    _HotelLiveCustomerAlerts(venueId: user!.id, pulseCtrl: _alertPulse)
+                    _HotelLiveCustomerAlerts(
+                          venueId: user!.id,
+                          pulseCtrl: _alertPulse,
+                        )
                         .animate(controller: _enterCtrl)
                         .fadeIn(delay: 150.ms)
                         .slideY(begin: 0.06, delay: 150.ms),
@@ -132,7 +133,10 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
 
                   const SizedBox(height: 10),
 
-                  _AllergenAlertsStream(hotelName: hotelName, pulseCtrl: _alertPulse)
+                  _AllergenAlertsStream(
+                        hotelName: hotelName,
+                        pulseCtrl: _alertPulse,
+                      )
                       .animate(controller: _enterCtrl)
                       .fadeIn(delay: 300.ms)
                       .slideY(begin: 0.06, delay: 300.ms),
@@ -211,13 +215,7 @@ class _HotelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF75070C), Color(0xFF9E1A21), Color(0xFF5C3D3F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(color: _kCherry),
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +224,10 @@ class _HotelHeader extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _kButter.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -236,17 +237,21 @@ class _HotelHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 6, height: 6,
+                      width: 6,
+                      height: 6,
                       decoration: const BoxDecoration(
-                        color: _kButter, shape: BoxShape.circle,
+                        color: _kButter,
+                        shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 5),
                     Text(
                       'HOTEL DASHBOARD',
                       style: GoogleFonts.inter(
-                        fontSize: 9, fontWeight: FontWeight.w800,
-                        color: _kButter, letterSpacing: 1.2,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: _kButter,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ],
@@ -258,21 +263,25 @@ class _HotelHeader extends StatelessWidget {
           Text(
             '$greeting,',
             style: GoogleFonts.inter(
-              fontSize: 13, color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.6),
             ),
           ),
           Text(
             hotelName,
-            style: GoogleFonts.sora(
-              fontSize: 22, fontWeight: FontWeight.w800,
-              color: Colors.white, letterSpacing: -0.5,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             date,
             style: GoogleFonts.inter(
-              fontSize: 12, color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -296,9 +305,15 @@ class _LiveKpiRow extends StatelessWidget {
           .snapshots(),
       builder: (context, guestSnap) {
         final guestCount = guestSnap.data?.docs.length ?? 0;
-        final allergenCount = guestSnap.data?.docs
-            .where((d) => ((d.data() as Map)['allergens'] as List?)?.isNotEmpty == true)
-            .length ?? 0;
+        final allergenCount =
+            guestSnap.data?.docs
+                .where(
+                  (d) =>
+                      ((d.data() as Map)['allergens'] as List?)?.isNotEmpty ==
+                      true,
+                )
+                .length ??
+            0;
 
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
@@ -311,29 +326,35 @@ class _LiveKpiRow extends StatelessWidget {
 
             return Row(
               children: [
-                Expanded(child: _KpiCard(
-                  value: '$guestCount',
-                  label: 'Guests In',
-                  icon: Icons.hotel_rounded,
-                  color: _kInfo,
-                  bg: _kInfoBg,
-                )),
+                Expanded(
+                  child: _KpiCard(
+                    value: '$guestCount',
+                    label: 'Guests In',
+                    icon: Icons.hotel_rounded,
+                    color: _kInfo,
+                    bg: _kInfoBg,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _KpiCard(
-                  value: '$allergenCount',
-                  label: 'Allergen Profiles',
-                  icon: Icons.warning_amber_rounded,
-                  color: _kCherry,
-                  bg: _kCherryB,
-                )),
+                Expanded(
+                  child: _KpiCard(
+                    value: '$allergenCount',
+                    label: 'Allergen Profiles',
+                    icon: Icons.warning_amber_rounded,
+                    color: _kCherry,
+                    bg: _kCherryB,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _KpiCard(
-                  value: '$expiryCount',
-                  label: 'Expiry Alerts',
-                  icon: Icons.schedule_rounded,
-                  color: _kButterD,
-                  bg: _kButter,
-                )),
+                Expanded(
+                  child: _KpiCard(
+                    value: '$expiryCount',
+                    label: 'Expiry Alerts',
+                    icon: Icons.schedule_rounded,
+                    color: _kButterD,
+                    bg: _kButter,
+                  ),
+                ),
               ],
             );
           },
@@ -381,15 +402,19 @@ class _KpiCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.sora(
-              fontSize: 26, fontWeight: FontWeight.w800, color: _kEspresso,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: _kEspresso,
             ),
           ),
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10, fontWeight: FontWeight.w500,
-              color: _kFog, height: 1.3,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: _kFog,
+              height: 1.3,
             ),
           ),
         ],
@@ -400,11 +425,11 @@ class _KpiCard extends StatelessWidget {
 
 // ── Section header ─────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  final String  title;
+  final String title;
   final String? subtitle;
   final IconData icon;
-  final Color   iconColor;
-  final bool    dot;
+  final Color iconColor;
+  final bool dot;
   final AnimationController? pulseCtrl;
 
   const _SectionHeader({
@@ -421,7 +446,8 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 32, height: 32,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: iconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
@@ -437,8 +463,9 @@ class _SectionHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.sora(
-                      fontSize: 15, fontWeight: FontWeight.w700,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       color: _kEspresso,
                     ),
                   ),
@@ -447,13 +474,18 @@ class _SectionHeader extends StatelessWidget {
                     AnimatedBuilder(
                       animation: pulseCtrl!,
                       builder: (_, _) => Container(
-                        width: 8, height: 8,
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _kOlive.withValues(alpha: 0.5 + pulseCtrl!.value * 0.5),
+                          color: _kOlive.withValues(
+                            alpha: 0.5 + pulseCtrl!.value * 0.5,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: _kOlive.withValues(alpha: 0.4 * pulseCtrl!.value),
+                              color: _kOlive.withValues(
+                                alpha: 0.4 * pulseCtrl!.value,
+                              ),
                               blurRadius: 6,
                             ),
                           ],
@@ -516,10 +548,12 @@ class _AllergenAlertsStream extends StatelessWidget {
 
         return Column(
           children: withAllergens.map((doc) {
-            final data   = doc.data() as Map<String, dynamic>;
-            final name   = data['guestName'] as String? ?? 'Guest';
-            final room   = data['room'] as String? ?? '—';
-            final allergens = List<String>.from(data['allergens'] as List? ?? []);
+            final data = doc.data() as Map<String, dynamic>;
+            final name = data['guestName'] as String? ?? 'Guest';
+            final room = data['room'] as String? ?? '—';
+            final allergens = List<String>.from(
+              data['allergens'] as List? ?? [],
+            );
             return _AllergenAlertTile(
               guestName: name,
               room: room,
@@ -573,7 +607,8 @@ class _AllergenAlertTile extends StatelessWidget {
           children: [
             // Avatar
             Container(
-              width: 44, height: 44,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: _kCherry.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
@@ -582,8 +617,10 @@ class _AllergenAlertTile extends StatelessWidget {
               child: Center(
                 child: Text(
                   guestName.isNotEmpty ? guestName[0].toUpperCase() : 'G',
-                  style: GoogleFonts.sora(
-                    fontSize: 18, fontWeight: FontWeight.w800, color: _kCherry,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _kCherry,
                   ),
                 ),
               ),
@@ -599,12 +636,16 @@ class _AllergenAlertTile extends StatelessWidget {
                       Text(
                         guestName,
                         style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: _kEspresso,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: _kInfo.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
@@ -612,7 +653,9 @@ class _AllergenAlertTile extends StatelessWidget {
                         child: Text(
                           'Room $room',
                           style: GoogleFonts.inter(
-                            fontSize: 11, fontWeight: FontWeight.w600, color: _kInfo,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _kInfo,
                           ),
                         ),
                       ),
@@ -622,20 +665,31 @@ class _AllergenAlertTile extends StatelessWidget {
                   Wrap(
                     spacing: 5,
                     runSpacing: 5,
-                    children: allergens.map((a) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _kCherry.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _kCherry.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        '⚠ $a',
-                        style: GoogleFonts.inter(
-                          fontSize: 10, fontWeight: FontWeight.w700, color: _kCherry,
-                        ),
-                      ),
-                    )).toList(),
+                    children: allergens
+                        .map(
+                          (a) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _kCherry.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _kCherry.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              '⚠ $a',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _kCherry,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
@@ -679,8 +733,8 @@ class _ExpiryAlertsStream extends StatelessWidget {
 
         return Column(
           children: docs.map((doc) {
-            final data     = doc.data() as Map<String, dynamic>;
-            final item     = data['itemName'] as String? ?? 'Unknown item';
+            final data = doc.data() as Map<String, dynamic>;
+            final item = data['itemName'] as String? ?? 'Unknown item';
             final location = data['location'] as String? ?? 'Storage';
             final expiresAt = (data['expiresAt'] as Timestamp?)?.toDate();
             final hoursLeft = expiresAt != null
@@ -717,7 +771,8 @@ class _ExpiryAlertsStream extends StatelessWidget {
                         Text(
                           item,
                           style: GoogleFonts.inter(
-                            fontSize: 13, fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                             color: _kEspresso,
                           ),
                         ),
@@ -729,7 +784,10 @@ class _ExpiryAlertsStream extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: isUrgent
                           ? _kCherry.withValues(alpha: 0.12)
@@ -739,7 +797,8 @@ class _ExpiryAlertsStream extends StatelessWidget {
                     child: Text(
                       isUrgent ? '${hoursLeft}h left' : '${hoursLeft}h left',
                       style: GoogleFonts.inter(
-                        fontSize: 11, fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
                         color: isUrgent ? _kCherry : _kButterD,
                       ),
                     ),
@@ -804,15 +863,20 @@ class _GuestCardsStream extends StatelessWidget {
               final data = docs[index].data() as Map<String, dynamic>;
               final name = data['guestName'] as String? ?? 'Guest';
               final room = data['room'] as String? ?? '—';
-              final allergens = List<String>.from(data['allergens'] as List? ?? []);
+              final allergens = List<String>.from(
+                data['allergens'] as List? ?? [],
+              );
               final checkIn = (data['checkInAt'] as Timestamp?)?.toDate();
 
               return _GuestCard(
-                name: name,
-                room: room,
-                allergens: allergens,
-                checkIn: checkIn,
-              ).animate().fadeIn(delay: Duration(milliseconds: index * 80)).slideX(
+                    name: name,
+                    room: room,
+                    allergens: allergens,
+                    checkIn: checkIn,
+                  )
+                  .animate()
+                  .fadeIn(delay: Duration(milliseconds: index * 80))
+                  .slideX(
                     begin: 0.1,
                     delay: Duration(milliseconds: index * 80),
                     curve: Curves.easeOutCubic,
@@ -826,10 +890,10 @@ class _GuestCardsStream extends StatelessWidget {
 }
 
 class _GuestCard extends StatelessWidget {
-  final String        name;
-  final String        room;
-  final List<String>  allergens;
-  final DateTime?     checkIn;
+  final String name;
+  final String room;
+  final List<String> allergens;
+  final DateTime? checkIn;
 
   const _GuestCard({
     required this.name,
@@ -868,17 +932,21 @@ class _GuestCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: _avatarColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: _avatarColor.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: _avatarColor.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Center(
                   child: Text(
                     name[0].toUpperCase(),
-                    style: GoogleFonts.sora(
-                      fontSize: 18, fontWeight: FontWeight.w800,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
                       color: _avatarColor,
                     ),
                   ),
@@ -893,7 +961,9 @@ class _GuestCard extends StatelessWidget {
                 child: Text(
                   room,
                   style: GoogleFonts.inter(
-                    fontSize: 10, fontWeight: FontWeight.w700, color: _kInfo,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: _kInfo,
                   ),
                 ),
               ),
@@ -903,7 +973,9 @@ class _GuestCard extends StatelessWidget {
           Text(
             name,
             style: GoogleFonts.inter(
-              fontSize: 13, fontWeight: FontWeight.w700, color: _kEspresso,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _kEspresso,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -925,7 +997,9 @@ class _GuestCard extends StatelessWidget {
               child: Text(
                 '✓ No allergens',
                 style: GoogleFonts.inter(
-                  fontSize: 9, fontWeight: FontWeight.w600, color: _kOlive,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: _kOlive,
                 ),
               ),
             )
@@ -933,19 +1007,29 @@ class _GuestCard extends StatelessWidget {
             Wrap(
               spacing: 3,
               runSpacing: 3,
-              children: allergens.take(2).map((a) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _kCherry.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(
-                  a,
-                  style: GoogleFonts.inter(
-                    fontSize: 8, fontWeight: FontWeight.w700, color: _kCherry,
-                  ),
-                ),
-              )).toList(),
+              children: allergens
+                  .take(2)
+                  .map(
+                    (a) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _kCherry.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        a,
+                        style: GoogleFonts.inter(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w700,
+                          color: _kCherry,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
         ],
       ),
@@ -985,7 +1069,17 @@ class _QuickActionsRow extends StatelessWidget {
             label: 'Scan Food',
             color: _kCherry,
             bg: _kCherryB,
-            onTap: () => context.go(AppRoutes.hotelContaminationScan),
+            onTap: () => context.go(AppRoutes.hotelScan),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionBtn(
+            icon: Icons.event_available_rounded,
+            label: 'Expiry AI',
+            color: _kButterD,
+            bg: _kButter,
+            onTap: () => context.go(AppRoutes.hotelExpiryDate),
           ),
         ),
         const SizedBox(width: 10),
@@ -1005,9 +1099,9 @@ class _QuickActionsRow extends StatelessWidget {
 
 class _ActionBtn extends StatefulWidget {
   final IconData icon;
-  final String   label;
-  final Color    color;
-  final Color    bg;
+  final String label;
+  final Color color;
+  final Color bg;
   final VoidCallback onTap;
 
   const _ActionBtn({
@@ -1053,8 +1147,10 @@ class _ActionBtnState extends State<_ActionBtn> {
                 widget.label,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 10, fontWeight: FontWeight.w700,
-                  color: widget.color, height: 1.2,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: widget.color,
+                  height: 1.2,
                 ),
               ),
             ],
@@ -1081,8 +1177,17 @@ class _CheckInDialogState extends State<_CheckInDialog> {
   bool _saving = false;
 
   static const _commonAllergens = [
-    'Gluten', 'Nuts', 'Dairy', 'Eggs', 'Shellfish',
-    'Soy', 'Fish', 'Sesame', 'Peanuts', 'Mustard', 'Sulphites',
+    'Gluten',
+    'Nuts',
+    'Dairy',
+    'Eggs',
+    'Shellfish',
+    'Soy',
+    'Fish',
+    'Sesame',
+    'Peanuts',
+    'Mustard',
+    'Sulphites',
   ];
 
   @override
@@ -1117,18 +1222,38 @@ class _CheckInDialogState extends State<_CheckInDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Text(
         'Check-in Guest',
-        style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _kEspresso),
+        style: GoogleFonts.playfairDisplay(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: _kEspresso,
+        ),
       ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Input(ctrl: _nameCtrl, hint: 'Guest full name', icon: Icons.person_rounded),
+            _Input(
+              ctrl: _nameCtrl,
+              hint: 'Guest full name',
+              icon: Icons.person_rounded,
+            ),
             const SizedBox(height: 12),
-            _Input(ctrl: _roomCtrl, hint: 'Room number', icon: Icons.hotel_rounded, keyboardType: TextInputType.number),
+            _Input(
+              ctrl: _roomCtrl,
+              hint: 'Room number',
+              icon: Icons.hotel_rounded,
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 16),
-            Text('Allergens / Conditions', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _kCocoa)),
+            Text(
+              'Allergens / Conditions',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _kCocoa,
+              ),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 6,
@@ -1141,18 +1266,22 @@ class _CheckInDialogState extends State<_CheckInDialog> {
                   }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      color: selected ? _kCherry : _kSand.withValues(alpha: 0.3),
+                      color: selected
+                          ? _kCherry
+                          : _kSand.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: selected ? _kCherry : _kSand,
-                      ),
+                      border: Border.all(color: selected ? _kCherry : _kSand),
                     ),
                     child: Text(
                       a,
                       style: GoogleFonts.inter(
-                        fontSize: 11, fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: selected ? Colors.white : _kCocoa,
                       ),
                     ),
@@ -1166,17 +1295,35 @@ class _CheckInDialogState extends State<_CheckInDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: GoogleFonts.inter(color: _kFog, fontWeight: FontWeight.w600)),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.inter(color: _kFog, fontWeight: FontWeight.w600),
+          ),
         ),
         ElevatedButton(
           onPressed: _saving ? null : _save,
           style: ElevatedButton.styleFrom(
             backgroundColor: _kCherry,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: _saving
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('Check In', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  'Check In',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ],
     );
@@ -1237,7 +1384,7 @@ class _AddExpiryDialog extends StatefulWidget {
 }
 
 class _AddExpiryDialogState extends State<_AddExpiryDialog> {
-  final _itemCtrl     = TextEditingController();
+  final _itemCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   DateTime _expiresAt = DateTime.now().add(const Duration(hours: 24));
   bool _saving = false;
@@ -1256,7 +1403,9 @@ class _AddExpiryDialogState extends State<_AddExpiryDialog> {
       await FirebaseFirestore.instance.collection('hotel_expiry_alerts').add({
         'hotelName': widget.hotelName,
         'itemName': _itemCtrl.text.trim(),
-        'location': _locationCtrl.text.trim().isEmpty ? 'Storage' : _locationCtrl.text.trim(),
+        'location': _locationCtrl.text.trim().isEmpty
+            ? 'Storage'
+            : _locationCtrl.text.trim(),
         'expiresAt': Timestamp.fromDate(_expiresAt),
         'resolved': false,
         'createdAt': FieldValue.serverTimestamp(),
@@ -1274,14 +1423,26 @@ class _AddExpiryDialogState extends State<_AddExpiryDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: Text(
         'Add Expiry Alert',
-        style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _kEspresso),
+        style: GoogleFonts.playfairDisplay(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: _kEspresso,
+        ),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _Input(ctrl: _itemCtrl, hint: 'Item name', icon: Icons.inventory_2_rounded),
+          _Input(
+            ctrl: _itemCtrl,
+            hint: 'Item name',
+            icon: Icons.inventory_2_rounded,
+          ),
           const SizedBox(height: 10),
-          _Input(ctrl: _locationCtrl, hint: 'Location (Kitchen, Buffet...)', icon: Icons.place_rounded),
+          _Input(
+            ctrl: _locationCtrl,
+            hint: 'Location (Kitchen, Buffet...)',
+            icon: Icons.place_rounded,
+          ),
           const SizedBox(height: 14),
           GestureDetector(
             onTap: () async {
@@ -1297,11 +1458,19 @@ class _AddExpiryDialogState extends State<_AddExpiryDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.schedule_rounded, color: _kButterD, size: 18),
+                  const Icon(
+                    Icons.schedule_rounded,
+                    color: _kButterD,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     DateFormat('MMM d, HH:mm').format(_expiresAt),
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kEspresso),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _kEspresso,
+                    ),
                   ),
                 ],
               ),
@@ -1312,17 +1481,35 @@ class _AddExpiryDialogState extends State<_AddExpiryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel', style: GoogleFonts.inter(color: _kFog, fontWeight: FontWeight.w600)),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.inter(color: _kFog, fontWeight: FontWeight.w600),
+          ),
         ),
         ElevatedButton(
           onPressed: _saving ? null : _save,
           style: ElevatedButton.styleFrom(
             backgroundColor: _kCherry,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: _saving
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('Save', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  'Save',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ],
     );
@@ -1338,7 +1525,10 @@ Future<DateTime?> showDateTimePicker(BuildContext context) async {
   );
   if (date == null) return null;
   if (!context.mounted) return null;
-  final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+  final time = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay.now(),
+  );
   if (time == null) return null;
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
@@ -1346,10 +1536,14 @@ Future<DateTime?> showDateTimePicker(BuildContext context) async {
 // ── Empty state ────────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
-  final String   message;
-  final Color    color;
+  final String message;
+  final Color color;
 
-  const _EmptyState({required this.icon, required this.message, required this.color});
+  const _EmptyState({
+    required this.icon,
+    required this.message,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1368,7 +1562,11 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             message,
-            style: GoogleFonts.inter(fontSize: 13, color: color, fontWeight: FontWeight.w500),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -1392,10 +1590,14 @@ class _ShimmerCard extends StatefulWidget {
 class _HotelLiveCustomerAlerts extends StatefulWidget {
   final String venueId;
   final AnimationController pulseCtrl;
-  const _HotelLiveCustomerAlerts({required this.venueId, required this.pulseCtrl});
+  const _HotelLiveCustomerAlerts({
+    required this.venueId,
+    required this.pulseCtrl,
+  });
 
   @override
-  State<_HotelLiveCustomerAlerts> createState() => _HotelLiveCustomerAlertsState();
+  State<_HotelLiveCustomerAlerts> createState() =>
+      _HotelLiveCustomerAlertsState();
 }
 
 class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
@@ -1404,14 +1606,18 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
     return StreamBuilder(
       stream: VenueAlertService.alertsStream(widget.venueId),
       builder: (context, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty) return const SizedBox.shrink();
+        if (!snap.hasData || snap.data!.docs.isEmpty)
+          return const SizedBox.shrink();
 
         final docs = snap.data!.docs;
         return Container(
           decoration: BoxDecoration(
             color: _kCherry.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _kCherry.withValues(alpha: 0.28), width: 1.2),
+            border: Border.all(
+              color: _kCherry.withValues(alpha: 0.28),
+              width: 1.2,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1437,7 +1643,7 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                     Expanded(
                       child: Text(
                         '🚨 Guest Scans — ${docs.length} alert${docs.length == 1 ? '' : 's'}',
-                        style: GoogleFonts.sora(
+                        style: GoogleFonts.playfairDisplay(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: _kCherry,
@@ -1445,16 +1651,23 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => VenueAlertService.resolveAll(widget.venueId),
+                      onPressed: () =>
+                          VenueAlertService.resolveAll(widget.venueId),
                       style: TextButton.styleFrom(
                         foregroundColor: _kCherry,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
                         'Clear all',
-                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -1463,12 +1676,18 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
               const SizedBox(height: 8),
               ...docs.map((doc) {
                 final d = doc.data();
-                final name      = d['customerName'] as String? ?? 'Guest';
-                final allergens = List<String>.from(d['allergens'] as List? ?? []);
-                final product   = d['productName'] as String? ?? '';
-                final room      = d['room'] as String?;
-                final risk      = d['riskLevel'] as String? ?? 'moderate';
-                final riskColor = risk == 'high' ? _kCherry : risk == 'low' ? _kOlive : _kButterD;
+                final name = d['customerName'] as String? ?? 'Guest';
+                final allergens = List<String>.from(
+                  d['allergens'] as List? ?? [],
+                );
+                final product = d['productName'] as String? ?? '';
+                final room = d['room'] as String?;
+                final risk = d['riskLevel'] as String? ?? 'moderate';
+                final riskColor = risk == 'high'
+                    ? _kCherry
+                    : risk == 'low'
+                    ? _kOlive
+                    : _kButterD;
 
                 return Container(
                   margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
@@ -1476,7 +1695,10 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                   decoration: BoxDecoration(
                     color: _kParchment,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: riskColor.withValues(alpha: 0.25), width: 0.8),
+                    border: Border.all(
+                      color: riskColor.withValues(alpha: 0.25),
+                      width: 0.8,
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1489,7 +1711,11 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
-                          child: Icon(Icons.person_rounded, size: 18, color: riskColor),
+                          child: Icon(
+                            Icons.person_rounded,
+                            size: 18,
+                            color: riskColor,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1501,7 +1727,7 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                               children: [
                                 Text(
                                   name,
-                                  style: GoogleFonts.sora(
+                                  style: GoogleFonts.playfairDisplay(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: _kEspresso,
@@ -1510,7 +1736,10 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                                 if (room != null) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: _kInfo.withValues(alpha: 0.10),
                                       borderRadius: BorderRadius.circular(5),
@@ -1530,35 +1759,55 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
                             if (product.isNotEmpty)
                               Text(
                                 'Scanned: $product',
-                                style: GoogleFonts.inter(fontSize: 11, color: _kFog),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: _kFog,
+                                ),
                               ),
                             const SizedBox(height: 4),
                             Wrap(
                               spacing: 4,
                               runSpacing: 4,
-                              children: allergens.map((a) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: riskColor.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(color: riskColor.withValues(alpha: 0.30)),
-                                ),
-                                child: Text(
-                                  a,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: riskColor,
-                                  ),
-                                ),
-                              )).toList(),
+                              children: allergens
+                                  .map(
+                                    (a) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: riskColor.withValues(
+                                          alpha: 0.10,
+                                        ),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: riskColor.withValues(
+                                            alpha: 0.30,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        a,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: riskColor,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                             ),
                           ],
                         ),
                       ),
                       GestureDetector(
                         onTap: () => VenueAlertService.resolve(doc.id),
-                        child: Icon(Icons.check_circle_outline_rounded, size: 20, color: _kOlive),
+                        child: Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 20,
+                          color: _kOlive,
+                        ),
                       ),
                     ],
                   ),

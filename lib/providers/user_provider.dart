@@ -81,6 +81,21 @@ class UserProvider extends ChangeNotifier {
     }();
   }
 
+  Future<void> refreshCurrentUserFromDatabase({String? expectedRole}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? currentUser?.id;
+    if (uid == null || uid.isEmpty) return;
+
+    try {
+      final loaded = await FirebaseService.getUser(uid);
+      if (loaded == null) return;
+      if (expectedRole != null && loaded.role != expectedRole) return;
+      currentUser = loaded;
+      notifyListeners();
+    } catch (e, st) {
+      _logError('UserProvider.refreshCurrentUserFromDatabase failed', e, st);
+    }
+  }
+
   String _friendlyFirebaseError(Object error) {
     if (error is TimeoutException) {
       return 'Request timed out. This is usually a network/CORS/firewall issue on Web. Check your connection, disable ad blockers for localhost, and verify Firebase authorized domains.';
@@ -264,28 +279,40 @@ class UserProvider extends ChangeNotifier {
     }
 
     if (kIsWeb) {
-      final user = UserModel(
-        id: uid,
-        name: role == 'restaurant'
-            ? 'Restaurant Manager'
-            : role == 'hotel'
-            ? 'Hotel Manager'
-            : '',
-        email: email,
-        conditions: const <String>[],
-        allergens: const <String>[],
-        calorieGoal: 2200,
-        role: role,
-        notifyDailyIntake: true,
-        notifyAllergens: true,
-        notifyWeeklyReport: true,
-      );
+      UserModel? loaded;
+      try {
+        loaded = await FirebaseService.getUser(uid);
+      } catch (e, st) {
+        _logError('UserProvider.login web getUser failed', e, st);
+        loaded = null;
+      }
+
+      final user =
+          loaded ??
+          UserModel(
+            id: uid,
+            name: role == 'restaurant'
+                ? 'Restaurant Manager'
+                : role == 'hotel'
+                ? 'Hotel Manager'
+                : (cred.user?.displayName ?? ''),
+            email: email,
+            conditions: const <String>[],
+            allergens: const <String>[],
+            calorieGoal: 2200,
+            role: role,
+            notifyDailyIntake: true,
+            notifyAllergens: true,
+            notifyWeeklyReport: true,
+          );
 
       currentUser = user;
       isLoading = false;
       notifyListeners();
 
-      _loadUserInBackground(uid);
+      if (loaded == null) {
+        _loadUserInBackground(uid);
+      }
       return user;
     }
 

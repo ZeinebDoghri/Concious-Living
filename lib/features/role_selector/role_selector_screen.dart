@@ -19,21 +19,21 @@ class RoleSelectorScreen extends StatefulWidget {
 
 class _RoleSelectorScreenState extends State<RoleSelectorScreen>
     with TickerProviderStateMixin {
-  late final AnimationController _bgAnim;
+  late final AnimationController _blobAnim;
   String? _pendingRoute;
 
   @override
   void initState() {
     super.initState();
-    _bgAnim = AnimationController(
+    _blobAnim = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 20),
     )..repeat();
   }
 
   @override
   void dispose() {
-    _bgAnim.dispose();
+    _blobAnim.dispose();
     super.dispose();
   }
 
@@ -58,15 +58,15 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A14),
+      backgroundColor: FreshGuardTheme.customerSurface,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Animated mesh background ─────────────────────────────────────────
+          // ── Animated blob background ─────────────────────────────────────────
           AnimatedBuilder(
-            animation: _bgAnim,
+            animation: _blobAnim,
             builder: (context, _) => CustomPaint(
-              painter: _MeshPainter(_bgAnim.value),
+              painter: _BlobBackgroundPainter(_blobAnim.value),
             ),
           ),
 
@@ -75,112 +75,99 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
               children: [
                 // ── Header ─────────────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
+                  padding: const EdgeInsets.fromLTRB(28, 40, 28, 0),
                   child: Column(
                     children: [
-                      // Logo
+                      // FreshGuard logo badge
                       Container(
-                        width: 64,
-                        height: 64,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const RadialGradient(
-                            colors: [Color(0xFFB03A3F), Color(0xFF6B1215)],
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              FreshGuardTheme.customerPrimary,
+                              FreshGuardTheme.customerDeep,
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.cherry.withValues(alpha: 0.5),
-                              blurRadius: 24,
-                              spreadRadius: 2,
-                            ),
-                          ],
+                          boxShadow: AppShadows.lg(FreshGuardTheme.customerPrimary),
                         ),
                         child: const Icon(
                           Icons.eco_rounded,
                           color: Colors.white,
-                          size: 32,
+                          size: 34,
                         ),
                       )
                           .animate()
                           .scale(
                             begin: const Offset(0.5, 0.5),
-                            duration: 600.ms,
+                            duration: AppDurations.xl,
                             curve: Curves.elasticOut,
                           )
-                          .fadeIn(duration: 400.ms),
+                          .fadeIn(duration: AppDurations.lg),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
+                      // App name
                       Text(
                         AppStrings.appNameUpper,
-                        style: GoogleFonts.sora(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: FreshGuardTheme.customerTextMuted,
                           letterSpacing: 3,
                         ),
                       ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 24),
 
+                      // "Who are you?" title
                       Text(
-                        AppStrings.taglineLong,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.4),
-                          letterSpacing: 0.5,
-                        ),
-                      ).animate().fadeIn(delay: 350.ms, duration: 500.ms),
-
-                      const SizedBox(height: 36),
-
-                      // Section title
-                      Text(
-                        'Choisissez votre rôle',
-                        style: GoogleFonts.sora(
-                          fontSize: 22,
+                        AppStrings.whoAreYou,
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: FreshGuardTheme.customerTextTitle,
                           letterSpacing: -0.3,
                         ),
-                      ).animate().fadeIn(delay: 450.ms, duration: 500.ms),
+                      ).animate().fadeIn(delay: 300.ms, duration: 500.ms),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
 
+                      // Subtitle
                       Text(
-                        'Pour personnaliser votre expérience',
+                        AppStrings.chooseRole,
                         style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.45),
+                          fontSize: 14,
+                          color: FreshGuardTheme.customerTextMuted,
+                          height: 1.5,
                         ),
-                      ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
+                      ).animate().fadeIn(delay: 380.ms, duration: 500.ms),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 36),
 
                 // ── Role cards ─────────────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                     child: Column(
                       children: [
+                        // Customer card
                         _RoleCard(
-                          gradientA: const Color(0xFF1A3A5C),
-                          gradientB: const Color(0xFF0D1F35),
-                          glowColor: const Color(0xFF3B82F6),
-                          icon: Icons.person_outline_rounded,
-                          emoji: '🥗',
-                          tag: 'CONSOMMATEUR',
+                          cardColor: FreshGuardTheme.customerSoftLavender,
+                          primary: FreshGuardTheme.customerPrimary,
+                          deep: FreshGuardTheme.customerDeep,
+                          textTitle: FreshGuardTheme.customerTextTitle,
+                          textBody: FreshGuardTheme.customerTextBody,
+                          icon: Icons.person_rounded,
                           title: AppStrings.iAmCustomer,
                           subtitle: AppStrings.customerCardSubtitle,
-                          features: const [
-                            'Scan de plats par IA',
-                            'Alertes allergènes',
-                            'Suivi nutritionnel',
-                          ],
-                          delay: 600,
+                          delay: 450,
                           onTap: () => _select(
                             venueType: '',
                             route: AppRoutes.customerLogin,
@@ -189,21 +176,17 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
 
                         const SizedBox(height: 14),
 
+                        // Restaurant card
                         _RoleCard(
-                          gradientA: const Color(0xFF1A2E0A),
-                          gradientB: const Color(0xFF0D1A05),
-                          glowColor: AppColors.olive,
+                          cardColor: FreshGuardTheme.restaurantSoftPink,
+                          primary: FreshGuardTheme.restaurantPrimary,
+                          deep: FreshGuardTheme.restaurantDeep,
+                          textTitle: FreshGuardTheme.restaurantTextTitle,
+                          textBody: FreshGuardTheme.restaurantTextBody,
                           icon: Icons.restaurant_rounded,
-                          emoji: '👨‍🍳',
-                          tag: 'RESTAURATEUR',
                           title: AppStrings.iAmRestaurant,
                           subtitle: AppStrings.restaurantCardSubtitle,
-                          features: const [
-                            'IA Compost Mask2Former',
-                            'Monitoring déchets',
-                            'Alertes cuisine',
-                          ],
-                          delay: 700,
+                          delay: 550,
                           onTap: () => _select(
                             venueType: 'restaurant',
                             route: AppRoutes.restaurantLogin,
@@ -212,21 +195,17 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
 
                         const SizedBox(height: 14),
 
+                        // Hotel card
                         _RoleCard(
-                          gradientA: const Color(0xFF2A1A00),
-                          gradientB: const Color(0xFF1A1000),
-                          glowColor: const Color(0xFFD97706),
+                          cardColor: FreshGuardTheme.hotelSoftGreen,
+                          primary: FreshGuardTheme.hotelPrimary,
+                          deep: FreshGuardTheme.hotelDeep,
+                          textTitle: FreshGuardTheme.hotelTextTitle,
+                          textBody: FreshGuardTheme.hotelTextBody,
                           icon: Icons.hotel_rounded,
-                          emoji: '🏨',
-                          tag: 'HÔTELIER',
                           title: AppStrings.iAmHotel,
                           subtitle: AppStrings.hotelCardSubtitle,
-                          features: const [
-                            'Room service tracking',
-                            'Santé des hôtes',
-                            'Alertes cuisine',
-                          ],
-                          delay: 800,
+                          delay: 650,
                           onTap: () => _select(
                             venueType: 'hotel',
                             route: AppRoutes.hotelLogin,
@@ -247,28 +226,26 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
 
 // ── Role Card ──────────────────────────────────────────────────────────────────
 class _RoleCard extends StatefulWidget {
-  final Color gradientA;
-  final Color gradientB;
-  final Color glowColor;
+  final Color cardColor;
+  final Color primary;
+  final Color deep;
+  final Color textTitle;
+  final Color textBody;
   final IconData icon;
-  final String emoji;
-  final String tag;
   final String title;
   final String subtitle;
-  final List<String> features;
   final int delay;
   final VoidCallback onTap;
 
   const _RoleCard({
-    required this.gradientA,
-    required this.gradientB,
-    required this.glowColor,
+    required this.cardColor,
+    required this.primary,
+    required this.deep,
+    required this.textTitle,
+    required this.textBody,
     required this.icon,
-    required this.emoji,
-    required this.tag,
     required this.title,
     required this.subtitle,
-    required this.features,
     required this.delay,
     required this.onTap,
   });
@@ -294,118 +271,65 @@ class _RoleCardState extends State<_RoleCard> {
         duration: const Duration(milliseconds: 130),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [widget.gradientA, widget.gradientB],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: widget.glowColor.withValues(alpha: 0.25),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: widget.glowColor.withValues(alpha: _pressed ? 0.15 : 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: widget.cardColor,
+            borderRadius: BorderRadius.circular(AppRadii.innerCard),
+            boxShadow: AppShadows.md(widget.primary),
           ),
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              // Icon area
-              Column(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.glowColor.withValues(alpha: 0.12),
-                      border: Border.all(
-                        color: widget.glowColor.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        widget.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: widget.glowColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      widget.tag,
-                      style: GoogleFonts.inter(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: widget.glowColor,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ],
+              // ── Icon circle ─────────────────────────────────────────────────
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.primary,
+                  boxShadow: AppShadows.sm(widget.primary),
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: Colors.white,
+                  size: 26,
+                ),
               ),
 
               const SizedBox(width: 16),
 
-              // Content
+              // ── Text content ────────────────────────────────────────────────
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.title,
-                      style: GoogleFonts.sora(
-                        fontSize: 16,
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: widget.textTitle,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    ...widget.features.map(
-                      (f) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: widget.glowColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              f,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white.withValues(alpha: 0.55),
-                              ),
-                            ),
-                          ],
-                        ),
+                    const SizedBox(height: 5),
+                    Text(
+                      widget.subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: widget.textBody,
+                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Arrow
+              const SizedBox(width: 12),
+
+              // ── Arrow icon ──────────────────────────────────────────────────
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: widget.glowColor.withValues(alpha: 0.6),
+                color: widget.primary,
                 size: 16,
               ),
             ],
@@ -425,45 +349,67 @@ class _RoleCardState extends State<_RoleCard> {
   }
 }
 
-// ── Background mesh painter ────────────────────────────────────────────────────
-class _MeshPainter extends CustomPainter {
+// ── Blob background painter ────────────────────────────────────────────────────
+class _BlobBackgroundPainter extends CustomPainter {
   final double t;
-  _MeshPainter(this.t);
+  _BlobBackgroundPainter(this.t);
 
   @override
   void paint(Canvas canvas, Size size) {
-    void glow(Offset c, double r, Color col, double alpha) {
-      canvas.drawCircle(
-        c,
-        r,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [col.withValues(alpha: alpha), Colors.transparent],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
-      );
-    }
+    final angle = t * 2 * math.pi;
 
-    final a = t * 2 * math.pi;
-    glow(
-      Offset(size.width * (0.15 + 0.05 * math.sin(a)), size.height * 0.2),
-      size.width * 0.6,
-      AppColors.cherry,
-      0.12,
+    // Blob 1 — customer lavender, top-left
+    final c1 = Offset(
+      size.width * 0.15 + math.cos(angle) * 30,
+      size.height * 0.2 + math.sin(angle) * 20,
     );
-    glow(
-      Offset(size.width * (0.85 + 0.05 * math.cos(a)), size.height * 0.65),
+    canvas.drawCircle(
+      c1,
       size.width * 0.55,
-      AppColors.olive,
-      0.10,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            FreshGuardTheme.customerPrimary.withValues(alpha: 0.10),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: c1, radius: size.width * 0.55)),
     );
-    glow(
-      Offset(size.width * 0.5, size.height * (0.5 + 0.05 * math.sin(a * 1.3))),
-      size.width * 0.4,
-      const Color(0xFF3B82F6),
-      0.06,
+
+    // Blob 2 — restaurant pink, bottom-right
+    final c2 = Offset(
+      size.width * 0.85 + math.sin(angle * 0.7) * 25,
+      size.height * 0.72 + math.cos(angle * 0.7) * 30,
+    );
+    canvas.drawCircle(
+      c2,
+      size.width * 0.50,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            FreshGuardTheme.restaurantPrimary.withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: c2, radius: size.width * 0.50)),
+    );
+
+    // Blob 3 — hotel green, center
+    final c3 = Offset(
+      size.width * 0.5 + math.sin(angle * 1.3) * 20,
+      size.height * 0.5 + math.cos(angle * 1.1) * 25,
+    );
+    canvas.drawCircle(
+      c3,
+      size.width * 0.35,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            FreshGuardTheme.hotelPrimary.withValues(alpha: 0.06),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: c3, radius: size.width * 0.35)),
     );
   }
 
   @override
-  bool shouldRepaint(_MeshPainter old) => old.t != t;
+  bool shouldRepaint(_BlobBackgroundPainter old) => old.t != t;
 }

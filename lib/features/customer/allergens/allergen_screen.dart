@@ -3,14 +3,20 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
-import '../../../providers/user_provider.dart';
-import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
 import '../../../shared/widgets/empty_state.dart';
+
+// ── Customer design tokens ─────────────────────────────────────────────────────
+const _kPrimary   = Color(0xFFA78BFA);
+const _kDeep      = Color(0xFF7C3AED);
+const _kSurface   = Color(0xFFF5F3FF);
+const _kSoftBg    = Color(0xFFEDE9FE);
+const _kTextTitle = Color(0xFF2D1B69);
+const _kTextBody  = Color(0xFF4B3B8C);
+const _kTextMuted = Color(0xFF8B7BC0);
+const _kDanger    = Color(0xFFFF7070);
 
 class AllergenScreen extends StatefulWidget {
   const AllergenScreen({super.key});
@@ -33,20 +39,6 @@ class _AllergenScreenState extends State<AllergenScreen>
   }
 
   Future<void> _load() async {
-    final userAllergens = context.read<UserProvider>().currentUser?.allergens;
-    if (userAllergens != null && userAllergens.isNotEmpty) {
-      final next = userAllergens.toList(growable: false)..sort();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsKey, jsonEncode(next));
-
-      if (!mounted) return;
-      setState(() {
-        _allergens = next;
-        _loading = false;
-      });
-      return;
-    }
-
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
 
@@ -71,12 +63,6 @@ class _AllergenScreenState extends State<AllergenScreen>
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefsKey, jsonEncode(next));
 
-    final userProvider = context.read<UserProvider>();
-    final user = userProvider.currentUser;
-    if (user != null) {
-      await userProvider.saveProfile(user.copyWith(allergens: next));
-    }
-
     if (!mounted) return;
     setState(() => _allergens = next);
   }
@@ -99,154 +85,259 @@ class _AllergenScreenState extends State<AllergenScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _kSurface,
       body: SafeArea(
         child: Column(
           children: [
-            CherryHeader(
-              title: AppStrings.myAllergenProfile,
-              subtitle: AppStrings.allergenBanner,
-              showBack: false,
-              actions: [
-                IconButton(
-                  onPressed: _edit,
-                  icon: const Icon(Icons.edit_outlined),
-                  color: AppColors.butter,
-                  splashColor: AppColors.butter.withValues(alpha: 0.2),
+            // ── Header ─────────────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft:  Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
-                child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.cherry,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.myAllergenProfile,
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
-                      )
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppStrings.myAllergens,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                                height: 1.2,
-                              ),
+                        const SizedBox(height: 4),
+                        Text(
+                          AppStrings.allergenBanner,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _edit,
+                    icon: const Icon(Icons.edit_outlined),
+                    color: Colors.white,
+                    splashColor: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: _loading
+                  ? Center(
+                      child: CircularProgressIndicator(color: _kPrimary),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Info banner ───────────────────────────────
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _kSoftBg,
+                              borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                              border: Border.all(color: _kPrimary.withValues(alpha: 0.2)),
                             ),
-                            const SizedBox(height: 10),
-                            if (_allergens.isEmpty)
-                              EmptyState(
-                                icon: Icons.shield_outlined,
-                                title: AppStrings.noAllergensTitle,
-                                subtitle: AppStrings.noAllergensSubtitle,
-                                actionLabel: AppStrings.editAllergenProfile,
-                                onAction: _edit,
-                              )
-                            else
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: _allergens
-                                    .map(
-                                      (a) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.butter,
-                                          borderRadius: BorderRadius.circular(
-                                            AppRadii.chip,
-                                          ),
-                                          border: Border.all(
-                                            color: AppColors.sand,
-                                            width: 0.5,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          a,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.espresso,
-                                            height: 1.2,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(growable: false),
-                              ),
-                            const SizedBox(height: 18),
-                            Text(
-                              AppStrings.recentAllergenWarnings,
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.infoBg,
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.innerCard,
-                                ),
-                                border: Border.all(
-                                  color: AppColors.sand,
-                                  width: 0.5,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    color: AppColors.infoText,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      AppStrings.allergenInformation,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.infoText,
-                                        height: 1.5,
-                                      ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, color: _kPrimary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    AppStrings.allergenInformation,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: _kTextBody,
+                                      height: 1.5,
                                     ),
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // ── My allergens ──────────────────────────────
+                          Text(
+                            AppStrings.myAllergens,
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: _kTextTitle,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          if (_allergens.isEmpty)
+                            EmptyState(
+                              icon: Icons.shield_outlined,
+                              title: AppStrings.noAllergensTitle,
+                              subtitle: AppStrings.noAllergensSubtitle,
+                              actionLabel: AppStrings.editAllergenProfile,
+                              onAction: _edit,
+                            )
+                          else
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: _allergens
+                                  .map(
+                                    (a) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _kDanger.withValues(alpha: 0.10),
+                                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                                        border: Border.all(
+                                          color: _kDanger.withValues(alpha: 0.35),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.warning_amber_rounded,
+                                            size: 14,
+                                            color: _kDanger,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            a,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: _kDanger,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
+                          const SizedBox(height: 24),
+
+                          // ── Recent allergen warnings ───────────────────
+                          Text(
+                            AppStrings.recentAllergenWarnings,
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: _kTextTitle,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Placeholder info card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                              boxShadow: AppShadows.sm(_kPrimary),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: _kSoftBg,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.shield_outlined, color: _kPrimary, size: 22),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'No recent warnings',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: _kTextTitle,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Scan a dish to check for allergen risks.',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: _kTextMuted,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // ── Scan CTA ──────────────────────────────────
+                          GestureDetector(
+                            onTap: () async => context.go(AppRoutes.customerScan),
+                            child: Container(
+                              width: double.infinity,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                borderRadius: BorderRadius.circular(AppRadii.pill),
+                                boxShadow: AppShadows.md(_kPrimary),
+                              ),
+                              child: Center(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      AppStrings.scanYourDish,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 18),
-                            AnimatedButton(
-                              label: AppStrings.scanYourDish,
-                              color: AppColors.cherry,
-                              textColor: AppColors.butter,
-                              onTap: () async =>
-                                  context.go(AppRoutes.customerScan),
-                              height: 52,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-              ),
+                    ),
             ),
           ],
         ),
@@ -291,7 +382,7 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
       padding: EdgeInsets.only(bottom: viewInsets),
       child: Container(
         decoration: const BoxDecoration(
-          color: AppColors.parchment,
+          color: Colors.white,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -310,10 +401,10 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                     Expanded(
                       child: Text(
                         AppStrings.editAllergenProfile,
-                        style: GoogleFonts.dmSerifDisplay(
+                        style: GoogleFonts.playfairDisplay(
                           fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.espresso,
+                          fontWeight: FontWeight.w700,
+                          color: _kTextTitle,
                           height: 1.2,
                         ),
                       ),
@@ -321,6 +412,7 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
+                      color: _kTextMuted,
                     ),
                   ],
                 ),
@@ -328,60 +420,65 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: _options
-                      .map((a) {
-                        final selected = _selected.contains(a);
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              if (selected) {
-                                _selected.remove(a);
-                              } else {
-                                _selected.add(a);
-                              }
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(AppRadii.chip),
-                          splashColor: AppColors.cherry.withValues(alpha: 0.12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? AppColors.cherry
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(
-                                AppRadii.chip,
-                              ),
-                              border: Border.all(
-                                color: AppColors.sand,
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              a,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: selected
-                                    ? AppColors.butter
-                                    : AppColors.cocoa,
-                                height: 1.2,
-                              ),
-                            ),
+                  children: _options.map((a) {
+                    final selected = _selected.contains(a);
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (selected) {
+                            _selected.remove(a);
+                          } else {
+                            _selected.add(a);
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      splashColor: _kPrimary.withValues(alpha: 0.12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: selected ? _kSoftBg : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          border: Border.all(
+                            color: selected ? _kPrimary : const Color(0xFFEDE9FE),
+                            width: 1.5,
                           ),
-                        );
-                      })
-                      .toList(growable: false),
+                        ),
+                        child: Text(
+                          a,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? _kDeep : _kTextMuted,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(growable: false),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _customController,
-                  decoration: const InputDecoration(
+                  style: GoogleFonts.inter(fontSize: 14, color: _kTextTitle),
+                  decoration: InputDecoration(
                     labelText: 'Add custom allergen',
-                    prefixIcon: Icon(Icons.add, color: AppColors.cocoa),
+                    labelStyle: GoogleFonts.inter(color: _kTextMuted),
+                    prefixIcon: Icon(Icons.add, color: _kPrimary),
+                    filled: true,
+                    fillColor: _kSoftBg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.input),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.input),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadii.input),
+                      borderSide: BorderSide(color: _kPrimary, width: 1.5),
+                    ),
                   ),
                   onSubmitted: (v) {
                     final t = v.trim();
@@ -396,16 +493,52 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(AppStrings.cancel),
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _kSoftBg,
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Center(
+                            child: Text(
+                              AppStrings.cancel,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: _kTextBody,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(_selected),
-                        child: Text(AppStrings.saveGoals),
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(_selected),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Center(
+                            child: Text(
+                              AppStrings.saveGoals,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],

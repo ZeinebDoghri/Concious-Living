@@ -4,43 +4,31 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants.dart';
 
 class RiskBadge extends StatelessWidget {
-  final String riskLevel; // low | moderate | high
+  final String riskLevel;
 
   const RiskBadge(this.riskLevel, {super.key});
 
   static String label(String level) {
     switch (level) {
-      case 'high':
-        return AppStrings.riskHigh;
-      case 'moderate':
-        return AppStrings.riskModerate;
-      case 'low':
-      default:
-        return AppStrings.riskLow;
+      case 'high': return AppStrings.riskHigh;
+      case 'moderate': return AppStrings.riskModerate;
+      case 'low': default: return AppStrings.riskLow;
     }
   }
 
   static Color textColor(String level) {
     switch (level) {
-      case 'high':
-        return AppColors.cherry;
-      case 'moderate':
-        return AppColors.riskModerateText;
-      case 'low':
-      default:
-        return AppColors.olive;
+      case 'high': return const Color(0xFFCC3333);
+      case 'moderate': return const Color(0xFFB87700);
+      case 'low': default: return const Color(0xFF2D8A56);
     }
   }
 
   static Color bgColor(String level) {
     switch (level) {
-      case 'high':
-        return AppColors.cherryBlush;
-      case 'moderate':
-        return AppColors.butter;
-      case 'low':
-      default:
-        return AppColors.oliveMist;
+      case 'high': return FreshGuardTheme.danger.withValues(alpha: 0.12);
+      case 'moderate': return FreshGuardTheme.warning.withValues(alpha: 0.15);
+      case 'low': default: return FreshGuardTheme.fresh.withValues(alpha: 0.12);
     }
   }
 
@@ -48,17 +36,16 @@ class RiskBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final level = riskLevel.toLowerCase();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: bgColor(level),
-        borderRadius: BorderRadius.circular(AppRadii.badge),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
         label(level),
-          style: GoogleFonts.inter(
+        style: GoogleFonts.inter(
           fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: textColor(level),
           height: 1.2,
         ),

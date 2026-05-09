@@ -8,14 +8,20 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
 
+const _kPrimary   = Color(0xFF7DC5A0);
+const _kDeep      = Color(0xFF4A8A6A);
+const _kSurface   = Color(0xFFF4FAF7);
+const _kSoftBg    = Color(0xFFDFF2E9);
+const _kTitle     = Color(0xFF0D2E1E);
+const _kBody      = Color(0xFF3A6A52);
+const _kMuted     = Color(0xFF7AAA90);
+
 class HotelProfileScreen extends StatelessWidget {
   const HotelProfileScreen({super.key});
 
-  static const _headerSecondaryText = AppColors.cocoa;
-
   String _text(String? value, {String fallback = '—'}) {
-    final text = (value ?? '').trim();
-    return text.isEmpty ? fallback : text;
+    final t = (value ?? '').trim();
+    return t.isEmpty ? fallback : t;
   }
 
   String _memberSince() {
@@ -27,53 +33,30 @@ class HotelProfileScreen extends StatelessWidget {
   Future<void> _signOut(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.parchment,
-          title: Text(
-            AppStrings.signOut,
-            style: GoogleFonts.dmSerifDisplay(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.espresso,
-            ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.xl)),
+        title: Text(
+          AppStrings.signOut,
+          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _kTitle),
+        ),
+        content: Text(
+          'You will need to sign in again to manage this hotel account.',
+          style: GoogleFonts.inter(fontSize: 13, color: _kBody, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(false),
+            child: Text(AppStrings.cancel, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: _kMuted)),
           ),
-          content: Text(
-            'You will need to sign in again to manage this hotel account.',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: AppColors.cocoa,
-              height: 1.5,
-            ),
+          TextButton(
+            onPressed: () => ctx.pop(true),
+            child: Text(AppStrings.confirm, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: FreshGuardTheme.danger)),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => dialogContext.pop(false),
-              child: Text(
-                AppStrings.cancel,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.cocoa,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => dialogContext.pop(true),
-              child: Text(
-                AppStrings.confirm,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.cherry,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
-
     if (confirmed != true || !context.mounted) return;
-
     await context.read<UserProvider>().logout();
     if (!context.mounted) return;
     context.go(AppRoutes.roleSelector);
@@ -82,319 +65,243 @@ class HotelProfileScreen extends StatelessWidget {
   void _about(BuildContext context) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.parchment,
-          title: Text(
-            AppStrings.aboutProject,
-            style: GoogleFonts.dmSerifDisplay(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.espresso,
-            ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.xl)),
+        title: Text(
+          AppStrings.aboutProject,
+          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _kTitle),
+        ),
+        content: Text(
+          AppStrings.taglineLong,
+          style: GoogleFonts.inter(fontSize: 13, color: _kBody, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => ctx.pop(),
+            child: Text(AppStrings.ok, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: _kPrimary)),
           ),
-          content: Text(
-            AppStrings.taglineLong,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: AppColors.cocoa,
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => dialogContext.pop(),
-              child: Text(
-                AppStrings.ok,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.olive,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().currentUser;
-    final hotelName = _text(user?.hotelName, fallback: AppStrings.appName);
-    final hotelType = _text(user?.hotelType);
-    final rooms = user?.rooms ?? 0;
+    final user       = context.watch<UserProvider>().currentUser;
+    final hotelName  = _text(user?.hotelName, fallback: AppStrings.appName);
+    final hotelType  = _text(user?.hotelType);
+    final rooms      = user?.rooms ?? 0;
     final managerName = _text(user?.name);
-    final email = _text(user?.email);
-    final phone = _text(user?.phone);
-    final logoUrl = (user?.avatarPath ?? '').trim();
-    final hasLogo = logoUrl.isNotEmpty;
+    final email      = _text(user?.email);
+    final phone      = _text(user?.phone);
+    final logoUrl    = (user?.avatarPath ?? '').trim();
+    final hasLogo    = logoUrl.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _kSurface,
       body: Column(
         children: [
+          // ── Hero header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 220),
-            child: Stack(
-              children: [
-                Container(color: AppColors.olive),
-                Positioned.fill(child: CustomPaint(painter: _ArcPainter())),
-                SafeArea(
-                  bottom: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(42),
-                            child: Container(
-                              width: 84,
-                              height: 84,
-                              color: AppColors.oliveMist,
-                              alignment: Alignment.center,
-                              child: hasLogo
-                                  ? Image.network(
-                                      logoUrl,
-                                      width: 84,
-                                      height: 84,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, _, error) {
-                                        return const Icon(Icons.hotel, size: 36, color: AppColors.olive);
-                                      },
-                                    )
-                                  : const Icon(Icons.hotel, size: 36, color: AppColors.olive),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.cherryBlush,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'Hotel',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.cherry,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            hotelName,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.dmSerifDisplay(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.espresso,
-                              height: 1.15,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$hotelType · $rooms rooms',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: _headerSecondaryText,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            managerName,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: _headerSecondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _StatPill(label: _memberSince(), icon: Icons.verified_outlined),
-                              const SizedBox(width: 10),
-                              _StatPill(label: email, icon: Icons.email_outlined),
-                              const SizedBox(width: 10),
-                              _StatPill(label: phone, icon: Icons.phone_outlined),
-                            ],
-                          ),
-                        ],
+            constraints: const BoxConstraints(minHeight: 240),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_kPrimary, _kDeep],
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                child: Column(
+                  children: [
+                    // avatar
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _kSoftBg,
+                        boxShadow: AppShadows.md(_kPrimary),
                       ),
+                      clipBehavior: Clip.antiAlias,
+                      child: hasLogo
+                          ? Image.network(logoUrl, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const Icon(Icons.hotel, size: 40, color: _kDeep))
+                          : const Icon(Icons.hotel, size: 40, color: _kDeep),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    // role chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Text('Hotel', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      hotelName,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white, height: 1.15),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$hotelType · $rooms rooms',
+                      style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.80)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      managerName,
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.65)),
+                    ),
+                    const SizedBox(height: 14),
+                    // info pills
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _InfoPill(icon: Icons.verified_outlined, label: _memberSince()),
+                        _InfoPill(icon: Icons.email_outlined, label: email),
+                        _InfoPill(icon: Icons.phone_outlined, label: phone),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
+
+          // ── Scrollable body ──────────────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 children: [
+                  // overlap card
                   Transform.translate(
                     offset: const Offset(0, -20),
-                    child: _Card(
+                    child: _Section(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Hotel overview',
-                            style: GoogleFonts.dmSerifDisplay(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.espresso,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
+                          Text('Hotel overview', style: GoogleFonts.playfairDisplay(fontSize: 15, fontWeight: FontWeight.w600, color: _kTitle)),
+                          const SizedBox(height: 14),
                           Row(
                             children: [
-                              Expanded(child: _KpiTile(number: '$rooms', label: 'Rooms', color: AppColors.olive)),
+                              Expanded(child: _KpiTile(value: '$rooms', label: 'Rooms', color: _kPrimary)),
                               const SizedBox(width: 10),
-                              Expanded(child: _KpiTile(number: hotelType, label: 'Type', color: AppColors.cherry)),
+                              Expanded(child: _KpiTile(value: hotelType, label: 'Type', color: _kDeep)),
                               const SizedBox(width: 10),
-                              Expanded(child: _KpiTile(number: managerName, label: 'Manager', color: AppColors.espresso)),
+                              Expanded(child: _KpiTile(value: managerName, label: 'Manager', color: _kBody)),
                               const SizedBox(width: 10),
-                              Expanded(child: _KpiTile(number: '24/7', label: 'Support', color: AppColors.olive)),
+                              Expanded(child: _KpiTile(value: '24/7', label: 'Support', color: _kPrimary)),
                             ],
                           ),
                         ],
                       ),
                     ),
                   ),
-                  _Card(
+
+                  // Hotel info card
+                  _Section(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Hotel information',
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                              ),
-                            ),
+                            Text('Hotel information', style: GoogleFonts.playfairDisplay(fontSize: 15, fontWeight: FontWeight.w600, color: _kTitle)),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('/hotel/profile/edit'),
-                              icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.olive,
-                              iconSize: 18,
-                              splashRadius: 18,
+                              onPressed: () => context.push(AppRoutes.hotelProfileEdit),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              color: _kPrimary,
                             ),
                           ],
                         ),
-                        _InfoRow(label: 'Hotel name', value: hotelName),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Hotel type', value: hotelType),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Rooms', value: rooms.toString()),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Manager', value: managerName),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Email', value: email),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(label: 'Phone', value: phone),
-                        const Divider(color: AppColors.sand, height: 1),
+                        _InfoRow(label: 'Hotel name',   value: hotelName),
+                        _InfoRow(label: 'Hotel type',   value: hotelType),
+                        _InfoRow(label: 'Rooms',        value: rooms.toString()),
+                        _InfoRow(label: 'Manager',      value: managerName),
+                        _InfoRow(label: 'Email',        value: email),
+                        _InfoRow(label: 'Phone',        value: phone),
                         _InfoRow(label: 'Member since', value: _memberSince()),
                       ],
                     ),
                   ),
-                  _Card(
+
+                  // Operations card
+                  _Section(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Operations & preferences',
-                              style: GoogleFonts.dmSerifDisplay(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
-                              ),
-                            ),
+                            Text('Operations & preferences', style: GoogleFonts.playfairDisplay(fontSize: 15, fontWeight: FontWeight.w600, color: _kTitle)),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('/hotel/profile/edit?step=2'),
-                              icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.olive,
-                              iconSize: 18,
-                              splashRadius: 18,
+                              onPressed: () => context.push('${AppRoutes.hotelProfileEdit}?step=2'),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              color: _kPrimary,
                             ),
                           ],
                         ),
-                        _BulletRow(
-                          icon: Icons.bed_outlined,
-                          text: 'Rooms and housekeeping planning are centralized here.',
-                        ),
-                        const SizedBox(height: 12),
-                        _BulletRow(
-                          icon: Icons.room_service_outlined,
-                          text: 'Front desk, kitchen, and housekeeping staff can be tracked in the edit flow.',
-                        ),
-                        const SizedBox(height: 12),
-                        _BulletRow(
-                          icon: Icons.notifications_active_outlined,
-                          text: 'Alert preferences are configured in the hotel setup/edit flow.',
-                        ),
+                        _BulletRow(icon: Icons.bed_outlined,                  text: 'Rooms and housekeeping planning are centralized here.'),
+                        const SizedBox(height: 10),
+                        _BulletRow(icon: Icons.room_service_outlined,          text: 'Front desk, kitchen, and housekeeping staff tracked in the edit flow.'),
+                        const SizedBox(height: 10),
+                        _BulletRow(icon: Icons.notifications_active_outlined,  text: 'Alert preferences configured in the hotel setup/edit flow.'),
                       ],
                     ),
                   ),
-                  _Card(
+
+                  // Actions card
+                  _Section(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       children: [
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.edit_note_outlined, color: AppColors.olive),
-                          title: Text(
-                            'Edit profile',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
-                            ),
+                          leading: Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+                            child: const Icon(Icons.edit_note_outlined, color: _kDeep, size: 18),
                           ),
-                          onTap: () => context.push('/hotel/profile/edit'),
+                          title: Text('Edit profile', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: _kTitle)),
+                          trailing: const Icon(Icons.chevron_right, color: _kMuted, size: 18),
+                          onTap: () => context.push(AppRoutes.hotelProfileEdit),
                         ),
+                        const Divider(color: Color(0xFFDFF2E9), height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.info_outline, color: AppColors.fog),
-                          title: Text(
-                            'About the project',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
-                            ),
+                          leading: Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(color: _kSoftBg, shape: BoxShape.circle),
+                            child: const Icon(Icons.info_outline, color: _kDeep, size: 18),
                           ),
+                          title: Text('About the project', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: _kTitle)),
+                          trailing: const Icon(Icons.chevron_right, color: _kMuted, size: 18),
                           onTap: () => _about(context),
                         ),
-                        const Divider(color: AppColors.sand, height: 1),
+                        const Divider(color: Color(0xFFDFF2E9), height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.logout, color: AppColors.olive),
-                          title: Text(
-                            'Sign out',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.olive,
-                            ),
+                          leading: Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(color: FreshGuardTheme.danger.withValues(alpha: 0.08), shape: BoxShape.circle),
+                            child: Icon(Icons.logout, color: FreshGuardTheme.danger, size: 18),
                           ),
+                          title: Text('Sign out', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: FreshGuardTheme.danger)),
                           onTap: () => _signOut(context),
                         ),
                       ],
@@ -410,71 +317,51 @@ class HotelProfileScreen extends StatelessWidget {
   }
 }
 
-class _ArcPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.06);
-    final center = Offset(size.width * 0.88, size.height * 0.12);
-    final radius = size.width * 0.8;
-    canvas.drawCircle(center, radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _Card extends StatelessWidget {
+class _Section extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry margin;
-
-  const _Card({required this.child, required this.margin});
+  const _Section({required this.child, required this.margin});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       margin: margin,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        boxShadow: AppShadows.sm(_kPrimary),
       ),
       child: child,
     );
   }
 }
 
-class _StatPill extends StatelessWidget {
-  final String label;
+class _InfoPill extends StatelessWidget {
   final IconData icon;
-
-  const _StatPill({required this.label, required this.icon});
+  final String label;
+  const _InfoPill({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 112),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      constraints: const BoxConstraints(maxWidth: 130),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.parchment.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withValues(alpha: 0.20),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: AppColors.espresso),
+          Icon(icon, size: 12, color: Colors.white),
           const SizedBox(width: 4),
           Flexible(
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.espresso,
-                height: 1.2,
-              ),
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white, height: 1.2),
             ),
           ),
         ],
@@ -484,46 +371,30 @@ class _StatPill extends StatelessWidget {
 }
 
 class _KpiTile extends StatelessWidget {
-  final String number;
+  final String value;
   final String label;
   final Color color;
-
-  const _KpiTile({required this.number, required this.label, required this.color});
+  const _KpiTile({required this.value, required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.oat,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: _kSoftBg,
+        borderRadius: BorderRadius.circular(AppRadii.md),
       ),
       child: Column(
         children: [
           Text(
-            number,
+            value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: GoogleFonts.dmSerifDisplay(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-              height: 1.0,
-            ),
+            style: GoogleFonts.playfairDisplay(fontSize: 16, fontWeight: FontWeight.w700, color: color, height: 1.1),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.cocoa,
-              height: 1.2,
-            ),
-          ),
+          const SizedBox(height: 4),
+          Text(label, textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500, color: _kMuted)),
         ],
       ),
     );
@@ -533,39 +404,24 @@ class _KpiTile extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-
   const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.fog,
-              ),
-            ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _kMuted))),
+              const SizedBox(width: 10),
+              Expanded(child: Text(value, textAlign: TextAlign.right, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: _kTitle))),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.espresso,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const Divider(color: Color(0xFFDFF2E9), height: 1),
+      ],
     );
   }
 }
@@ -573,7 +429,6 @@ class _InfoRow extends StatelessWidget {
 class _BulletRow extends StatelessWidget {
   final IconData icon;
   final String text;
-
   const _BulletRow({required this.icon, required this.text});
 
   @override
@@ -581,19 +436,9 @@ class _BulletRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: AppColors.olive),
+        Icon(icon, size: 18, color: _kPrimary),
         const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: AppColors.espresso,
-              height: 1.45,
-            ),
-          ),
-        ),
+        Expanded(child: Text(text, style: GoogleFonts.inter(fontSize: 13, color: _kBody, height: 1.45))),
       ],
     );
   }

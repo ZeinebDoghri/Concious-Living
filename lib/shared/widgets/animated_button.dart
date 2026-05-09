@@ -17,7 +17,7 @@ class AnimatedButton extends StatefulWidget {
     required this.label,
     this.icon,
     required this.color,
-    required this.textColor,
+    this.textColor = Colors.white,
     required this.onTap,
     this.isLoading = false,
     this.height = 52,
@@ -27,29 +27,8 @@ class AnimatedButton extends StatefulWidget {
   State<AnimatedButton> createState() => _AnimatedButtonState();
 }
 
-class _AnimatedButtonState extends State<AnimatedButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-      value: 1.0,
-      lowerBound: 0.96,
-      upperBound: 1.0,
-    );
-    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _AnimatedButtonState extends State<AnimatedButton> {
+  bool _pressed = false;
 
   Future<void> _handleTap() async {
     if (widget.isLoading || widget.onTap == null) return;
@@ -61,29 +40,31 @@ class _AnimatedButtonState extends State<AnimatedButton>
     return GestureDetector(
       onTapDown: (_) {
         if (widget.onTap == null || widget.isLoading) return;
-        _controller.animateTo(0.96);
+        setState(() => _pressed = true);
       },
       onTapUp: (_) {
         if (widget.onTap == null || widget.isLoading) return;
-        _controller.animateTo(1.0);
+        setState(() => _pressed = false);
       },
-      onTapCancel: () {
-        if (widget.onTap == null || widget.isLoading) return;
-        _controller.animateTo(1.0);
-      },
+      onTapCancel: () => setState(() => _pressed = false),
       onTap: _handleTap,
-      child: ScaleTransition(
-        scale: _scale,
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: _pressed ? AppDurations.xs : const Duration(milliseconds: 300),
+        curve: _pressed ? Curves.easeIn : Curves.elasticOut,
         child: Container(
           height: widget.height,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(AppRadii.button),
+            color: widget.isLoading
+                ? widget.color.withValues(alpha: 0.7)
+                : widget.color,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            boxShadow: AppShadows.md(widget.color),
           ),
           alignment: Alignment.center,
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
+            duration: AppDurations.sm,
             child: widget.isLoading
                 ? SizedBox(
                     key: const ValueKey('loading'),
@@ -104,14 +85,16 @@ class _AnimatedButtonState extends State<AnimatedButton>
                       ],
                       Text(
                         widget.label,
-                             style: GoogleFonts.inter(
-                          fontSize: 15,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: widget.textColor,
-                          letterSpacing: 0.3,
                           height: 1.2,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_rounded,
+                          color: widget.textColor.withValues(alpha: 0.7), size: 16),
                     ],
                   ),
           ),

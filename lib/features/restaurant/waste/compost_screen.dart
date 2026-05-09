@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -13,20 +14,23 @@ import '../../../core/models/compost_session_model.dart';
 import '../../../providers/compost_provider.dart';
 import '../../../providers/user_provider.dart';
 
-// ── Design tokens (compost feature palette) ───────────────────────────────────
-const _emerald = Color(0xFF10B981);
-const _emeraldDark = Color(0xFF059669);
-const _emeraldLight = Color(0xFFD1FAE5);
-const _emeraldMid = Color(0xFF6EE7B7);
-const _rose = Color(0xFFEF4444);
-const _roseLight = Color(0xFFFEE2E2);
-const _slate = Color(0xFF64748B);
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary = Color(0xFFF2A7A7);
+const _rDeep = Color(0xFFE47878);
+const _rSurface = Color(0xFFFFF5F5);
+const _rSoftBg = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextMuted = Color(0xFFB08080);
+const _fresh = Color(0xFF52C98A);
+const _freshLight = Color(0xFFE8F9F1);
+const _freshDark = Color(0xFF2E8B5A);
+const _danger = Color(0xFFFF7070);
+const _dangerLight = Color(0xFFFFEEEE);
+const _warning = Color(0xFFFFAB5B);
+const _warningLight = Color(0xFFFFF4E8);
 const _slateLight = Color(0xFFF1F5F9);
-const _amber = Color(0xFFF59E0B);
-const _amberLight = Color(0xFFFEF3C7);
-const _ink = Color(0xFF0F172A);
-const _fog2 = Color(0xFF94A3B8);
-const _surface = Color(0xFFFFFFFF);
+const _slate = Color(0xFF64748B);
+const _fog = Color(0xFF94A3B8);
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 class CompostScreen extends StatefulWidget {
@@ -59,7 +63,7 @@ class _CompostScreenState extends State<CompostScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
+      backgroundColor: _rSurface,
       body: Column(
         children: [
           _CompostHeader(tab: _tab),
@@ -86,11 +90,14 @@ class _CompostHeader extends StatelessWidget {
     final isLoaded = context.watch<CompostProvider>().isModelLoaded;
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF064E3B), Color(0xFF065F46), Color(0xFF047857)],
+          colors: [_rSoftBg, _rSurface],
+        ),
+        border: Border(
+          bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
         ),
       ),
       child: Column(
@@ -105,13 +112,11 @@ class _CompostHeader extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: _fresh.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3)),
+                    border: Border.all(color: _fresh.withValues(alpha: 0.3)),
                   ),
-                  child: const Icon(Icons.eco_rounded,
-                      color: Colors.white, size: 22),
+                  child: Icon(Icons.eco_rounded, color: _freshDark, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -120,10 +125,10 @@ class _CompostHeader extends StatelessWidget {
                     children: [
                       Text(
                         'Compost AI',
-                        style: GoogleFonts.sora(
+                        style: GoogleFonts.playfairDisplay(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: _rTextTitle,
                           height: 1.1,
                         ),
                       ),
@@ -131,7 +136,7 @@ class _CompostHeader extends StatelessWidget {
                         'Classification intelligente des déchets',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.75),
+                          color: _rTextMuted,
                           height: 1.3,
                         ),
                       ),
@@ -139,17 +144,19 @@ class _CompostHeader extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: isLoaded
-                        ? _emerald.withValues(alpha: 0.25)
-                        : Colors.white.withValues(alpha: 0.15),
+                        ? _fresh.withValues(alpha: 0.12)
+                        : _warning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isLoaded
-                          ? _emeraldMid.withValues(alpha: 0.6)
-                          : Colors.white.withValues(alpha: 0.3),
+                          ? _fresh.withValues(alpha: 0.4)
+                          : _warning.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Row(
@@ -160,7 +167,7 @@ class _CompostHeader extends StatelessWidget {
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isLoaded ? _emeraldMid : _amber,
+                          color: isLoaded ? _fresh : _warning,
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -169,7 +176,7 @@ class _CompostHeader extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: isLoaded ? _freshDark : _warning,
                         ),
                       ),
                     ],
@@ -182,7 +189,7 @@ class _CompostHeader extends StatelessWidget {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: _rSoftBg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: TabBar(
@@ -190,11 +197,18 @@ class _CompostHeader extends StatelessWidget {
               indicator: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: _rPrimary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
-              labelColor: _emeraldDark,
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.8),
+              labelColor: _rDeep,
+              unselectedLabelColor: _rTextMuted,
               labelStyle: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -230,10 +244,9 @@ class _ClassifyTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!prov.hasImage && !prov.hasResult) ...[
-            _TodayOverviewCard(prov: prov)
-                .animate()
-                .fadeIn(duration: 400.ms)
-                .slideY(begin: 0.15, end: 0),
+            _TodayOverviewCard(
+              prov: prov,
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.15, end: 0),
             const SizedBox(height: 16),
             _PhotoCard(prov: prov)
                 .animate()
@@ -247,14 +260,13 @@ class _ClassifyTab extends StatelessWidget {
           ] else if (prov.isAnalyzing) ...[
             _AnalyzingCard().animate().fadeIn(duration: 300.ms),
           ] else if (prov.hasResult) ...[
-            _ResultSection(prov: prov)
-                .animate()
-                .fadeIn(duration: 400.ms)
-                .slideY(begin: 0.1, end: 0),
+            _ResultSection(
+              prov: prov,
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
           ] else if (prov.state == CompostState.error) ...[
-            _ErrorCard(message: prov.errorMessage ?? 'Erreur inconnue')
-                .animate()
-                .fadeIn(duration: 300.ms),
+            _ErrorCard(
+              message: prov.errorMessage ?? 'Erreur inconnue',
+            ).animate().fadeIn(duration: 300.ms),
             const SizedBox(height: 12),
             _retakeButton(context, prov),
           ] else if (prov.hasImage) ...[
@@ -263,9 +275,9 @@ class _ClassifyTab extends StatelessWidget {
                 .fadeIn(duration: 350.ms)
                 .scale(begin: const Offset(0.95, 0.95)),
             const SizedBox(height: 16),
-            _ClassifyButton(prov: prov)
-                .animate()
-                .fadeIn(duration: 350.ms, delay: 100.ms),
+            _ClassifyButton(
+              prov: prov,
+            ).animate().fadeIn(duration: 350.ms, delay: 100.ms),
             const SizedBox(height: 10),
             _retakeButton(context, prov),
           ],
@@ -275,16 +287,29 @@ class _ClassifyTab extends StatelessWidget {
   }
 
   Widget _retakeButton(BuildContext ctx, CompostProvider prov) {
-    return OutlinedButton.icon(
-      onPressed: prov.reset,
-      icon: const Icon(Icons.refresh_rounded, size: 18),
-      label: const Text('Nouvelle photo'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _slate,
-        side: const BorderSide(color: _fog2),
-        minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
+    return GestureDetector(
+      onTap: prov.reset,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _rPrimary.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.refresh_rounded, size: 18, color: _rTextMuted),
+            const SizedBox(width: 8),
+            Text(
+              'Nouvelle photo',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _rTextMuted,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -306,11 +331,15 @@ class _TodayOverviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _rPrimary.withValues(alpha: 0.15),
+          width: 0.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: _emerald.withValues(alpha: 0.08),
+            color: _rPrimary.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -324,11 +353,10 @@ class _TodayOverviewCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _emeraldLight,
+                  color: _freshLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.eco_rounded,
-                    color: _emeraldDark, size: 20),
+                child: Icon(Icons.eco_rounded, color: _freshDark, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -337,17 +365,20 @@ class _TodayOverviewCard extends StatelessWidget {
                   children: [
                     Text(
                       "Aujourd'hui",
-                      style: GoogleFonts.sora(
+                      style: GoogleFonts.playfairDisplay(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: _ink,
+                        color: _rTextTitle,
                       ),
                     ),
                     Text(
                       count == 0
                           ? 'Aucune analyse'
                           : '$count analyse${count > 1 ? 's' : ''}',
-                      style: GoogleFonts.inter(fontSize: 12, color: _fog2),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: _rTextMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -368,13 +399,13 @@ class _TodayOverviewCard extends StatelessWidget {
                         sections: [
                           PieChartSectionData(
                             value: compost,
-                            color: _emerald,
+                            color: _fresh,
                             radius: 28,
                             showTitle: false,
                           ),
                           PieChartSectionData(
                             value: nonCompost,
-                            color: _rose,
+                            color: _danger,
                             radius: 28,
                             showTitle: false,
                           ),
@@ -394,13 +425,13 @@ class _TodayOverviewCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _Legend(
-                        color: _emerald,
+                        color: _fresh,
                         label: 'Compostable',
                         value: '${compost.toStringAsFixed(1)}%',
                       ),
                       const SizedBox(height: 8),
                       _Legend(
-                        color: _rose,
+                        color: _danger,
                         label: 'Non-compost.',
                         value: '${nonCompost.toStringAsFixed(1)}%',
                       ),
@@ -409,7 +440,7 @@ class _TodayOverviewCard extends StatelessWidget {
                         color: _slateLight,
                         label: 'Fond',
                         value: '${bg.toStringAsFixed(1)}%',
-                        borderColor: _fog2,
+                        borderColor: _fog,
                       ),
                     ],
                   ),
@@ -421,7 +452,7 @@ class _TodayOverviewCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: _emeraldLight,
+                color: _freshLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -430,7 +461,7 @@ class _TodayOverviewCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: _emeraldDark,
+                    color: _freshDark,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -474,13 +505,18 @@ class _Legend extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: GoogleFonts.inter(fontSize: 11, color: _slate)),
-            Text(value,
-                style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _ink)),
+            Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
+            ),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _rTextTitle,
+              ),
+            ),
           ],
         ),
       ],
@@ -498,15 +534,15 @@ class _PhotoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+          colors: [_rDeep, _rPrimary],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: _emerald.withValues(alpha: 0.25),
+            color: _rPrimary.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -518,7 +554,7 @@ class _PhotoCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'Analyser vos déchets',
-            style: GoogleFonts.sora(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -530,7 +566,7 @@ class _PhotoCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.75),
+              color: Colors.white.withValues(alpha: 0.85),
               height: 1.5,
             ),
           ),
@@ -540,7 +576,7 @@ class _PhotoCard extends StatelessWidget {
               Expanded(
                 child: _ActionChip(
                   icon: Icons.camera_alt_rounded,
-                  label: 'Camera',
+                  label: 'Caméra',
                   onTap: () {
                     HapticFeedback.mediumImpact();
                     prov.pickFromCamera();
@@ -583,9 +619,10 @@ class _PulsingIconState extends State<_PulsingIcon>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -603,7 +640,7 @@ class _PulsingIconState extends State<_PulsingIcon>
         height: 64,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withValues(alpha: 0.2),
         ),
         child: const Icon(Icons.eco_rounded, color: Colors.white, size: 34),
       ),
@@ -628,9 +665,9 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
         ),
         child: Column(
           children: [
@@ -656,21 +693,21 @@ class _EducationCards extends StatelessWidget {
   const _EducationCards();
 
   static const _composable = [
-    ('🥦', 'Vegetables & fruits'),
-    ('☕', 'Coffee grounds'),
-    ('🥚', 'Eggshells'),
-    ('🌿', 'Fresh herbs'),
-    ('🍞', 'Stale bread'),
-    ('🍂', 'Dead leaves'),
+    ('🥦', 'Légumes & fruits'),
+    ('☕', 'Marc de café'),
+    ('🥚', "Coquilles d'œufs"),
+    ('🌿', 'Herbes fraîches'),
+    ('🍞', 'Pain rassis'),
+    ('🍂', 'Feuilles mortes'),
   ];
 
   static const _nonComposable = [
-    ('🥩', 'Cooked meat'),
-    ('🧴', 'Plastic packaging'),
-    ('🪟', 'Glass'),
-    ('🥫', 'Metal / cans'),
-    ('🛢️', 'Cooking oil'),
-    ('🧻', 'Greasy paper'),
+    ('🥩', 'Viandes cuites'),
+    ('🧴', 'Emballages plastique'),
+    ('🪟', 'Verre'),
+    ('🥫', 'Métal / canettes'),
+    ('🛢️', 'Huile de cuisson'),
+    ('🧻', 'Papier gras'),
   ];
 
   @override
@@ -680,37 +717,36 @@ class _EducationCards extends StatelessWidget {
       children: [
         Text(
           '✅  Compostable',
-          style: GoogleFonts.sora(
+          style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: _emeraldDark,
+            color: _freshDark,
           ),
         ),
         const SizedBox(height: 10),
-        _list(_composable, _emeraldLight, _emeraldDark),
+        _list(_composable, _freshLight, _freshDark),
         const SizedBox(height: 16),
         Text(
           '❌  Non-compostable',
-          style: GoogleFonts.sora(
+          style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: _rose,
+            color: _danger,
           ),
         ),
         const SizedBox(height: 10),
-        _list(_nonComposable, _roseLight, _rose),
+        _list(_nonComposable, _dangerLight, _danger),
       ],
     );
   }
 
-  Widget _list(
-      List<(String, String)> items, Color bg, Color textColor) {
+  Widget _list(List<(String, String)> items, Color bg, Color textColor) {
     return SizedBox(
       height: 78,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
           return Container(
             width: 90,
@@ -722,8 +758,7 @@ class _EducationCards extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(items[i].$1,
-                    style: const TextStyle(fontSize: 22)),
+                Text(items[i].$1, style: const TextStyle(fontSize: 22)),
                 const SizedBox(height: 4),
                 Text(
                   items[i].$2,
@@ -759,7 +794,7 @@ class _ImagePreviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: _rPrimary.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -783,7 +818,7 @@ class _ImagePreviewCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.4),
+                      _rTextTitle.withValues(alpha: 0.4),
                     ],
                   ),
                 ),
@@ -793,8 +828,10 @@ class _ImagePreviewCard extends StatelessWidget {
               bottom: 14,
               left: 14,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(20),
@@ -831,13 +868,11 @@ class _ClassifyButton extends StatelessWidget {
       child: Container(
         height: 56,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF059669), Color(0xFF10B981)],
-          ),
+          gradient: const LinearGradient(colors: [_rDeep, _rPrimary]),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: _emerald.withValues(alpha: 0.35),
+              color: _rPrimary.withValues(alpha: 0.35),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -847,12 +882,11 @@ class _ClassifyButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.biotech_rounded,
-                  color: Colors.white, size: 22),
+              const Icon(Icons.biotech_rounded, color: Colors.white, size: 22),
               const SizedBox(width: 10),
               Text(
                 "Lancer l'analyse IA",
-                style: GoogleFonts.sora(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
@@ -873,13 +907,10 @@ class _AnalyzingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: _surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: _emerald.withValues(alpha: 0.08),
-            blurRadius: 20,
-          ),
+          BoxShadow(color: _rPrimary.withValues(alpha: 0.10), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -888,10 +919,10 @@ class _AnalyzingCard extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Analyse en cours…',
-            style: GoogleFonts.sora(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: _ink,
+              color: _rTextTitle,
             ),
           ),
           const SizedBox(height: 8),
@@ -900,7 +931,7 @@ class _AnalyzingCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: _fog2,
+              color: _rTextMuted,
               height: 1.5,
             ),
           ),
@@ -947,17 +978,15 @@ class _SpinningLoaderState extends State<_SpinningLoader>
         height: 64,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          gradient: SweepGradient(
-            colors: [_emerald, Colors.transparent],
-          ),
+          gradient: SweepGradient(colors: [_rPrimary, Colors.transparent]),
         ),
         child: Container(
           margin: const EdgeInsets.all(4),
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: _surface,
+            color: Colors.white,
           ),
-          child: const Icon(Icons.eco_rounded, color: _emerald, size: 28),
+          child: const Icon(Icons.eco_rounded, color: _rDeep, size: 28),
         ),
       ),
     );
@@ -972,7 +1001,7 @@ class _AnimatedSteps extends StatefulWidget {
 class _AnimatedStepsState extends State<_AnimatedSteps> {
   int _step = 0;
   static const _steps = [
-    "Décodage de l'image…",
+    "Decoding the image...",
     'LongestMaxSize + padding 512×512…',
     'Inférence Mask2Former (mask2former_fp32)…',
     "Génération de l'overlay coloré…",
@@ -1001,7 +1030,7 @@ class _AnimatedStepsState extends State<_AnimatedSteps> {
         key: ValueKey(_step),
         style: GoogleFonts.inter(
           fontSize: 12,
-          color: _emeraldDark,
+          color: _rDeep,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -1017,8 +1046,8 @@ class _ResultSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final result = prov.result!;
-    // Safe on both web (selectedImageBytes) and native (file read)
-    final Uint8List? originalBytes = prov.selectedImageBytes ??
+    final Uint8List? originalBytes =
+        prov.selectedImageBytes ??
         (!kIsWeb && prov.selectedImageFile != null
             ? prov.selectedImageFile!.readAsBytesSync()
             : null);
@@ -1028,7 +1057,7 @@ class _ResultSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ImageComparisonSlider(
-          originalBytes: originalBytes,  // non-null guaranteed above
+          originalBytes: originalBytes,
           maskBytes: result.maskPng,
         ),
         const SizedBox(height: 16),
@@ -1038,8 +1067,8 @@ class _ResultSection extends StatelessWidget {
               child: _AnimatedStatCard(
                 label: 'Compostable',
                 value: result.compostablePct,
-                color: _emerald,
-                bgColor: _emeraldLight,
+                color: _fresh,
+                bgColor: _freshLight,
                 icon: Icons.eco_rounded,
                 delay: 0,
               ),
@@ -1049,8 +1078,8 @@ class _ResultSection extends StatelessWidget {
               child: _AnimatedStatCard(
                 label: 'Non-compost.',
                 value: result.nonCompostablePct,
-                color: _rose,
-                bgColor: _roseLight,
+                color: _danger,
+                bgColor: _dangerLight,
                 icon: Icons.cancel_outlined,
                 delay: 120,
               ),
@@ -1073,7 +1102,7 @@ class _ResultSection extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: _amberLight,
+              color: _warningLight,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -1081,7 +1110,7 @@ class _ResultSection extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF92400E),
+                color: _warning,
               ),
             ),
           ),
@@ -1096,13 +1125,11 @@ class _ResultSection extends StatelessWidget {
             child: Container(
               height: 52,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF10B981)],
-                ),
+                gradient: const LinearGradient(colors: [_rDeep, _rPrimary]),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: _emerald.withValues(alpha: 0.3),
+                    color: _rPrimary.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1121,12 +1148,15 @@ class _ResultSection extends StatelessWidget {
                     : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.save_alt_rounded,
-                              color: Colors.white, size: 20),
+                          const Icon(
+                            Icons.save_alt_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            'Save Session',
-                            style: GoogleFonts.sora(
+                            'Sauvegarder la session',
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -1141,23 +1171,26 @@ class _ResultSection extends StatelessWidget {
           Container(
             height: 52,
             decoration: BoxDecoration(
-              color: _emeraldLight,
+              color: _freshLight,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _emeraldMid),
+              border: Border.all(color: _fresh.withValues(alpha: 0.5)),
             ),
             child: Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: _emeraldDark, size: 20),
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: _freshDark,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Session sauvegardée !',
-                    style: GoogleFonts.sora(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: _emeraldDark,
+                      color: _freshDark,
                     ),
                   ),
                 ],
@@ -1165,19 +1198,33 @@ class _ResultSection extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: () {
+        GestureDetector(
+          onTap: () {
             HapticFeedback.selectionClick();
             prov.reset();
           },
-          icon: const Icon(Icons.camera_alt_outlined, size: 18),
-          label: const Text('Nouvelle analyse'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _slate,
-            side: const BorderSide(color: _fog2),
-            minimumSize: const Size.fromHeight(48),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _rPrimary.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.camera_alt_outlined, size: 18, color: _rTextMuted),
+                const SizedBox(width: 8),
+                Text(
+                  'Nouvelle analyse',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _rTextMuted,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -1195,8 +1242,7 @@ class _ImageComparisonSlider extends StatefulWidget {
   });
 
   @override
-  State<_ImageComparisonSlider> createState() =>
-      _ImageComparisonSliderState();
+  State<_ImageComparisonSlider> createState() => _ImageComparisonSliderState();
 }
 
 class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
@@ -1214,10 +1260,8 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..forward();
-    _maskOpacity =
-        CurvedAnimation(parent: _maskAnim, curve: Curves.easeOut);
+    _maskOpacity = CurvedAnimation(parent: _maskAnim, curve: Curves.easeOut);
 
-    // Animate hint arrow left-right after reveal
     _hintAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
@@ -1242,7 +1286,7 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: _rPrimary.withValues(alpha: 0.2),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -1257,8 +1301,7 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
             return GestureDetector(
               onPanUpdate: (d) {
                 setState(() {
-                  _splitX =
-                      (_splitX + d.delta.dx / W).clamp(0.05, 0.95);
+                  _splitX = (_splitX + d.delta.dx / W).clamp(0.05, 0.95);
                   if (!_hasInteracted) {
                     _hasInteracted = true;
                     _hintAnim.stop();
@@ -1271,7 +1314,7 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                   if (widget.originalBytes != null)
                     Image.memory(widget.originalBytes!, fit: BoxFit.cover)
                   else
-                    Container(color: const Color(0xFF1B4332)),
+                    Container(color: _rSoftBg),
                   FadeTransition(
                     opacity: _maskOpacity,
                     child: ClipRect(
@@ -1284,14 +1327,17 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                           child: Image.memory(
                             widget.maskBytes,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: _emerald.withValues(alpha: 0.35),
+                            errorBuilder: (_, __, ___) => Container(
+                              color: _fresh.withValues(alpha: 0.35),
                               child: const Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.eco_rounded,
-                                        color: Colors.white, size: 32),
+                                    Icon(
+                                      Icons.eco_rounded,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
                                     SizedBox(height: 8),
                                     Text(
                                       'Masque IA',
@@ -1319,9 +1365,7 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          // White divider line
                           Container(width: 3, color: Colors.white),
-                          // Handle circle
                           Align(
                             alignment: Alignment.center,
                             child: AnimatedBuilder(
@@ -1343,16 +1387,17 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.22),
+                                      color: _rPrimary.withValues(alpha: 0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
-                                    Icons.compare_arrows_rounded,
-                                    size: 20,
-                                    color: _emeraldDark),
+                                child: Icon(
+                                  Icons.compare_arrows_rounded,
+                                  size: 20,
+                                  color: _rDeep,
+                                ),
                               ),
                             ),
                           ),
@@ -1432,9 +1477,10 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _val = Tween<double>(begin: 0, end: widget.value).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
+    _val = Tween<double>(
+      begin: 0,
+      end: widget.value,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _ctrl.forward();
     });
@@ -1453,9 +1499,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
       decoration: BoxDecoration(
         color: widget.bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: widget.color.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: widget.color.withValues(alpha: 0.25)),
       ),
       child: Column(
         children: [
@@ -1463,9 +1507,9 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
           const SizedBox(height: 6),
           AnimatedBuilder(
             animation: _val,
-            builder: (_, _) => Text(
+            builder: (_, __) => Text(
               '${_val.value.toStringAsFixed(1)}%',
-              style: GoogleFonts.sora(
+              style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: widget.color,
@@ -1498,17 +1542,19 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _roseLight,
+        color: _dangerLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _rose.withValues(alpha: 0.3)),
+        border: Border.all(color: _danger.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: _rose, size: 24),
+          const Icon(Icons.error_outline_rounded, color: _danger, size: 24),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(message,
-                style: GoogleFonts.inter(fontSize: 13, color: _rose)),
+            child: Text(
+              message,
+              style: GoogleFonts.inter(fontSize: 13, color: _danger),
+            ),
           ),
         ],
       ),
@@ -1530,20 +1576,19 @@ class _HistoryTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _WeeklyChart(weekly: prov.weeklyCompostPct)
-              .animate()
-              .fadeIn(duration: 400.ms)
-              .slideY(begin: 0.1, end: 0),
+          _WeeklyChart(
+            weekly: prov.weeklyCompostPct,
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
           const SizedBox(height: 20),
           if (sessions.isEmpty)
             _EmptyHistory().animate().fadeIn(duration: 400.ms, delay: 100.ms)
           else ...[
             Text(
               'Sessions récentes',
-              style: GoogleFonts.sora(
+              style: GoogleFonts.playfairDisplay(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: _ink,
+                color: _rTextTitle,
               ),
             ),
             const SizedBox(height: 12),
@@ -1574,11 +1619,15 @@ class _WeeklyChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _rPrimary.withValues(alpha: 0.15),
+          width: 0.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: _emerald.withValues(alpha: 0.08),
+            color: _rPrimary.withValues(alpha: 0.07),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1592,19 +1641,22 @@ class _WeeklyChart extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _emeraldLight,
+                  color: _freshLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.show_chart_rounded,
-                    color: _emeraldDark, size: 20),
+                child: Icon(
+                  Icons.show_chart_rounded,
+                  color: _freshDark,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 'Tendance hebdomadaire',
-                style: GoogleFonts.sora(
+                style: GoogleFonts.playfairDisplay(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: _ink,
+                  color: _rTextTitle,
                 ),
               ),
             ],
@@ -1617,11 +1669,14 @@ class _WeeklyChart extends StatelessWidget {
                 gridData: const FlGridData(show: false),
                 titlesData: FlTitlesData(
                   leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -1630,11 +1685,14 @@ class _WeeklyChart extends StatelessWidget {
                         if (i < 0 || i >= days.length) {
                           return const SizedBox.shrink();
                         }
-                        return Text(days[i],
-                            style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: _fog2,
-                                fontWeight: FontWeight.w500));
+                        return Text(
+                          days[i],
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: _rTextMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -1646,17 +1704,17 @@ class _WeeklyChart extends StatelessWidget {
                       return FlSpot(e.key.toDouble(), e.value);
                     }).toList(),
                     isCurved: true,
-                    color: _emerald,
+                    color: _rPrimary,
                     barWidth: 2.5,
                     dotData: FlDotData(
                       show: true,
                       getDotPainter: (spot, pct, bar, idx) =>
                           FlDotCirclePainter(
-                        radius: 4,
-                        color: _emerald,
-                        strokeWidth: 2,
-                        strokeColor: _surface,
-                      ),
+                            radius: 4,
+                            color: _rDeep,
+                            strokeWidth: 2,
+                            strokeColor: Colors.white,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
@@ -1664,8 +1722,8 @@ class _WeeklyChart extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          _emerald.withValues(alpha: 0.2),
-                          _emerald.withValues(alpha: 0.0),
+                          _rPrimary.withValues(alpha: 0.2),
+                          _rPrimary.withValues(alpha: 0.0),
                         ],
                       ),
                     ),
@@ -1688,9 +1746,9 @@ class _EmptyHistory extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       decoration: BoxDecoration(
-        color: _emeraldLight.withValues(alpha: 0.5),
+        color: _rSoftBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _emerald.withValues(alpha: 0.2)),
+        border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -1698,10 +1756,10 @@ class _EmptyHistory extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Aucune session enregistrée',
-            style: GoogleFonts.sora(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: _emeraldDark,
+              color: _rTextTitle,
             ),
           ),
           const SizedBox(height: 8),
@@ -1710,7 +1768,7 @@ class _EmptyHistory extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: _slate,
+              color: _rTextMuted,
               height: 1.5,
             ),
           ),
@@ -1732,12 +1790,12 @@ class _SessionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: _rPrimary.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1749,7 +1807,7 @@ class _SessionCard extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: _emeraldLight,
+              color: _freshLight,
               borderRadius: BorderRadius.circular(12),
             ),
             child: session.imageUrl != null
@@ -1758,15 +1816,11 @@ class _SessionCard extends StatelessWidget {
                     child: Image.network(
                       session.imageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.eco_rounded,
-                        color: _emeraldDark,
-                        size: 26,
-                      ),
+                      errorBuilder: (_, __, ___) =>
+                          Icon(Icons.eco_rounded, color: _freshDark, size: 26),
                     ),
                   )
-                : const Icon(Icons.eco_rounded,
-                    color: _emeraldDark, size: 26),
+                : Icon(Icons.eco_rounded, color: _freshDark, size: 26),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1777,7 +1831,7 @@ class _SessionCard extends StatelessWidget {
                   fmt.format(session.timestamp),
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: _fog2,
+                    color: _rTextMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1788,11 +1842,11 @@ class _SessionCard extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: session.compostablePct.round(),
-                        child: Container(height: 6, color: _emerald),
+                        child: Container(height: 6, color: _fresh),
                       ),
                       Expanded(
                         flex: session.nonCompostablePct.round(),
-                        child: Container(height: 6, color: _rose),
+                        child: Container(height: 6, color: _danger),
                       ),
                       Expanded(
                         flex: session.backgroundPct.round(),
@@ -1806,14 +1860,14 @@ class _SessionCard extends StatelessWidget {
                   children: [
                     _pctBadge(
                       '${session.compostablePct.toStringAsFixed(0)}%',
-                      _emeraldLight,
-                      _emeraldDark,
+                      _freshLight,
+                      _freshDark,
                     ),
                     const SizedBox(width: 6),
                     _pctBadge(
                       '${session.nonCompostablePct.toStringAsFixed(0)}%',
-                      _roseLight,
-                      _rose,
+                      _dangerLight,
+                      _danger,
                     ),
                   ],
                 ),
@@ -1825,7 +1879,7 @@ class _SessionCard extends StatelessWidget {
             '${session.inferenceTimeMs}ms',
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: _fog2,
+              color: _rTextMuted,
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -12,7 +13,15 @@ import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+
+// Customer (violet/lavender) role colors
+const _primary   = Color(0xFFA78BFA);
+const _deep      = Color(0xFF7C3AED);
+const _surface   = Color(0xFFF5F3FF);
+const _softBg    = Color(0xFFEDE9FE);
+const _textTitle = Color(0xFF2D1B69);
+const _textBody  = Color(0xFF4B3B8C);
+const _textMuted = Color(0xFF8B7BC0);
 
 class CustomerProfileSetupScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -26,49 +35,53 @@ class CustomerProfileSetupScreen extends StatefulWidget {
 
 class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     with TickerProviderStateMixin {
-  int _step = 0;
+  int _step     = 0;
   int _prevStep = 0;
 
   final _displayNameController = TextEditingController();
 
   DateTime? _dob;
-  String? _gender;
+  String?   _gender;
 
   Uint8List? _avatarBytes;
-  String? _avatarPath;
+  String?    _avatarPath;
 
   final Set<String> _conditions = <String>{};
   double _calorieGoal = 2200;
 
-  bool _notifyDaily = true;
-  bool _notifyAllergens = true;
-  bool _notifyWeekly = true;
-  String _language = 'English';
+  bool   _notifyDaily    = true;
+  bool   _notifyAllergens = true;
+  bool   _notifyWeekly   = true;
+  String _language       = 'English';
 
   bool _completing = false;
 
+  late final AnimationController _blobController;
   late final AnimationController _screenExitController;
-  late final Animation<double> _screenFade;
-  late final Animation<double> _screenScale;
+  late final Animation<double>   _screenFade;
+  late final Animation<double>   _screenScale;
 
   @override
   void initState() {
     super.initState();
+
     final fromProvider = context.read<UserProvider>().currentUser?.name;
     _displayNameController.text =
-      (fromProvider?.trim().isNotEmpty ?? false)
-        ? fromProvider!.trim()
-        : (widget.args['name'] as String?)?.trim() ?? '';
+        (fromProvider?.trim().isNotEmpty ?? false)
+            ? fromProvider!.trim()
+            : (widget.args['name'] as String?)?.trim() ?? '';
+
+    _blobController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat();
 
     _screenExitController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
       value: 1.0,
     );
-    _screenFade = CurvedAnimation(
-      parent: _screenExitController,
-      curve: Curves.easeOutCubic,
-    );
+    _screenFade  = CurvedAnimation(parent: _screenExitController, curve: Curves.easeOutCubic);
     _screenScale = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(parent: _screenExitController, curve: Curves.easeOutCubic),
     );
@@ -77,51 +90,45 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   @override
   void dispose() {
     _displayNameController.dispose();
+    _blobController.dispose();
     _screenExitController.dispose();
     super.dispose();
   }
 
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file   = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (file == null) return;
-
     final bytes = await file.readAsBytes();
     if (!mounted) return;
-
     setState(() {
       _avatarBytes = bytes;
-      _avatarPath = file.path;
+      _avatarPath  = file.path;
     });
   }
 
   Future<void> _pickDob() async {
-    final now = DateTime.now();
+    final now     = DateTime.now();
     final initial = _dob ?? DateTime(now.year - 22, now.month, now.day);
-
-    final date = await showDatePicker(
+    final date    = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(1920),
       lastDate: DateTime(now.year - 10, now.month, now.day),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.cherry,
-              onPrimary: AppColors.cherryHeaderText,
-                  surface: AppColors.parchment,
-                  onSurface: AppColors.espresso,
-                ),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: _primary,
+                onPrimary: Colors.white,
+                surface: _surface,
+                onSurface: _textTitle,
+              ),
+        ),
+        child: child!,
+      ),
     );
-
     if (date == null) return;
     if (!mounted) return;
-
     setState(() => _dob = date);
   }
 
@@ -129,7 +136,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_step >= 2) return;
     setState(() {
       _prevStep = _step;
-      _step += 1;
+      _step    += 1;
     });
   }
 
@@ -137,7 +144,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_step <= 0) return;
     setState(() {
       _prevStep = _step;
-      _step -= 1;
+      _step    -= 1;
     });
   }
 
@@ -145,9 +152,9 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_completing) return;
 
     final userProvider = context.read<UserProvider>();
-    final existing = userProvider.currentUser;
-    final email = (existing?.email ?? '').trim();
-    final name = _displayNameController.text.trim();
+    final existing     = userProvider.currentUser;
+    final email        = (existing?.email ?? '').trim();
+    final name         = _displayNameController.text.trim();
 
     if (existing == null || name.isEmpty || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,7 +173,6 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
           file: File(_avatarPath!),
         );
       } catch (_) {
-        // Keep local avatarPath if upload fails.
         avatarUrl = existing.avatarPath;
       }
     }
@@ -184,10 +190,8 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     );
 
     await userProvider.saveProfile(user);
-
     await _screenExitController.forward(from: 0.0);
     if (!mounted) return;
-
     context.go(AppRoutes.customerHome);
   }
 
@@ -213,9 +217,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                 _conditions.remove(c);
               } else {
                 if (c == 'None') {
-                  _conditions
-                    ..clear()
-                    ..add('None');
+                  _conditions..clear()..add('None');
                 } else {
                   _conditions.remove('None');
                   _conditions.add(c);
@@ -244,91 +246,132 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   @override
   Widget build(BuildContext context) {
     final forward = _step >= _prevStep;
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH   = screenH * 0.32;
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _screenFade,
-          child: ScaleTransition(
-            scale: _screenScale,
-            child: Column(
-              children: [
-                CherryHeader(
-                  title: AppStrings.setupYourProfile,
-                  showBack: true,
-                  height: 180,
-                  actions: [
-                    if (_step > 0)
-                      IconButton(
-                        onPressed: _back,
-                        icon: const Icon(Icons.chevron_left),
-                        color: AppColors.cherryHeaderText,
-                        splashColor: AppColors.cherryHeaderText.withValues(alpha: 0.15),
+      backgroundColor: _primary,
+      resizeToAvoidBottomInset: true,
+      body: FadeTransition(
+        opacity: _screenFade,
+        child: ScaleTransition(
+          scale: _screenScale,
+          child: Stack(
+            children: [
+              // ── Hero zone ──────────────────────────────────────────
+              Positioned(
+                top: 0, left: 0, right: 0,
+                height: heroH,
+                child: Stack(
+                  children: [
+                    Container(color: _primary),
+                    AnimatedBuilder(
+                      animation: _blobController,
+                      builder: (_, __) => CustomPaint(
+                        painter: _BlobPainter(_blobController.value, _primary),
+                        size: Size(double.infinity, heroH),
                       ),
+                    ),
+                    SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (_step > 0)
+                                  IconButton(
+                                    onPressed: _back,
+                                    icon: const Icon(Icons.arrow_back_ios_new),
+                                    color: Colors.white,
+                                  )
+                                else
+                                  const SizedBox(width: 48),
+                              ],
+                            ),
+                            const Spacer(),
+                            Center(
+                              child: Text(
+                                AppStrings.setupYourProfile,
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: AppColors.parchment,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
+              ),
+
+              // ── Floating card ──────────────────────────────────────
+              Positioned(
+                top: heroH - 24,
+                left: 0, right: 0, bottom: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft:  Radius.circular(32),
+                      topRight: Radius.circular(32),
+                    ),
+                    boxShadow: AppShadows.lg(_primary),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _StepProgressHeader(step: _step),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          switchInCurve: Curves.easeInOut,
+                          switchOutCurve: Curves.easeInOut,
+                          transitionBuilder: (child, animation) {
+                            final inTween = Tween<Offset>(
+                              begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
+                              end: Offset.zero,
+                            );
+                            final outTween = Tween<Offset>(
+                              begin: Offset.zero,
+                              end: forward ? const Offset(-1, 0) : const Offset(1, 0),
+                            );
+                            final isIncoming = child.key == ValueKey(_step);
+                            final offsetAnim = isIncoming
+                                ? inTween.animate(animation)
+                                : outTween.animate(animation);
+                            return SlideTransition(position: offsetAnim, child: child);
+                          },
+                          child: SingleChildScrollView(
+                            key: ValueKey(_step),
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                            child: _stepContent(),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        _StepProgressHeader(step: _step),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            switchInCurve: Curves.easeInOut,
-                            switchOutCurve: Curves.easeInOut,
-                            transitionBuilder: (child, animation) {
-                              final inTween = Tween<Offset>(
-                                begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
-                                end: Offset.zero,
-                              );
-                              final outTween = Tween<Offset>(
-                                begin: Offset.zero,
-                                end: forward ? const Offset(-1, 0) : const Offset(1, 0),
-                              );
-
-                              final isIncoming = child.key == ValueKey(_step);
-                              final offsetAnim = isIncoming
-                                  ? inTween.animate(animation)
-                                  : outTween.animate(animation);
-
-                              return SlideTransition(position: offsetAnim, child: child);
-                            },
-                            child: SingleChildScrollView(
-                              key: ValueKey(_step),
-                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                              child: _stepContent(),
-                            ),
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: AnimatedButton(
+                          label: _step == 2 ? AppStrings.completeSetup : AppStrings.continueCta,
+                          color: _step == 2 ? _deep : _primary,
+                          textColor: Colors.white,
+                          onTap: _step == 2 ? _complete : () async => _next(),
+                          isLoading: _completing,
+                          height: 52,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          child: AnimatedButton(
-                            label: _step == 2 ? AppStrings.completeSetup : AppStrings.continueCta,
-                            color: _step == 2 ? AppColors.olive : AppColors.cherry,
-                            textColor: _step == 2 ? AppColors.oliveHeaderText : AppColors.cherryHeaderText,
-                            onTap: _step == 2 ? _complete : () async => _next(),
-                            isLoading: _completing,
-                            height: 52,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -336,39 +379,31 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   }
 }
 
+// ── Step progress indicator ─────────────────────────────────────────────────
+
 class _StepProgressHeader extends StatelessWidget {
   final int step;
-
   const _StepProgressHeader({required this.step});
 
   @override
   Widget build(BuildContext context) {
     Widget dot(int index) {
-      if (index < step) {
-        return const _FilledDot(size: 16, color: AppColors.olive);
-      }
-      if (index == step) {
-        return const _FilledDot(size: 24, color: AppColors.cherry);
-      }
-      return const _OutlinedDot(size: 16, color: AppColors.sand);
+      if (index < step)  return const _FilledDot(size: 16, color: _deep);
+      if (index == step) return const _FilledDot(size: 24, color: _primary);
+      return const _OutlinedDot(size: 16, color: Color(0xFFE2E8F0));
     }
 
-    Color lineColor(int leftIndex) {
-      return leftIndex < step ? AppColors.cherry : AppColors.sand;
-    }
+    Color lineColor(int leftIndex) =>
+        leftIndex < step ? _primary : const Color(0xFFE2E8F0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           dot(0),
-          Expanded(
-            child: Container(height: 2, color: lineColor(0)),
-          ),
+          Expanded(child: Container(height: 2, color: lineColor(0))),
           dot(1),
-          Expanded(
-            child: Container(height: 2, color: lineColor(1)),
-          ),
+          Expanded(child: Container(height: 2, color: lineColor(1))),
           dot(2),
         ],
       ),
@@ -379,47 +414,39 @@ class _StepProgressHeader extends StatelessWidget {
 class _FilledDot extends StatelessWidget {
   final double size;
   final Color color;
-
   const _FilledDot({required this.size, required this.color});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: size, height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
 class _OutlinedDot extends StatelessWidget {
   final double size;
   final Color color;
-
   const _OutlinedDot({required this.size, required this.color});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 2),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: size, height: size,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(color: color, width: 2),
+        ),
+      );
 }
+
+// ── Step 0: Personal info ────────────────────────────────────────────────────
 
 class _StepPersonalInfo extends StatelessWidget {
   final TextEditingController displayNameController;
-  final DateTime? dob;
-  final VoidCallback onPickDob;
-  final String? gender;
+  final DateTime?             dob;
+  final VoidCallback          onPickDob;
+  final String?               gender;
   final ValueChanged<String?> onGender;
-  final Uint8List? avatarBytes;
-  final String? avatarPath;
+  final Uint8List?            avatarBytes;
+  final String?               avatarPath;
   final Future<void> Function() onPickAvatar;
 
   const _StepPersonalInfo({
@@ -446,8 +473,8 @@ class _StepPersonalInfo extends StatelessWidget {
             ? CircleAvatar(radius: 45, backgroundImage: FileImage(File(avatarPath!)))
             : const CircleAvatar(
                 radius: 45,
-                backgroundColor: AppColors.cherry,
-                child: Icon(Icons.person, size: 42, color: AppColors.parchment),
+                backgroundColor: _softBg,
+                child: Icon(Icons.person, size: 42, color: _primary),
               );
 
     return Column(
@@ -459,19 +486,14 @@ class _StepPersonalInfo extends StatelessWidget {
             children: [
               avatar,
               Positioned(
-                right: 0,
-                bottom: 0,
+                right: 0, bottom: 0,
                 child: GestureDetector(
                   onTap: onPickAvatar,
                   child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: const BoxDecoration(
-                      color: AppColors.olive,
-                      shape: BoxShape.circle,
-                    ),
+                    width: 28, height: 28,
+                    decoration: const BoxDecoration(color: _primary, shape: BoxShape.circle),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt, size: 14, color: AppColors.parchment),
+                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -479,105 +501,108 @@ class _StepPersonalInfo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        TextField(
+        _field(
           controller: displayNameController,
-          decoration: InputDecoration(
-            labelText: 'Display name',
-            prefixIcon: const Icon(Icons.person_outline, color: AppColors.cocoa),
-          ),
+          label: 'Display name',
+          icon: Icons.person_outline,
         ),
         const SizedBox(height: 16),
         GestureDetector(
           onTap: onPickDob,
           child: AbsorbPointer(
             child: TextField(
+              style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
               decoration: InputDecoration(
                 labelText: 'Date of birth',
-                prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.cocoa),
                 hintText: _dobLabel(),
+                labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+                hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+                prefixIcon: const Icon(Icons.cake_outlined, color: _textMuted, size: 20),
+                filled: true,
+                fillColor: _softBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.input),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.input),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          'Gender',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
-        ),
+        Text('Gender', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: [
-            _GenderChip(
-              label: 'Male',
-              selected: gender == 'Male',
-              onTap: () => onGender('Male'),
-            ),
-            _GenderChip(
-              label: 'Female',
-              selected: gender == 'Female',
-              onTap: () => onGender('Female'),
-            ),
-            _GenderChip(
-              label: 'Prefer not to say',
-              selected: gender == 'Prefer not to say',
-              onTap: () => onGender('Prefer not to say'),
-            ),
-          ],
+          children: ['Male', 'Female', 'Prefer not to say'].map((g) {
+            final sel = gender == g;
+            return InkWell(
+              onTap: () => onGender(g),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: sel ? _primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(color: sel ? _primary : const Color(0xFFE2E8F0), width: 1.5),
+                ),
+                child: Text(
+                  g,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: sel ? Colors.white : _textMuted,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
-}
 
-class _GenderChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _GenderChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.chip),
-      splashColor: AppColors.cherry.withValues(alpha: 0.15),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.cherry : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.chip),
-          border: Border.all(color: AppColors.sand, width: 1),
+  Widget _field({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        filled: true,
+        fillColor: _softBg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.butter : AppColors.cocoa,
-            height: 1.2,
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
         ),
       ),
     );
   }
 }
 
+// ── Step 1: Health profile ───────────────────────────────────────────────────
+
 class _StepHealthProfile extends StatelessWidget {
-  final Set<String> conditions;
+  final Set<String>        conditions;
   final ValueChanged<String> onToggleCondition;
-  final double calorieGoal;
+  final double             calorieGoal;
   final ValueChanged<double> onCalorie;
 
   const _StepHealthProfile({
@@ -589,109 +614,79 @@ class _StepHealthProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = const [
-      'Diabetes',
-      'Hypertension',
-      'High cholesterol',
-      'Heart disease',
-      'Kidney disease',
-      'None',
-    ];
+    const options = ['Diabetes', 'Hypertension', 'High cholesterol', 'Heart disease', 'Kidney disease', 'None'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           AppStrings.yourHealthProfile,
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.cherry,
-            height: 1.2,
-          ),
+          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _textTitle),
         ),
         const SizedBox(height: 6),
-        Text(
-          AppStrings.personaliseAlerts,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            color: AppColors.cocoa,
-            height: 1.6,
-          ),
-        ),
+        Text(AppStrings.personaliseAlerts,
+            style: GoogleFonts.inter(fontSize: 13, color: _textMuted, height: 1.6)),
         const SizedBox(height: 16),
-        Text(
-          AppStrings.chronicConditionsQ,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
-        ),
+        Text(AppStrings.chronicConditionsQ,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _textBody)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: options.map((c) {
-            final selected = conditions.contains(c);
+            final sel = conditions.contains(c);
             return InkWell(
               onTap: () => onToggleCondition(c),
-              borderRadius: BorderRadius.circular(AppRadii.chip),
-              splashColor: AppColors.cherry.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.cherry : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadii.chip),
-                  border: Border.all(color: AppColors.sand, width: 1),
+                  color: sel ? _primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(color: sel ? _primary : const Color(0xFFE2E8F0), width: 1.5),
                 ),
                 child: Text(
                   c,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.butter : AppColors.cocoa,
-                    height: 1.2,
+                    color: sel ? Colors.white : _textMuted,
                   ),
                 ),
               ),
             );
-          }).toList(growable: false),
+          }).toList(),
         ),
         const SizedBox(height: 20),
-        Text(
-          AppStrings.dailyCalorieGoal,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
-        ),
+        Text(AppStrings.dailyCalorieGoal,
+            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _textBody)),
         const SizedBox(height: 6),
         Text(
           AppStrings.kcal(calorieGoal.toInt()),
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.cherry,
-            height: 1.2,
-          ),
+          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: _primary),
         ),
-        Slider(
-          value: calorieGoal,
-          min: 1200,
-          max: 4000,
-          divisions: 28,
-          activeColor: AppColors.cherry,
-          onChanged: onCalorie,
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: _primary,
+            inactiveTrackColor: _softBg,
+            thumbColor: _deep,
+            overlayColor: _primary.withValues(alpha: 0.12),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: calorieGoal,
+            min: 1200,
+            max: 4000,
+            divisions: 28,
+            onChanged: onCalorie,
+          ),
         ),
       ],
     );
   }
 }
+
+// ── Step 2: Preferences ──────────────────────────────────────────────────────
 
 class _StepPreferences extends StatelessWidget {
   final bool notifyDaily;
@@ -700,7 +695,6 @@ class _StepPreferences extends StatelessWidget {
   final ValueChanged<bool> onNotifyDaily;
   final ValueChanged<bool> onNotifyAllergens;
   final ValueChanged<bool> onNotifyWeekly;
-
   final String language;
   final ValueChanged<String> onLanguage;
 
@@ -722,62 +716,42 @@ class _StepPreferences extends StatelessWidget {
       children: [
         Text(
           AppStrings.notificationPreferences,
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.cherry,
-            height: 1.2,
-          ),
+          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _textTitle),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.parchment,
+            color: _surface,
             borderRadius: BorderRadius.circular(AppRadii.innerCard),
-            border: Border.all(color: AppColors.sand, width: 0.5),
+            border: Border.all(color: _softBg, width: 1),
           ),
           child: Column(
             children: [
               SwitchListTile(
                 value: notifyDaily,
                 onChanged: onNotifyDaily,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  AppStrings.dailyIntakeSummary,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                activeColor: _primary,
+                activeTrackColor: _softBg,
+                title: Text(AppStrings.dailyIntakeSummary,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
-              const Divider(color: AppColors.sand, thickness: 0.5, height: 0.5),
+              Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
                 value: notifyAllergens,
                 onChanged: onNotifyAllergens,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  AppStrings.allergenAlerts,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                activeColor: _primary,
+                activeTrackColor: _softBg,
+                title: Text(AppStrings.allergenAlerts,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
-              const Divider(color: AppColors.sand, thickness: 0.5, height: 0.5),
+              Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
                 value: notifyWeekly,
                 onChanged: onNotifyWeekly,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  AppStrings.weeklyHealthReport,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                activeColor: _primary,
+                activeTrackColor: _softBg,
+                title: Text(AppStrings.weeklyHealthReport,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
             ],
           ),
@@ -785,7 +759,24 @@ class _StepPreferences extends StatelessWidget {
         const SizedBox(height: 20),
         DropdownButtonFormField<String>(
           initialValue: language,
-          decoration: InputDecoration(labelText: AppStrings.preferredLanguage),
+          decoration: InputDecoration(
+            labelText: AppStrings.preferredLanguage,
+            labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+            filled: true,
+            fillColor: _softBg,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: const BorderSide(color: _primary, width: 1.5),
+            ),
+          ),
           items: const ['Arabic', 'French', 'English']
               .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(growable: false),
@@ -796,4 +787,32 @@ class _StepPreferences extends StatelessWidget {
       ],
     );
   }
+}
+
+// ── Blob painter ─────────────────────────────────────────────────────────────
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color primary;
+  _BlobPainter(this.t, this.primary);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    final c1 = Offset(size.width * 0.15 + math.cos(angle) * 20, size.height * 0.35 + math.sin(angle) * 15);
+    canvas.drawCircle(c1, size.width * 0.5, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)));
+    final c2 = Offset(size.width * 0.85 + math.sin(angle * 0.7) * 18, size.height * 0.6 + math.cos(angle * 0.7) * 22);
+    canvas.drawCircle(c2, size.width * 0.4, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)));
+    final c3 = Offset(size.width * 0.5 + math.cos(angle * 1.4) * 14, size.height * 0.2 + math.sin(angle * 1.4) * 10);
+    canvas.drawCircle(c3, size.width * 0.3, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)));
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) => old.t != t;
 }
