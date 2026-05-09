@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
 import '../allergens/allergen_utils.dart';
 import '../allergens/allergy_service.dart';
+import '../nutrition/calorie_inference_service.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
 const _kPrimary = Color(0xFFA78BFA);
@@ -80,6 +82,18 @@ class _ResultScreenState extends State<ResultScreen>
     return null;
   }
 
+  NutritionResult? _parseCalorieResult() {
+    final raw = widget.args['calorieResult'];
+    if (raw is Map<String, dynamic>) {
+      try {
+        return NutritionResult.fromJson(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   void _snack(String message) {
     ScaffoldMessenger.of(
       context,
@@ -118,6 +132,8 @@ class _ResultScreenState extends State<ResultScreen>
     final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
     final result = _parseResult();
     final allergyResult = _parseAllergyResult();
+    final calorieResult = _parseCalorieResult();
+    final calorieError = (widget.args['calorieError'] as String?)?.trim() ?? '';
     final hasImageBytes = imageBytes != null && imageBytes.isNotEmpty;
     final hasImagePath = imagePath != null && imagePath.isNotEmpty;
 
@@ -317,6 +333,85 @@ class _ResultScreenState extends State<ResultScreen>
                       _AllergenModelCard(result: allergyResult),
                       const SizedBox(height: 18),
                     ],
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                        border: Border.all(color: _kSoftBg, width: 1.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.local_fire_department_outlined,
+                                color: _kPrimary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Calorie & Nutrition Analysis',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: _kTextTitle,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (calorieResult != null) ...[
+                            Text(
+                              '${calorieResult.calories.toStringAsFixed(0)} kcal • ${calorieResult.mass.toStringAsFixed(0)} g',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _kTextBody,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetricChip(
+                                  label: 'Protein',
+                                  value:
+                                      '${calorieResult.protein.toStringAsFixed(1)} g',
+                                  color: const Color(0xFF10B981),
+                                ),
+                                _MetricChip(
+                                  label: 'Fat',
+                                  value: '${calorieResult.fat.toStringAsFixed(1)} g',
+                                  color: const Color(0xFFF59E0B),
+                                ),
+                                _MetricChip(
+                                  label: 'Carbs',
+                                  value: '${calorieResult.carb.toStringAsFixed(1)} g',
+                                  color: _kPrimary,
+                                ),
+                              ],
+                            ),
+                          ] else
+                            Text(
+                              calorieError.isNotEmpty
+                                  ? 'Calorie analysis unavailable: $calorieError'
+                                  : 'Calorie analysis is unavailable for this scan.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: _kTextBody,
+                                height: 1.4,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
 
                     NutrientCard(
                       name: AppStrings.cholesterolLabel,
@@ -574,6 +669,38 @@ class _ImagePlaceholder extends StatelessWidget {
       color: _kSoftBg,
       alignment: Alignment.center,
       child: Icon(Icons.image_outlined, size: 40, color: _kTextMuted),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MetricChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 }
