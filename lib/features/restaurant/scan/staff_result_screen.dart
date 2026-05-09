@@ -1060,6 +1060,16 @@ class _FreshnessCard extends StatelessWidget {
   final Map<String, dynamic> result;
   const _FreshnessCard({required this.result});
 
+  // ✅ Helper to normalize confidence to 0-100 percentage
+  int _confidencePercent(double confidence) {
+    // If value > 1, assume it's already a percentage (0-100)
+    // If value <= 1, assume it's a decimal (0-1) and convert to percentage
+    final normalized = confidence > 1.0
+        ? confidence.clamp(0.0, 100.0)
+        : (confidence * 100).clamp(0.0, 100.0);
+    return normalized.round();
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ((result['status'] as String?) ?? 'expiring').toLowerCase();
@@ -1079,7 +1089,7 @@ class _FreshnessCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${(confidence * 100).round()}% de confiance',
+                  '${_confidencePercent(confidence)}% de confiance',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

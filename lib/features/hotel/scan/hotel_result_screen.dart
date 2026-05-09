@@ -73,6 +73,14 @@ class _HotelResultScreenState extends State<HotelResultScreen>
   Map<String, dynamic> get _contaminationResult =>
       (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
 
+  // ✅ Helper to normalize confidence to 0-100 percentage
+  String _normalizeConfidencePercent(double confidence) {
+    final normalized = confidence > 1.0
+        ? confidence.clamp(0.0, 100.0)
+        : (confidence * 100).clamp(0.0, 100.0);
+    return normalized.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isFusion) {
@@ -229,7 +237,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     required FoodAnalysisResult contamination,
     Uint8List? imageBytes,
   }) {
-    final confPct = (contamination.confidence * 100).toStringAsFixed(1);
+    final confPct = _normalizeConfidencePercent(contamination.confidence);
 
     return Column(
       children: [
@@ -337,7 +345,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                       children: [
                         Text(det.label, style: GoogleFonts.inter(fontSize: 11)),
                         Text(
-                          '${(det.confidence * 100).toStringAsFixed(0)}%',
+                          '${_normalizeConfidencePercent(det.confidence).split('.')[0]}%',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

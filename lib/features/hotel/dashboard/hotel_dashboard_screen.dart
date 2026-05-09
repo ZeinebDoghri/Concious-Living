@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,9 +8,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
+import '../../../providers/inventory_provider.dart';
 import '../../../core/constants.dart';
 import '../../../core/venue_alert_service.dart';
+import '../../../providers/hotel_expiry_alerts_provider.dart';
 import '../../../providers/user_provider.dart';
 
 // ── Brand palette ──────────────────────────────────────────────────────────────
@@ -322,40 +325,52 @@ class _LiveKpiRow extends StatelessWidget {
               .where('resolved', isEqualTo: false)
               .snapshots(),
           builder: (context, expirySnap) {
-            final expiryCount = expirySnap.data?.docs.length ?? 0;
+            // ✅ COMBINE: Firestore count + Provider urgent count
+            return Consumer<HotelExpiryAlertsProvider>(
+              builder: (context, alertsProvider, _) {
+                final firestoreCount = expirySnap.data?.docs.length ?? 0;
+final providerCount = alertsProvider.urgentCount;
+// ✅ Ajout InventoryProvider
+final inventoryCount = context.watch<InventoryProvider>()
+    .items
+    .where((i) => i.status == 'expiring' || i.status == 'spoiled')
+    .length;
+final totalExpiryCount = firestoreCount + providerCount + inventoryCount;
 
-            return Row(
-              children: [
-                Expanded(
-                  child: _KpiCard(
-                    value: '$guestCount',
-                    label: 'Guests In',
-                    icon: Icons.hotel_rounded,
-                    color: _kInfo,
-                    bg: _kInfoBg,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    value: '$allergenCount',
-                    label: 'Allergen Profiles',
-                    icon: Icons.warning_amber_rounded,
-                    color: _kCherry,
-                    bg: _kCherryB,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    value: '$expiryCount',
-                    label: 'Expiry Alerts',
-                    icon: Icons.schedule_rounded,
-                    color: _kButterD,
-                    bg: _kButter,
-                  ),
-                ),
-              ],
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _KpiCard(
+                        value: '$guestCount',
+                        label: 'Guests In',
+                        icon: Icons.hotel_rounded,
+                        color: _kInfo,
+                        bg: _kInfoBg,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _KpiCard(
+                        value: '$allergenCount',
+                        label: 'Allergen Profiles',
+                        icon: Icons.warning_amber_rounded,
+                        color: _kCherry,
+                        bg: _kCherryB,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _KpiCard(
+                        value: '$totalExpiryCount',
+                        label: 'Expiry Alerts',
+                        icon: Icons.schedule_rounded,
+                        color: _kButterD,
+                        bg: _kButter,
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
@@ -701,7 +716,7 @@ class _AllergenAlertTile extends StatelessWidget {
   }
 }
 
-// ── Expiry alerts stream ───────────────────────────────────────────────────────
+// ── Expiry alerts stream (combines provider AI data + Firestore manual alerts) ──────────
 class _ExpiryAlertsStream extends StatelessWidget {
   final String hotelName;
   const _ExpiryAlertsStream({required this.hotelName});
@@ -716,101 +731,357 @@ class _ExpiryAlertsStream extends StatelessWidget {
           .orderBy('expiresAt')
           .limit(5)
           .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _ShimmerCard(height: 70);
-        }
+      builder: (context, firestoreSnapshot) {
+        // ✅ COMBINE: Firestore data + Provider data (AI-detected) + InventoryProvider
+        return Consumer<InventoryProvider>(
+          builder: (context, inventoryProvider, _) {
+            // InventoryProvider alerts (user-scanned products)
+            final inventoryAlerts = inventoryProvider.items
+                .map((item) => _AlertDisplay(
+                      id: item.id,
+                      source: 'inventory',
+                      itemName: item.name,
+                      location: '📸 AI Scan',
+                      expiresAt: item.expiryDate,
+                      imageBase64: item.imageBase64,
+                    ))
+                .toList();
 
-        final docs = snapshot.data?.docs ?? [];
+            return Consumer<HotelExpiryAlertsProvider>(
+              builder: (context, alertsProvider, _) {
+                // Firestore alerts
+                final firebaseDocs = firestoreSnapshot.data?.docs ?? [];
 
-        if (docs.isEmpty) {
-          return _EmptyState(
-            icon: Icons.inventory_2_outlined,
-            message: 'No expiry alerts — inventory is fresh!',
-            color: _kOlive,
-          );
-        }
+                // Provider alerts (AI-detected, in-memory)
+                final providerAlerts = alertsProvider.sortedAlerts;
 
-        return Column(
-          children: docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final item = data['itemName'] as String? ?? 'Unknown item';
-            final location = data['location'] as String? ?? 'Storage';
-            final expiresAt = (data['expiresAt'] as Timestamp?)?.toDate();
-            final hoursLeft = expiresAt != null
-                ? expiresAt.difference(DateTime.now()).inHours
-                : 0;
-            final isUrgent = hoursLeft < 12;
+                // Combine: inventory first, then providerAlerts, then firebaseDocs
+                final combined = [
+                  ...inventoryAlerts,
+                  ...providerAlerts.map((a) => _AlertDisplay(
+                        id: a.id,
+                        source: 'provider',
+                        itemName: a.itemName,
+                        location: '📸 AI Scan',
+                        expiresAt: a.expiresAt,
+                        imageBase64: a.imageBase64,
+                      )),
+                  ...firebaseDocs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return _AlertDisplay(
+                      id: doc.id,
+                      source: 'firestore',
+                      itemName: data['itemName'] as String? ?? 'Unknown item',
+                      location: data['location'] as String? ?? 'Storage',
+                      expiresAt: (data['expiresAt'] as Timestamp?)?.toDate(),
+                      imageBase64: null,
+                    );
+                  }),
+                ];
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUrgent
-                    ? _kCherryB.withValues(alpha: 0.3)
-                    : _kButter.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isUrgent
-                      ? _kCherry.withValues(alpha: 0.3)
-                      : _kButterD.withValues(alpha: 0.4),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    color: isUrgent ? _kCherry : _kButterD,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _kEspresso,
-                          ),
-                        ),
-                        Text(
-                          location,
-                          style: GoogleFonts.inter(fontSize: 11, color: _kFog),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isUrgent
-                          ? _kCherry.withValues(alpha: 0.12)
-                          : _kButterD.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      isUrgent ? '${hoursLeft}h left' : '${hoursLeft}h left',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: isUrgent ? _kCherry : _kButterD,
+                if (firestoreSnapshot.connectionState ==
+                        ConnectionState.waiting &&
+                    providerAlerts.isEmpty &&
+                    inventoryAlerts.isEmpty) {
+                  return _ShimmerCard(height: 70);
+                }
+
+                final displayAlerts = combined.take(5).toList();
+
+                if (displayAlerts.isEmpty) {
+                  return _EmptyState(
+                    icon: Icons.inventory_2_outlined,
+                    message: 'No expiry alerts — inventory is fresh!',
+                    color: _kOlive,
+                  );
+                }
+
+                return Column(
+                  children: displayAlerts.map((alert) {
+                    final daysLeft = alert.expiresAt != null
+                        ? alert.expiresAt!.difference(DateTime.now()).inDays
+                        : 0;
+                    final isExpired = daysLeft < 0;
+                    final isUrgent = daysLeft >= 0 && daysLeft <= 7;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
                       ),
-                    ),
-                  ),
-                ],
-              ),
+                      decoration: BoxDecoration(
+                        color: isExpired
+                            ? const Color(0xFFFF7070).withValues(alpha: 0.12)
+                            : isUrgent
+                                ? _kCherryB.withValues(alpha: 0.3)
+                                : _kButter.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isExpired
+                              ? const Color(0xFFFF7070).withValues(alpha: 0.3)
+                              : isUrgent
+                                  ? _kCherry.withValues(alpha: 0.3)
+                                  : _kButterD.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          if (alert.imageBase64 != null &&
+                              alert.imageBase64!.isNotEmpty)
+                            Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _kFog.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.memory(
+                                  base64Decode(alert.imageBase64!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.image_not_supported_rounded),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: _kFog.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.schedule_rounded,
+                                size: 20,
+                                color: _kFog,
+                              ),
+                            ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  alert.itemName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: _kEspresso,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  alert.location,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: _kFog,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isExpired
+                                  ? const Color(0xFFFF7070)
+                                      .withValues(alpha: 0.12)
+                                  : isUrgent
+                                      ? _kCherry.withValues(alpha: 0.12)
+                                      : _kButterD.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              isExpired
+                                  ? 'EXPIRED'
+                                  : daysLeft == 0
+                                      ? 'Today'
+                                      : '${daysLeft}d left',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: isExpired
+                                    ? const Color(0xFFFF7070)
+                                    : isUrgent
+                                        ? _kCherry
+                                        : _kButterD,
+                              ),
+                            ),
+                          ),
+                          // ── Delete button ──────────────────────────────
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () async {
+                              // Capture providers before async gap
+                              final invProvider =
+                                  context.read<InventoryProvider>();
+                              final hotelProvider =
+                                  context.read<HotelExpiryAlertsProvider>();
+                              final confirmed = await showModalBottomSheet<bool>(
+                                context: context,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => Container(
+                                  decoration: const BoxDecoration(
+                                    color: _kParchment,
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(24)),
+                                  ),
+                                  padding: const EdgeInsets.fromLTRB(
+                                      24, 16, 24, 32),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: _kFog.withValues(alpha: 0.3),
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'Remove Alert',
+                                        style: GoogleFonts.playfairDisplay(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: _kEspresso,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Remove "${alert.itemName}" from expiry alerts?',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(
+                                            fontSize: 13, color: _kFog),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () => Navigator.pop(
+                                                  context, false),
+                                              style: OutlinedButton.styleFrom(
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12)),
+                                                side: BorderSide(
+                                                    color: _kFog.withValues(
+                                                        alpha: 0.4)),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 14),
+                                              ),
+                                              child: Text('Cancel',
+                                                  style: GoogleFonts.inter(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: _kFog)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () => Navigator.pop(
+                                                  context, true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    const Color(0xFFFF7070),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12)),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 14),
+                                              ),
+                                              child: Text('Remove',
+                                                  style: GoogleFonts.inter(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: Colors.white)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                              if (confirmed != true) return;
+                              if (alert.source == 'inventory') {
+                                await invProvider.removeItem(alert.id);
+                              } else if (alert.source == 'provider') {
+                                hotelProvider.removeAlert(alert.id);
+                              } else if (alert.source == 'firestore') {
+                                await FirebaseFirestore.instance
+                                    .collection('hotel_expiry_alerts')
+                                    .doc(alert.id)
+                                    .update({'resolved': true});
+                              }
+                            },
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF7070)
+                                    .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                                color: Color(0xFFFF7070),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             );
-          }).toList(),
+          },
         );
       },
     );
   }
+}
+
+// ── Helper model for alert display ──────────────────────────────────────────
+class _AlertDisplay {
+  final String id;
+  final String source; // 'inventory' | 'provider' | 'firestore'
+  final String itemName;
+  final String location;
+  final DateTime? expiresAt;
+  final String? imageBase64;
+
+  _AlertDisplay({
+    required this.id,
+    required this.source,
+    required this.itemName,
+    required this.location,
+    required this.expiresAt,
+    this.imageBase64,
+  });
 }
 
 // ── Guest cards stream ─────────────────────────────────────────────────────────

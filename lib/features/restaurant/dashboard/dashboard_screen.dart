@@ -91,8 +91,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     return '${cuisine.isEmpty ? 'Restaurant' : cuisine} - $covers seats';
   }
 
-  int _expiringSoon(InventoryProvider p) =>
-      p.items.where((i) => i.isExpiringSoon).length;
+  /// Color for Expiring card based on count threshold
+  Color _expiringCardColor(int count) {
+    if (count == 0) return _fresh;        // ✅ Green (neutral)
+    if (count <= 3) return _warning;      // ⚠️ Orange (1-3 items)
+    return _danger;                        // 🚨 Red (4+ items)
+  }
 
   int _wasteEst(int alerts, int expiring, int scans) =>
       max(1, alerts * 2 + expiring * 3 + max(2, scans ~/ 2));
@@ -158,8 +162,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
           final name = _venueName(userP, isHotel);
           final subtitle = _venueSubtitle(userP, isHotel);
-          final pending = alertsP.pendingCount;
-          final expiring = _expiringSoon(invP);
+          final pending = alertsP.pendingCount;             // ✅ Alerts card (independent)
+          final expiring = invP.expiringCount;              // ✅ Expiring card (standalone)
+          final expiringColor = _expiringCardColor(expiring); // ✅ Dynamic color based on count
           final scans = scanP.items.length;
           final wasteKg = _wasteEst(pending, expiring, scans);
           final freshness = _freshnessScore(pending, expiring).round();
@@ -195,21 +200,37 @@ class _DashboardScreenState extends State<DashboardScreen>
                       child: Row(
                         children: [
                           _MiniStatCard(
-                            label: 'Alerts',
+                            label: '🚨 Alerts',
                             value: '$pending',
                             color: _danger,
                             icon: Icons.warning_amber_rounded,
+                            isAlert: pending > 0,
+                            onTap: pending > 0
+                                ? () {
+                                    HapticFeedback.selectionClick();
+                                    context.go(AppRoutes.restaurantAlerts);
+                                  }
+                                : null,
                           ),
                           const SizedBox(width: 10),
+                          // ✅ DYNAMIC EXPIRING CARD (STANDALONE)
                           _MiniStatCard(
-                            label: 'Expiring',
+                            label: '⏰ Expiring',
                             value: '$expiring',
-                            color: _warning,
+                            color: expiringColor,
                             icon: Icons.inventory_2_rounded,
+                            isAlert: expiring > 0,
+                            isAnimated: expiring > 0,
+                            onTap: expiring > 0
+                                ? () {
+                                    HapticFeedback.selectionClick();
+                                    context.go(AppRoutes.restaurantInventory);
+                                  }
+                                : null,
                           ),
                           const SizedBox(width: 10),
                           _MiniStatCard(
-                            label: 'Freshness',
+                            label: '✨ Freshness',
                             value: '$freshness%',
                             color: _fresh,
                             icon: Icons.eco_rounded,
@@ -519,63 +540,150 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ── Mini stat cards ────────────────────────────────────────────────────────────
-class _MiniStatCard extends StatelessWidget {
+class _MiniStatCard extends StatefulWidget {
   final String label;
   final String value;
   final Color color;
   final IconData icon;
+  final bool isAlert;
+  final bool isAnimated;
+  final VoidCallback? onTap;
 
   const _MiniStatCard({
     required this.label,
     required this.value,
     required this.color,
     required this.icon,
+    this.isAlert = false,
+    this.isAnimated = false,
+    this.onTap,
   });
+
+  @override
+  State<_MiniStatCard> createState() => _MiniStatCardState();
+}
+
+class _MiniStatCardState extends State<_MiniStatCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    if (widget.isAnimated) {
+      _pulseController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_MiniStatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAnimated && !oldWidget.isAnimated) {
+      _pulseController.repeat();
+    } else if (!widget.isAnimated && oldWidget.isAnimated) {
+      _pulseController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.10),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: MouseRegion(
+          cursor:
+              widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+          child: ScaleTransition(
+            scale: widget.isAnimated
+                ? Tween<double>(begin: 1.0, end: 1.02).animate(
+                    CurvedAnimation(
+                      parent: _pulseController,
+                      curve: Curves.easeInOut,
+                    ),
+                  )
+                : AlwaysStoppedAnimation(1.0),
+            child: Container(
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: widget.isAlert
+                    ? Border.all(
+                        color: widget.color.withValues(alpha: 0.3),
+                        width: 1.5,
+                      )
+                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withValues(
+                      alpha: widget.isAnimated ? 0.18 : (widget.isAlert ? 0.15 : 0.10),
+                    ),
+                    blurRadius: widget.isAnimated ? 20 : (widget.isAlert ? 16 : 12),
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: color,
-                height: 1.0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 18),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.value,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: widget.color,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.label,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: _rTextMuted,
+                            fontWeight:
+                                widget.isAlert ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (widget.isAlert)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: widget.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 10, color: _rTextMuted),
-            ),
-          ],
+          ),
         ),
       ),
     );
