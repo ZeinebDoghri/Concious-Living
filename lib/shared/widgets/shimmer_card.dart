@@ -25,7 +25,7 @@ class _ShimmerCardState extends State<ShimmerCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1500),
     )..repeat();
   }
 
@@ -37,19 +37,21 @@ class _ShimmerCardState extends State<ShimmerCard>
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        final dx = (t * 2) - 1; // -1..1
+        final dx = (t * 2) - 1;
 
         final gradient = LinearGradient(
           begin: Alignment(-1 + dx, 0),
           end: Alignment(1 + dx, 0),
-          colors: const [
-            AppColors.oat,
-            AppColors.sand,
-            AppColors.oat,
+          colors: [
+            primary.withValues(alpha: 0.04),
+            primary.withValues(alpha: 0.10),
+            primary.withValues(alpha: 0.04),
           ],
           stops: const [0.2, 0.5, 0.8],
         );
@@ -62,7 +64,10 @@ class _ShimmerCardState extends State<ShimmerCard>
             child: Container(
               height: widget.height,
               width: double.infinity,
-              color: AppColors.parchment,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(widget.radius),
+              ),
             ),
           ),
         );

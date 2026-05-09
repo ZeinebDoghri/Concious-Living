@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,29 +7,29 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants.dart'; // Ensure AppRoutes is available
-import 'annotated_contamination_image.dart';
-import 'food_contamination_service.dart';
 
 import '../../../core/firebase_service.dart';
 import '../../../core/models/waste_item_model.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/freshness_badge.dart';
+import 'annotated_contamination_image.dart';
+import 'food_contamination_service.dart';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const _kEmerald  = Color(0xFF4F6815);   // Olive
-const _kEmeraldL = Color(0xFFD4E8A8);   // Olive Mist
-const _kRose     = Color(0xFF75070C);   // Cherry
-const _kRoseL    = Color(0xFFFBBCBF);   // Cherry Blush
-const _kAmber    = Color(0xFFE8C84A);   // Butter Deep
-const _kAmberL   = Color(0xFFFFEDAB);   // Butter
-const _kSlate    = Color(0xFF8C7B7C);   // Fog
-const _kSlateL   = Color(0xFFFAF5EE);   // Parchment
-const _kInk      = Color(0xFF2C1A1B);   // Espresso
-const _kSurface  = Color(0xFFEDE0D3);   // Warm Oat
-const _kCard     = Color(0xFFFAF5EE);   // Parchment
-const _kBorder   = Color(0xFFD9C9B4);   // Sand
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary = Color(0xFFF2A7A7);
+const _rDeep = Color(0xFFE47878);
+const _rSurface = Color(0xFFFFF5F5);
+const _rSoftBg = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextBody = Color(0xFF7A4040);
+const _rTextMuted = Color(0xFFB08080);
+const _fresh = Color(0xFF52C98A);
+const _freshBg = Color(0xFFE8F9F1);
+const _warning = Color(0xFFFFAB5B);
+const _warningBg = Color(0xFFFFF4E8);
+const _danger = Color(0xFFFF7070);
+const _dangerBg = Color(0xFFFFEEEE);
 
 class StaffResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -87,18 +86,23 @@ class _StaffResultScreenState extends State<StaffResultScreen>
       (widget.args['wasteResult'] as Map<String, dynamic>?) ?? {};
   Map<String, dynamic> get _compostResult =>
       (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
-    Map<String, dynamic> get _contaminationResult =>
+  Map<String, dynamic> get _contaminationResult =>
       (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
 
   void _snack(String msg, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(children: [
-          Icon(success ? Icons.check_circle_rounded : Icons.info_rounded,
-              color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(msg)),
-        ]),
+        content: Row(
+          children: [
+            Icon(
+              success ? Icons.check_circle_rounded : Icons.info_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(msg)),
+          ],
+        ),
       ),
     );
   }
@@ -107,7 +111,6 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     if (_actionLoading || _actionDone) return;
     HapticFeedback.mediumImpact();
     setState(() => _actionLoading = true);
-    final inv = context.read<InventoryProvider>();
 
     try {
       final user = context.read<UserProvider>().currentUser;
@@ -120,7 +123,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
           : <Map>[];
 
       for (final entry in items) {
-        final name = (entry['name'] as String?)?.trim() ?? 'Waste item';
+        final name = (entry['name'] as String?)?.trim() ?? 'Waste';
         final kg = (entry['quantityKg'] as num?)?.toDouble() ?? 0.0;
         if (venueId.isNotEmpty) {
           await FirebaseService.logWaste(
@@ -138,9 +141,10 @@ class _StaffResultScreenState extends State<StaffResultScreen>
       }
 
       // 2. Remove spoiled item from inventory if needed
-      final status =
-          ((_freshnessResult['status'] as String?) ?? '').toLowerCase();
+      final status = ((_freshnessResult['status'] as String?) ?? '')
+          .toLowerCase();
       if (status == 'spoiled') {
+        final inv = context.read<InventoryProvider>();
         final candidate = inv.items
             .where((e) => e.status == 'spoiled')
             .followedBy(inv.items.where((e) => e.status == 'expiring'))
@@ -176,20 +180,18 @@ class _StaffResultScreenState extends State<StaffResultScreen>
   Widget _buildFusion() {
     final compostPct =
         (_compostResult['compostablePct'] as num?)?.toDouble() ?? 0.0;
-    final status =
-        ((_freshnessResult['status'] as String?) ?? 'fresh').toLowerCase();
+    final status = ((_freshnessResult['status'] as String?) ?? 'fresh')
+        .toLowerCase();
+    final detectedCount =
+        ((_wasteResult['detectedItems'] as List?)?.length ?? 0);
+    final maskPng = _compostResult['maskPng'] as Uint8List?;
+    final ms = (_compostResult['inferenceTimeMs'] as num?)?.toInt() ?? 920;
     final contamination = _contaminationResult.isNotEmpty
         ? FoodAnalysisResult.fromJson(_contaminationResult)
         : null;
-    final detectedCount =
-      ((_wasteResult['mass_estimates'] as List?)?.length ??
-        (_wasteResult['detectedItems'] as List?)?.length ??
-        0);
-    final maskPng = _compostResult['maskPng'] as Uint8List?;
-    final ms = (_compostResult['inferenceTimeMs'] as num?)?.toInt() ?? 920;
 
     return Scaffold(
-      backgroundColor: _kSurface,
+      backgroundColor: _rSurface,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -198,7 +200,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
             expandedHeight: 260,
             pinned: true,
             automaticallyImplyLeading: false,
-            backgroundColor: _kInk,
+            backgroundColor: _rTextTitle,
             leading: GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -207,23 +209,30 @@ class _StaffResultScreenState extends State<StaffResultScreen>
               child: Container(
                 margin: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.black38,
+                  color: _rSoftBg.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
             actions: [
               Container(
                 margin: const EdgeInsets.fromLTRB(0, 10, 12, 10),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: _kEmerald.withValues(alpha: 0.25),
+                  color: _rPrimary.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: _kEmerald.withValues(alpha: 0.5), width: 0.8),
+                    color: _rPrimary.withValues(alpha: 0.5),
+                    width: 0.8,
+                  ),
                 ),
                 child: Text(
                   '⚡ Smart Scan',
@@ -240,26 +249,32 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 fit: StackFit.expand,
                 children: [
                   // Scanned image
-                  if (_imageBytes != null)
-                    contamination != null
-                        ? AnnotatedContaminationImage(
-                            imageBytes: _imageBytes!,
-                            detections: contamination.detections,
-                          )
-                        : Image.memory(_imageBytes!, fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => _imageFallback())
+                  if (_imageBytes != null && contamination != null)
+                    AnnotatedContaminationImage(
+                      imageBytes: _imageBytes!,
+                      detections: contamination.detections,
+                    )
+                  else if (_imageBytes != null)
+                    Image.memory(
+                      _imageBytes!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imageFallback(),
+                    )
                   else if (!kIsWeb && _imageFile != null)
                     Image.file(_imageFile!, fit: BoxFit.cover)
                   else
                     _imageFallback(),
                   // Gradient overlay
-                  const DecoratedBox(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xDD1E293B)],
-                        stops: [0.4, 1.0],
+                        colors: [
+                          Colors.transparent,
+                          _rTextTitle.withValues(alpha: 0.85),
+                        ],
+                        stops: const [0.4, 1.0],
                       ),
                     ),
                   ),
@@ -273,17 +288,17 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                       children: [
                         Text(
                           'Analyse complète',
-                          style: GoogleFonts.sora(
-                            fontSize: 20,
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
                         ),
                         Text(
-                          '4 IA · fraîcheur · déchets · compost · contamination',
+                          '3 IA · fraîcheur · déchets · compost',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.65),
+                            color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
                       ],
@@ -311,17 +326,18 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 _SectionCard(
                   title: '♻️ Compost IA',
                   subtitle: 'mask2former_fp32 · Swin-B · mIoU 0.86',
-                  color: _kEmerald,
+                  color: _fresh,
                   delay: 0,
                   child: _CompostCard(
                     maskPng: maskPng,
                     compostPct: compostPct,
-                    nonCompostPct: (_compostResult['nonCompostablePct'] as num?)
+                    nonCompostPct:
+                        (_compostResult['nonCompostablePct'] as num?)
                             ?.toDouble() ??
                         0.0,
                     bgPct:
                         (_compostResult['backgroundPct'] as num?)?.toDouble() ??
-                            0.0,
+                        0.0,
                     ms: ms,
                   ),
                 ),
@@ -330,7 +346,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
 
                 // ── Freshness card ─────────────────────────────────────────
                 _SectionCard(
-                  title: '🌡️ Fraîcheur',
+                  title: 'Freshness',
                   subtitle: _freshnessStatusLabel(status),
                   color: _freshnessColor(status),
                   delay: 100,
@@ -339,85 +355,28 @@ class _StaffResultScreenState extends State<StaffResultScreen>
 
                 const SizedBox(height: 12),
 
-                if (contamination != null)
-                  _SectionCard(
-                    title: '🦠 Contamination / Insectes',
-                    subtitle: contamination.isContaminated
-                        ? 'Contamination détectée'
-                        : 'Aucune contamination détectée',
-                    color: contamination.isContaminated ? _kRose : _kEmerald,
-                    delay: 150,
-                    child: _contaminationCard(
-                      result: contamination,
-                      imageBytes: _imageBytes,
-                    ),
-                  ),
-
-                if (contamination != null) const SizedBox(height: 12),
-
                 // ── Waste card ─────────────────────────────────────────────
                 _SectionCard(
-                  title: '🗑️ Déchets détectés',
+                  title: 'Detected Waste',
                   subtitle: '$detectedCount article(s) identifié(s)',
-                  color: _kAmber,
+                  color: _warning,
                   delay: 200,
                   child: _WasteCard(result: _wasteResult),
                 ),
 
-                const SizedBox(height: 10),
-
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    context.go(AppRoutes.restaurantWaste);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _kCard,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _kBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: _kAmber.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.delete_rounded, color: _kAmber, size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Ouvrir Analyse dechets',
-                                style: GoogleFonts.sora(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: _kInk,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Interface complete avec overlay + masse',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: _kSlate,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded, color: _kSlate),
-                      ],
+                if (contamination != null) ...[
+                  const SizedBox(height: 12),
+                  _SectionCard(
+                    title: 'Contamination',
+                    subtitle: 'YOLO food safety detection',
+                    color: contamination.isClean ? _fresh : _danger,
+                    delay: 300,
+                    child: _ContaminationCard(
+                      result: contamination,
+                      imageBytes: _imageBytes,
                     ),
                   ),
-                ),
+                ],
 
                 const SizedBox(height: 20),
 
@@ -441,22 +400,27 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                   child: Container(
                     height: 50,
                     decoration: BoxDecoration(
-                      color: _kCard,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _kBorder),
+                      border: Border.all(
+                        color: _rPrimary.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.camera_alt_outlined,
-                            size: 18, color: _kSlate),
+                        Icon(
+                          Icons.camera_alt_outlined,
+                          size: 18,
+                          color: _rTextMuted,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Nouveau scan',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: _kSlate,
+                            color: _rTextMuted,
                           ),
                         ),
                       ],
@@ -479,109 +443,31 @@ class _StaffResultScreenState extends State<StaffResultScreen>
   }
 
   Color _freshnessColor(String s) {
-    if (s == 'fresh') return _kEmerald;
-    if (s == 'expiring') return _kAmber;
-    return _kRose;
+    if (s == 'fresh') return _fresh;
+    if (s == 'expiring') return _warning;
+    return _danger;
   }
 
   Widget _imageFallback() => Container(
-        color: const Color(0xFF0D1524),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.image_search_rounded,
-                  size: 48, color: Colors.white24),
-              const SizedBox(height: 8),
-              Text('Image non disponible sur web',
-                  style: GoogleFonts.inter(
-                      fontSize: 12, color: Colors.white30)),
-            ],
+    color: _rSoftBg,
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.image_search_rounded,
+            size: 48,
+            color: _rPrimary.withValues(alpha: 0.4),
           ),
-        ),
-      );
-
-    Widget _contaminationCard({
-      required FoodAnalysisResult result,
-      required Uint8List? imageBytes,
-    }) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: result.isContaminated
-              ? const Color(0xFFFFF5F5)
-              : const Color(0xFFF0FFF4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: result.isContaminated
-                ? const Color(0xFFFCA5A5)
-                : const Color(0xFFA7F3D0),
-            width: 1.5,
+          const SizedBox(height: 8),
+          Text(
+            'Image non disponible sur web',
+            style: GoogleFonts.inter(fontSize: 12, color: _rTextMuted),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  result.isContaminated
-                      ? Icons.warning_rounded
-                      : Icons.check_circle_rounded,
-                  color: result.isContaminated
-                      ? const Color(0xFFEF4444)
-                      : const Color(0xFF10B981),
-                  size: 40,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        result.isContaminated
-                            ? 'Contamination détectée'
-                            : 'Aucune contamination détectée',
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: _kInk,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Confidence: ${result.confidence.toStringAsFixed(1)}%',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: _kSlate,
-                        ),
-                      ),
-                      Text(
-                        '${result.detectionCount} objet(s) détecté(s)',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: _kSlate,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (imageBytes != null) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: AnnotatedContaminationImage(
-                  imageBytes: imageBytes,
-                  detections: result.detections,
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
+        ],
+      ),
+    ),
+  );
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LEGACY VIEW (backward compat)
@@ -591,16 +477,17 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     final result = (widget.args['result'] as Map<String, dynamic>?) ?? {};
 
     return Scaffold(
-      backgroundColor: _kSurface,
+      backgroundColor: _rSurface,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [_rSoftBg, _rSurface]),
+                border: Border(
+                  bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Row(
@@ -611,20 +498,26 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: _rSoftBg,
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _rPrimary.withValues(alpha: 0.3),
+                        ),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white, size: 16),
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: _rDeep,
+                        size: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Scan Result',
-                    style: GoogleFonts.sora(
+                    'Résultat du scan',
+                    style: GoogleFonts.playfairDisplay(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: _rTextTitle,
                     ),
                   ),
                 ],
@@ -642,9 +535,11 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                         child: SizedBox(
                           height: 200,
                           width: double.infinity,
-                          child: Image.memory(_imageBytes!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => _imageFallback()),
+                          child: Image.memory(
+                            _imageBytes!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _imageFallback(),
+                          ),
                         ),
                       )
                     else if (!kIsWeb && _imageFile != null)
@@ -669,9 +564,11 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
-                          color: _kCard,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: _kBorder),
+                          border: Border.all(
+                            color: _rPrimary.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Center(
                           child: Text(
@@ -679,7 +576,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: _kSlate,
+                              color: _rTextMuted,
                             ),
                           ),
                         ),
@@ -701,10 +598,11 @@ class _SummaryBanner extends StatelessWidget {
   final String status;
   final double compostPct;
   final int detectedItems;
-  const _SummaryBanner(
-      {required this.status,
-      required this.compostPct,
-      required this.detectedItems});
+  const _SummaryBanner({
+    required this.status,
+    required this.compostPct,
+    required this.detectedItems,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -712,25 +610,26 @@ class _SummaryBanner extends StatelessWidget {
     final String text;
 
     if (status == 'spoiled') {
-      color = _kRose;
-      text  = '⚠️ Produit périmé détecté — retrait recommandé';
+      color = _danger;
+      text = '⚠️ Produit périmé détecté — retrait recommandé';
     } else if (compostPct > 55) {
-      color = _kEmerald;
-      text  = '✅ ${compostPct.toStringAsFixed(0)}% compostable — excellente gestion';
+      color = _fresh;
+      text =
+          '✅ ${compostPct.toStringAsFixed(0)}% compostable — excellente gestion';
     } else if (detectedItems > 0) {
-      color = _kAmber;
-      text  = '📊 $detectedItems déchet(s) identifié(s) — action recommandée';
+      color = _warning;
+      text = '📊 $detectedItems déchet(s) identifié(s) — action recommandée';
     } else {
-      color = const Color(0xFF6366F1);
-      text  = '🔍 Analyse 3-en-1 complète — voir le détail ci-dessous';
+      color = _rPrimary;
+      text = '🔍 Analyse 3-en-1 complète — voir le détail ci-dessous';
     }
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -778,76 +677,77 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kBorder, width: 0.8),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.07),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-              border: Border(
-                bottom:
-                    BorderSide(color: color.withValues(alpha: 0.15), width: 0.8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _rPrimary.withValues(alpha: 0.2),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(2),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.15),
+                    width: 0.8,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: color.withValues(alpha: 0.7),
-                        ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
+                          Text(
+                            subtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: color.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Padding(padding: const EdgeInsets.all(16), child: child),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: child,
-          ),
-        ],
-      ),
-    )
+        )
         .animate()
         .fadeIn(
           delay: Duration(milliseconds: 150 + delay),
@@ -893,7 +793,7 @@ class _CompostCard extends StatelessWidget {
                 ? Image.memory(
                     maskPng!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _MaskFallback(
+                    errorBuilder: (_, __, ___) => _MaskFallback(
                       compostPct: compostPct,
                       nonCompostPct: nonCompostPct,
                       bgPct: bgPct,
@@ -909,29 +809,39 @@ class _CompostCard extends StatelessWidget {
         const SizedBox(height: 8),
 
         // Legend
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _Dot(color: _kEmerald),
-          const SizedBox(width: 4),
-          Text('Compostable',
-              style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-          const SizedBox(width: 14),
-          _Dot(color: _kRose),
-          const SizedBox(width: 4),
-          Text('Non-compost.',
-              style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-          const SizedBox(width: 14),
-          Container(
-            width: 8, height: 8,
-            decoration: BoxDecoration(
-              color: _kSlate.withValues(alpha: 0.25),
-              shape: BoxShape.circle,
-              border: Border.all(color: _kSlate.withValues(alpha: 0.5)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _Dot(color: _fresh),
+            const SizedBox(width: 4),
+            Text(
+              'Compostable',
+              style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
             ),
-          ),
-          const SizedBox(width: 4),
-          Text('Fond',
-              style: GoogleFonts.inter(fontSize: 11, color: _kSlate)),
-        ]),
+            const SizedBox(width: 14),
+            _Dot(color: _danger),
+            const SizedBox(width: 4),
+            Text(
+              'Non-compost.',
+              style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
+            ),
+            const SizedBox(width: 14),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _rTextMuted.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+                border: Border.all(color: _rTextMuted.withValues(alpha: 0.5)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Fond',
+              style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
+            ),
+          ],
+        ),
 
         const SizedBox(height: 12),
 
@@ -939,15 +849,25 @@ class _CompostCard extends StatelessWidget {
         Row(
           children: [
             _StatBox(
-                value: compostPct, label: 'Compostable',
-                color: _kEmerald, bg: _kEmeraldL),
+              value: compostPct,
+              label: 'Compostable',
+              color: _fresh,
+              bg: _freshBg,
+            ),
             const SizedBox(width: 8),
             _StatBox(
-                value: nonCompostPct, label: 'Non-compost.',
-                color: _kRose, bg: _kRoseL),
+              value: nonCompostPct,
+              label: 'Non-compost.',
+              color: _danger,
+              bg: _dangerBg,
+            ),
             const SizedBox(width: 8),
-            _StatBox(value: bgPct, label: 'Fond',
-                color: _kSlate, bg: _kSlateL),
+            _StatBox(
+              value: bgPct,
+              label: 'Fond',
+              color: _rTextMuted,
+              bg: _rSoftBg,
+            ),
           ],
         ),
 
@@ -957,7 +877,7 @@ class _CompostCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: _kAmberL,
+                color: _warningBg,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -965,7 +885,7 @@ class _CompostCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF92400E),
+                  color: _warning,
                 ),
               ),
             ),
@@ -981,10 +901,11 @@ class _MaskFallback extends StatelessWidget {
   final double compostPct;
   final double nonCompostPct;
   final double bgPct;
-  const _MaskFallback(
-      {required this.compostPct,
-      required this.nonCompostPct,
-      required this.bgPct});
+  const _MaskFallback({
+    required this.compostPct,
+    required this.nonCompostPct,
+    required this.bgPct,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1002,12 +923,18 @@ class _MaskFallback extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(flex: (c * 100).round(),
-                    child: Container(color: _kEmerald.withValues(alpha: 0.6))),
-                Expanded(flex: (n * 100).round(),
-                    child: Container(color: _kRose.withValues(alpha: 0.6))),
-                Expanded(flex: (b * 100).round(),
-                    child: Container(color: _kSlate.withValues(alpha: 0.3))),
+                Expanded(
+                  flex: (c * 100).round(),
+                  child: Container(color: _fresh.withValues(alpha: 0.6)),
+                ),
+                Expanded(
+                  flex: (n * 100).round(),
+                  child: Container(color: _danger.withValues(alpha: 0.6)),
+                ),
+                Expanded(
+                  flex: (b * 100).round(),
+                  child: Container(color: _rSoftBg),
+                ),
               ],
             ),
             Center(
@@ -1021,7 +948,7 @@ class _MaskFallback extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: _rTextTitle,
                     ),
                   ),
                 ],
@@ -1039,10 +966,10 @@ class _Dot extends StatelessWidget {
   const _Dot({required this.color});
   @override
   Widget build(BuildContext context) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: 8,
+    height: 8,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 // ── Animated stat box ──────────────────────────────────────────────────────────
@@ -1051,11 +978,12 @@ class _StatBox extends StatefulWidget {
   final String label;
   final Color color;
   final Color bg;
-  const _StatBox(
-      {required this.value,
-      required this.label,
-      required this.color,
-      required this.bg});
+  const _StatBox({
+    required this.value,
+    required this.label,
+    required this.color,
+    required this.bg,
+  });
 
   @override
   State<_StatBox> createState() => _StatBoxState();
@@ -1070,10 +998,16 @@ class _StatBoxState extends State<_StatBox>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
-    _val = Tween<double>(begin: 0, end: widget.value).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-    Future.delayed(200.ms, () { if (mounted) _ctrl.forward(); });
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _val = Tween<double>(
+      begin: 0,
+      end: widget.value,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    Future.delayed(200.ms, () {
+      if (mounted) _ctrl.forward();
+    });
   }
 
   @override
@@ -1096,9 +1030,9 @@ class _StatBoxState extends State<_StatBox>
           children: [
             AnimatedBuilder(
               animation: _val,
-              builder: (_, _) => Text(
+              builder: (_, __) => Text(
                 '${_val.value.toStringAsFixed(1)}%',
-                style: GoogleFonts.sora(
+                style: GoogleFonts.inter(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: widget.color,
@@ -1139,10 +1073,7 @@ class _FreshnessCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Transform.scale(
-              scale: 1.3,
-              child: FreshnessBadge(status),
-            ),
+            Transform.scale(scale: 1.3, child: FreshnessBadge(status)),
             const SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1152,13 +1083,13 @@ class _FreshnessCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _kInk,
+                    color: _rTextTitle,
                   ),
                 ),
                 if (daysLeft != null)
                   Text(
                     '$daysLeft jour${daysLeft == 1 ? '' : 's'} restant(s)',
-                    style: GoogleFonts.inter(fontSize: 12, color: _kSlate),
+                    style: GoogleFonts.inter(fontSize: 12, color: _rTextMuted),
                   ),
               ],
             ),
@@ -1168,8 +1099,8 @@ class _FreshnessCard extends StatelessWidget {
           const SizedBox(height: 10),
           _InfoBanner(
             text: '⚠️ Retirer immédiatement du stock',
-            color: _kRose,
-            bg: _kRoseL,
+            color: _danger,
+            bg: _dangerBg,
           ),
         ] else if (isExpiring) ...[
           const SizedBox(height: 10),
@@ -1177,15 +1108,15 @@ class _FreshnessCard extends StatelessWidget {
             text: daysLeft == null
                 ? '⏰ À utiliser très bientôt'
                 : '⏰ Utiliser avant $daysLeft jour${daysLeft == 1 ? '' : 's'}',
-            color: _kAmber,
-            bg: _kAmberL,
+            color: _warning,
+            bg: _warningBg,
           ),
         ] else ...[
           const SizedBox(height: 10),
           _InfoBanner(
             text: '✅ Produit en bon état',
-            color: _kEmerald,
-            bg: _kEmeraldL,
+            color: _fresh,
+            bg: _freshBg,
           ),
         ],
       ],
@@ -1197,8 +1128,11 @@ class _InfoBanner extends StatelessWidget {
   final String text;
   final Color color;
   final Color bg;
-  const _InfoBanner(
-      {required this.text, required this.color, required this.bg});
+  const _InfoBanner({
+    required this.text,
+    required this.color,
+    required this.bg,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1228,26 +1162,17 @@ class _WasteCard extends StatelessWidget {
   const _WasteCard({required this.result});
 
   List<Map<String, dynamic>> get _items {
-    final raw = result['mass_estimates'] ?? result['detectedItems'];
+    final raw = result['detectedItems'];
     if (raw is! List) return [];
-    return raw.whereType<Map>().map((e) => <String, dynamic>{
-          'name': (e['label'] ?? e['name'] as Object?)?.toString().trim() ?? 'Waste item',
-          'quantityKg': (e['estimatedKg'] ?? e['quantityKg'] as Object?) is num
-              ? (e['estimatedKg'] ?? e['quantityKg'] as num).toDouble()
-              : 0.0,
-        }).toList();
-  }
-
-  Uint8List? get _overlayBytes {
-    final raw = result['overlay_png_b64'];
-    if (raw is String && raw.isNotEmpty) {
-      try {
-        return base64Decode(raw);
-      } catch (_) {
-        return null;
-      }
-    }
-    return null;
+    return raw
+        .whereType<Map>()
+        .map(
+          (e) => <String, dynamic>{
+            'name': (e['name'] as String?)?.trim() ?? 'Waste',
+            'quantityKg': (e['quantityKg'] as num?)?.toDouble() ?? 0.0,
+          },
+        )
+        .toList();
   }
 
   @override
@@ -1256,14 +1181,14 @@ class _WasteCard extends StatelessWidget {
     if (items.isEmpty) {
       return Row(
         children: [
-          const Icon(Icons.check_circle_rounded, color: _kEmerald, size: 20),
+          const Icon(Icons.check_circle_rounded, color: _fresh, size: 20),
           const SizedBox(width: 8),
           Text(
             'Aucun déchet excessif détecté',
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: _kEmerald,
+              color: _fresh,
             ),
           ),
         ],
@@ -1271,32 +1196,20 @@ class _WasteCard extends StatelessWidget {
     }
 
     // Find top wasted item
-    final top = items.reduce((a, b) =>
-        (a['quantityKg'] as double) >= (b['quantityKg'] as double) ? a : b);
-
-    final overlayBytes = _overlayBytes;
+    final top = items.reduce(
+      (a, b) =>
+          (a['quantityKg'] as double) >= (b['quantityKg'] as double) ? a : b,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (overlayBytes != null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              overlayBytes,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
         // Top item highlight
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF7C2D12), Color(0xFF9A3412)],
+              colors: [_rDeep, _rPrimary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1304,8 +1217,11 @@ class _WasteCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.trending_up_rounded,
-                  color: Colors.white70, size: 20),
+              const Icon(
+                Icons.trending_up_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1314,51 +1230,68 @@ class _WasteCard extends StatelessWidget {
                     Text(
                       'Plus gaspillé',
                       style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: Colors.white60,
-                          fontWeight: FontWeight.w500),
+                        fontSize: 10,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       top['name'] as String,
-                      style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
               ),
               Text(
                 '${(top['quantityKg'] as double).toStringAsFixed(1)} kg',
-                style: GoogleFonts.sora(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         ),
         if (items.length > 1) ...[
           const SizedBox(height: 10),
-          ...items.skip(1).map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  children: [
-                    const Icon(Icons.remove_circle_outline_rounded,
-                        color: _kAmber, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(item['name'] as String,
-                            style: GoogleFonts.inter(
-                                fontSize: 13, color: _kInk))),
-                    Text(
-                      '${(item['quantityKg'] as double).toStringAsFixed(1)} kg',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: _kSlate),
-                    ),
-                  ],
+          ...items
+              .skip(1)
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.remove_circle_outline_rounded,
+                        color: _warning,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item['name'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: _rTextBody,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${(item['quantityKg'] as double).toStringAsFixed(1)} kg',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: _rTextMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
         ],
       ],
     );
@@ -1366,6 +1299,178 @@ class _WasteCard extends StatelessWidget {
 }
 
 // ── Smart action button ────────────────────────────────────────────────────────
+class _ContaminationCard extends StatelessWidget {
+  final FoodAnalysisResult result;
+  final Uint8List? imageBytes;
+
+  const _ContaminationCard({required this.result, required this.imageBytes});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = result.isClean ? _fresh : _danger;
+    final bg = result.isClean ? _freshBg : _dangerBg;
+    final confidence = result.confidence > 1
+        ? result.confidence
+        : result.confidence * 100;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (imageBytes != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              height: 190,
+              width: double.infinity,
+              child: AnnotatedContaminationImage(
+                imageBytes: imageBytes!,
+                detections: result.detections,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.28)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                result.isClean
+                    ? Icons.verified_rounded
+                    : Icons.warning_amber_rounded,
+                color: color,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  result.isClean
+                      ? 'Surface propre detectee'
+                      : 'Risque de contamination detecte',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ),
+              Text(
+                '${confidence.toStringAsFixed(1)}%',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _MiniPercentBar(label: 'Clean', value: result.cleanPct, color: _fresh),
+        const SizedBox(height: 8),
+        _MiniPercentBar(
+          label: 'Contaminated',
+          value: result.contaminatedPct,
+          color: _danger,
+        ),
+        if (result.detections.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...result.detections.map(
+            (detection) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.bug_report_outlined,
+                    color: _danger,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      detection.label,
+                      style: GoogleFonts.inter(fontSize: 12, color: _rTextBody),
+                    ),
+                  ),
+                  Text(
+                    '${(detection.confidence * 100).toStringAsFixed(0)}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _danger,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MiniPercentBar extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _MiniPercentBar({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = (value > 1 ? value / 100 : value)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _rTextMuted,
+              ),
+            ),
+            Text(
+              '${value.toStringAsFixed(1)}%',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            minHeight: 8,
+            value: normalized,
+            backgroundColor: color.withValues(alpha: 0.12),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SmartActionButton extends StatelessWidget {
   final bool isDone;
   final bool isLoading;
@@ -1381,11 +1486,11 @@ class _SmartActionButton extends StatelessWidget {
   });
 
   String get _label {
-    if (isDone) return 'Actions saved ✓';
+    if (isDone) return 'Actions enregistrées ✓';
     final parts = <String>[];
-    if (detectedCount > 0) parts.add('Log waste');
-    if (status == 'spoiled') parts.add('Remove from stock');
-    if (parts.isEmpty) return 'Update inventory';
+    if (detectedCount > 0) parts.add('Enregistrer les déchets');
+    if (status == 'spoiled') parts.add('Retirer du stock');
+    if (parts.isEmpty) return 'Mettre à jour l\'inventaire';
     return parts.join(' · ');
   }
 
@@ -1398,14 +1503,12 @@ class _SmartActionButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           gradient: isDone
-              ? const LinearGradient(
-                  colors: [Color(0xFF059669), Color(0xFF10B981)])
-              : const LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF334155)]),
+              ? const LinearGradient(colors: [_fresh, Color(0xFF3DB876)])
+              : const LinearGradient(colors: [_rDeep, _rPrimary]),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: (isDone ? _kEmerald : _kInk).withValues(alpha: 0.3),
+              color: (isDone ? _fresh : _rPrimary).withValues(alpha: 0.35),
               blurRadius: 16,
               offset: const Offset(0, 5),
             ),
@@ -1417,7 +1520,9 @@ class _SmartActionButton extends StatelessWidget {
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,

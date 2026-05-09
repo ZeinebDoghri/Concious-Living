@@ -11,8 +11,15 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
-import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+
+// ── Customer design tokens ─────────────────────────────────────────────────────
+const _kPrimary   = Color(0xFFA78BFA);
+const _kDeep      = Color(0xFF7C3AED);
+const _kSurface   = Color(0xFFF5F3FF);
+const _kSoftBg    = Color(0xFFEDE9FE);
+const _kTextTitle = Color(0xFF2D1B69);
+const _kTextBody  = Color(0xFF4B3B8C);
+const _kTextMuted = Color(0xFF8B7BC0);
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -114,20 +121,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   InputDecoration _decoration({required String label, required IconData icon}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: AppColors.cocoa),
+      labelStyle: GoogleFonts.inter(color: _kTextMuted),
+      prefixIcon: Icon(icon, color: _kPrimary),
       filled: true,
-      fillColor: AppColors.cream,
+      fillColor: Colors.white,
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.sand, width: 1),
+        borderSide: BorderSide(color: _kSoftBg, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.cherry, width: 1.2),
+        borderSide: const BorderSide(color: _kPrimary, width: 1.5),
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
-        borderSide: const BorderSide(color: AppColors.sand, width: 1),
+        borderSide: BorderSide(color: _kSoftBg, width: 1.5),
       ),
     );
   }
@@ -164,10 +172,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.cherry,
-                  onPrimary: AppColors.cherryHeaderText,
-                  surface: AppColors.parchment,
-                  onSurface: AppColors.espresso,
+                  primary: _kPrimary,
+                  onPrimary: Colors.white,
+                  surface: Colors.white,
+                  onSurface: _kTextTitle,
                 ),
           ),
           child: child!,
@@ -282,10 +290,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _sectionTitle(String text) {
     return Text(
       text,
-      style: GoogleFonts.dmSerifDisplay(
+      style: GoogleFonts.playfairDisplay(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.espresso,
+        fontWeight: FontWeight.w700,
+        color: _kTextTitle,
         height: 1.2,
       ),
     );
@@ -304,240 +312,310 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _kSurface,
       body: SafeArea(
         child: Column(
           children: [
-            CherryHeader(
-              title: 'Edit Profile',
-              showBack: true,
-              actions: [
-                IconButton(
-                  onPressed: _saving ? null : _save,
-                  icon: const Icon(Icons.save),
-                  color: AppColors.butter,
-                  splashColor: AppColors.butter.withValues(alpha: 0.2),
+            // ── Header ─────────────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                borderRadius: BorderRadius.only(
+                  bottomLeft:  Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.pop(),
+                    icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                ),
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              width: 90,
-                              height: 90,
-                              child: Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 45,
-                                    backgroundColor: AppColors.oatDeep,
-                                    foregroundImage: avatarImage,
-                                    child: avatarImage == null
-                                        ? const Icon(Icons.person, color: AppColors.cocoa, size: 34)
-                                        : null,
-                                  ),
-                                  Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: InkWell(
-                                      onTap: _pickAvatar,
-                                      borderRadius: BorderRadius.circular(18),
-                                      child: Container(
-                                        width: 34,
-                                        height: 34,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.parchment,
-                                          borderRadius: BorderRadius.circular(18),
-                                          border: Border.all(color: AppColors.sand, width: 0.8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.photo_camera_outlined,
-                                          size: 18,
-                                          color: AppColors.espresso,
-                                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Edit Profile',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _saving ? null : _save,
+                    icon: const Icon(Icons.save),
+                    color: Colors.white,
+                    splashColor: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Avatar with edit overlay ───────────────────────
+                    Center(
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: 90,
+                            height: 90,
+                            child: Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 45,
+                                  backgroundColor: _kSoftBg,
+                                  foregroundImage: avatarImage,
+                                  child: avatarImage == null
+                                      ? Icon(Icons.person, color: _kPrimary, size: 34)
+                                      : null,
+                                ),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: InkWell(
+                                    onTap: _pickAvatar,
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: _kPrimary,
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(color: Colors.white, width: 2),
+                                        boxShadow: AppShadows.sm(_kPrimary),
+                                      ),
+                                      child: const Icon(
+                                        Icons.photo_camera_outlined,
+                                        size: 18,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Change photo',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.cherry,
-                                height: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      _sectionTitle('Personal info'),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _nameController,
-                        decoration: _decoration(label: AppStrings.fullName, icon: Icons.person_outline),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _emailController,
-                        enabled: false,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.fog,
-                        ),
-                        decoration: _decoration(label: AppStrings.emailAddress, icon: Icons.email_outlined),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _dobController,
-                        readOnly: true,
-                        onTap: _pickDob,
-                        decoration: _decoration(label: 'Date of birth', icon: Icons.cake_outlined),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: _decoration(label: 'Phone number', icon: Icons.phone_outlined),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Gender',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.espresso,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _genderOptions.map((g) {
-                          final selected = _gender == g;
-                          return ChoiceChip(
-                            label: Text(g),
-                            selected: selected,
-                            selectedColor: AppColors.cherryBlush,
-                            backgroundColor: AppColors.cream,
-                            side: const BorderSide(color: AppColors.sand, width: 0.8),
-                            labelStyle: GoogleFonts.inter(
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Change photo',
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: selected ? AppColors.cherryDark : AppColors.espresso,
+                              color: _kPrimary,
+                              height: 1.2,
                             ),
-                            onSelected: (v) => setState(() => _gender = v ? g : null),
-                          );
-                        }).toList(growable: false),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      SizedBox(key: _healthSectionKey),
-                      _sectionTitle('Health conditions'),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _conditionOptions.map((c) {
-                          final selected = _conditions.contains(c);
-                          return FilterChip(
-                            label: Text(c),
-                            selected: selected,
-                            selectedColor: AppColors.cherryBlush,
-                            backgroundColor: AppColors.cream,
-                            side: const BorderSide(color: AppColors.sand, width: 0.8),
-                            labelStyle: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? AppColors.cherryDark : AppColors.espresso,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Personal info ─────────────────────────────────
+                    _sectionTitle('Personal info'),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _nameController,
+                      style: GoogleFonts.inter(fontSize: 14, color: _kTextTitle),
+                      decoration: _decoration(label: AppStrings.fullName, icon: Icons.person_outline),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _emailController,
+                      enabled: false,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: _kTextMuted,
+                      ),
+                      decoration: _decoration(label: AppStrings.emailAddress, icon: Icons.email_outlined),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _dobController,
+                      readOnly: true,
+                      onTap: _pickDob,
+                      style: GoogleFonts.inter(fontSize: 14, color: _kTextTitle),
+                      decoration: _decoration(label: 'Date of birth', icon: Icons.cake_outlined),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: GoogleFonts.inter(fontSize: 14, color: _kTextTitle),
+                      decoration: _decoration(label: 'Phone number', icon: Icons.phone_outlined),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Gender',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _kTextTitle,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _genderOptions.map((g) {
+                        final selected = _gender == g;
+                        return ChoiceChip(
+                          label: Text(g),
+                          selected: selected,
+                          selectedColor: _kSoftBg,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: selected ? _kPrimary : _kSoftBg,
+                            width: 1.5,
+                          ),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? _kDeep : _kTextBody,
+                          ),
+                          onSelected: (v) => setState(() => _gender = v ? g : null),
+                        );
+                      }).toList(growable: false),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Health conditions ──────────────────────────────
+                    SizedBox(key: _healthSectionKey),
+                    _sectionTitle('Health conditions'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _conditionOptions.map((c) {
+                        final selected = _conditions.contains(c);
+                        return FilterChip(
+                          label: Text(c),
+                          selected: selected,
+                          selectedColor: _kSoftBg,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
+                            color: selected ? _kPrimary : _kSoftBg,
+                            width: 1.5,
+                          ),
+                          labelStyle: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? _kDeep : _kTextBody,
+                          ),
+                          onSelected: (_) => _toggleCondition(c),
+                        );
+                      }).toList(growable: false),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Condition info card ────────────────────────────
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                        border: Border.all(color: _kSoftBg, width: 1.5),
+                        boxShadow: AppShadows.sm(_kPrimary),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: _kSoftBg,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            onSelected: (_) => _toggleCondition(c),
-                          );
-                        }).toList(growable: false),
+                            child: Icon(Icons.info_outline, color: _kPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Chronic conditions',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: _kTextTitle,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  adjusted.isEmpty
+                                      ? 'We automatically adjust nutrient alerts based on your health profile.'
+                                      : 'We automatically adjust nutrient alerts for: ${adjusted.join(', ')}.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: _kTextBody,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 14),
-                      Container(
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Save CTA ───────────────────────────────────────
+                    GestureDetector(
+                      onTap: _saving ? null : _save,
+                      child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(14),
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: AppColors.parchment,
-                          borderRadius: BorderRadius.circular(AppRadii.innerCard),
-                          border: Border.all(color: AppColors.sand, width: 0.6),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                          boxShadow: AppShadows.md(_kPrimary),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.cherryBlush,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.info_outline, color: AppColors.cherryDark),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Chronic conditions',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.espresso,
-                                      height: 1.2,
-                                    ),
+                        child: Center(
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    adjusted.isEmpty
-                                        ? 'We automatically adjust nutrient alerts based on your health profile.'
-                                        : 'We automatically adjust nutrient alerts for: ${adjusted.join(', ')}.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.cocoa,
-                                      height: 1.45,
-                                    ),
+                                )
+                              : Text(
+                                  'Save',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                ),
                         ),
                       ),
-                      const SizedBox(height: 22),
-                      AnimatedButton(
-                        label: 'Save',
-                        color: AppColors.cherry,
-                        textColor: AppColors.butter,
-                        isLoading: _saving,
-                        onTap: _save,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

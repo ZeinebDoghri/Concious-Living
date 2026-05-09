@@ -9,14 +9,24 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
-import '../../../core/models/user_model.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
+
+// ── Customer design tokens ─────────────────────────────────────────────────────
+const _kPrimary   = Color(0xFFA78BFA);
+const _kDeep      = Color(0xFF7C3AED);
+const _kSurface   = Color(0xFFF5F3FF);
+const _kSoftBg    = Color(0xFFEDE9FE);
+const _kTextTitle = Color(0xFF2D1B69);
+const _kTextBody  = Color(0xFF4B3B8C);
+const _kTextMuted = Color(0xFF8B7BC0);
+const _kDanger    = Color(0xFFFF7070);
+const _kFresh     = Color(0xFF52C98A);
+const _kWarning   = Color(0xFFFFAB5B);
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  static const _cherryMutedText = Color(0xFFF5C0C2);
   static const _prefsAllergensKey = 'customer_allergens_json';
 
   String _fmtText(String? value, {String fallback = '—'}) {
@@ -39,10 +49,7 @@ class ProfileScreen extends StatelessWidget {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return '?';
 
-    final parts = trimmed
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
 
     String firstChar(String s) {
@@ -66,17 +73,12 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Color _barColor(double pct) {
-    if (pct > 100) return AppColors.cherry;
-    if (pct >= 80) return AppColors.butterDeep;
-    return AppColors.olive;
+    if (pct > 100) return _kDanger;
+    if (pct >= 80)  return _kWarning;
+    return _kFresh;
   }
 
-  Future<List<String>> _loadAllergens(UserModel? user) async {
-    final profileAllergens = user?.allergens ?? const <String>[];
-    if (profileAllergens.isNotEmpty) {
-      return profileAllergens;
-    }
-
+  Future<List<String>> _loadAllergens() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsAllergensKey);
 
@@ -94,17 +96,22 @@ class ProfileScreen extends StatelessWidget {
     BuildContext context, {
     required String title,
     required String body,
+    bool isDanger = false,
   }) async {
     return (await showDialog<bool>(
           context: context,
           builder: (context) {
             return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadii.xl),
+              ),
               title: Text(
                 title,
-                style: GoogleFonts.dmSerifDisplay(
+                style: GoogleFonts.playfairDisplay(
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.espresso,
+                  fontWeight: FontWeight.w700,
+                  color: _kTextTitle,
                 ),
               ),
               content: Text(
@@ -112,14 +119,17 @@ class ProfileScreen extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.cocoa,
+                  color: _kTextBody,
                   height: 1.5,
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(AppStrings.cancel, style: GoogleFonts.inter()),
+                  child: Text(
+                    AppStrings.cancel,
+                    style: GoogleFonts.inter(color: _kTextMuted),
+                  ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(true),
@@ -127,7 +137,7 @@ class ProfileScreen extends StatelessWidget {
                     AppStrings.ok,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
-                      color: AppColors.cherry,
+                      color: isDanger ? _kDanger : _kPrimary,
                     ),
                   ),
                 ),
@@ -145,9 +155,7 @@ class ProfileScreen extends StatelessWidget {
     final scans = context.watch<ScanHistoryProvider>().items;
 
     final scansTotal = scans.length;
-    final scansThisWeek = scans
-        .where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7)
-        .length;
+    final scansThisWeek = scans.where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7).length;
 
     final intakePct = userProvider.mockDailyIntakePct;
     final goalsMet = intakePct.values.where((v) => v <= 100).length;
@@ -168,11 +176,7 @@ class ProfileScreen extends StatelessWidget {
       }
 
       final recent = scans.take(12).toList(growable: false);
-      final avg =
-          recent
-              .map((e) => score(e.result.overallRisk))
-              .reduce((a, b) => a + b) /
-          recent.length;
+      final avg = recent.map((e) => score(e.result.overallRisk)).reduce((a, b) => a + b) / recent.length;
       if (avg >= 2.4) return 'High';
       if (avg >= 1.7) return 'Moderate';
       return 'Low';
@@ -182,117 +186,134 @@ class ProfileScreen extends StatelessWidget {
     final avatarImage = avatarUrl.isEmpty ? null : NetworkImage(avatarUrl);
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _kSurface,
       body: Column(
         children: [
-          SizedBox(
-            height: 220,
+          // ── Profile header ───────────────────────────────────────────────
+          Container(
             width: double.infinity,
-            child: Stack(
-              children: [
-                Container(color: AppColors.cherry),
-                Positioned.fill(child: CustomPaint(painter: _ArcPainter())),
-                SafeArea(
-                  bottom: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 42,
-                            backgroundColor: AppColors.cherryBlush,
-                            foregroundImage: avatarImage,
-                            child: avatarImage == null
-                                ? Text(
-                                    _initials(user?.name ?? ''),
-                                    style: GoogleFonts.dmSerifDisplay(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.cherry,
-                                      height: 1.0,
-                                    ),
-                                  )
-                                : null,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA), Color(0xFFC4B5FD)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                child: Column(
+                  children: [
+                    // Avatar
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundColor: Colors.white.withValues(alpha: 0.25),
+                          foregroundImage: avatarImage,
+                          child: avatarImage == null
+                              ? Text(
+                                  _initials(user?.name ?? ''),
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    height: 1.0,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: AppShadows.sm(_kPrimary),
                           ),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.oliveMist,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'Customer',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.olive,
-                                height: 1.2,
-                              ),
-                            ),
+                          child: InkWell(
+                            onTap: () => context.push(AppRoutes.customerEditProfile),
+                            child: Icon(Icons.edit_outlined, size: 16, color: _kDeep),
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            _fmtText(user?.name, fallback: AppStrings.appName),
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.butter,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _fmtText(user?.email, fallback: ''),
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: _cherryMutedText,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _memberSinceText(),
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: _cherryMutedText,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _StatPill(label: '$scansTotal Scans'),
-                              const SizedBox(width: 10),
-                              _StatPill(label: '$goalsMet Goals met'),
-                              const SizedBox(width: 10),
-                              _StatPill(label: _conditionTag(user?.conditions)),
-                            ],
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Role badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Customer',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                          height: 1.2,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _fmtText(user?.name, fallback: AppStrings.appName),
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _fmtText(user?.email, fallback: ''),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.80),
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _memberSinceText(),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.65),
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _StatPill(label: '$scansTotal Scans'),
+                        const SizedBox(width: 10),
+                        _StatPill(label: '$goalsMet Goals met'),
+                        const SizedBox(width: 10),
+                        _StatPill(label: _conditionTag(user?.conditions)),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
+
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 children: [
+                  // ── Health snapshot card ───────────────────────────────
                   Transform.translate(
                     offset: const Offset(0, -20),
-                    child: _Card(
+                    child: _SectionCard(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,27 +322,23 @@ class ProfileScreen extends StatelessWidget {
                             children: [
                               Text(
                                 'Health snapshot',
-                                style: GoogleFonts.dmSerifDisplay(
+                                style: GoogleFonts.playfairDisplay(
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.espresso,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kTextTitle,
                                 ),
                               ),
                               const Spacer(),
                               InkWell(
-                                onTap: () =>
-                                    context.go('/customer/nutrition-goals'),
+                                onTap: () => context.go('/customer/nutrition-goals'),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 6,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                                   child: Text(
                                     'Edit goals',
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.cherry,
+                                      color: _kPrimary,
                                     ),
                                   ),
                                 ),
@@ -353,12 +370,12 @@ class ProfileScreen extends StatelessWidget {
                             pct: intakePct['sugar'] ?? 0,
                             barColor: _barColor(intakePct['sugar'] ?? 0),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(color: AppColors.sand, height: 1),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Divider(color: _kSoftBg, height: 1),
                           ),
                           FutureBuilder<List<String>>(
-                            future: _loadAllergens(user),
+                            future: _loadAllergens(),
                             builder: (context, snap) {
                               final allergens = snap.data ?? const <String>[];
                               return Row(
@@ -368,7 +385,7 @@ class ProfileScreen extends StatelessWidget {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.cocoa,
+                                      color: _kTextMuted,
                                     ),
                                   ),
                                   const Spacer(),
@@ -377,7 +394,7 @@ class ProfileScreen extends StatelessWidget {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.cherry,
+                                      color: _kPrimary,
                                     ),
                                   ),
                                 ],
@@ -388,7 +405,9 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  _Card(
+
+                  // ── Personal information ───────────────────────────────
+                  _SectionCard(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,43 +416,35 @@ class ProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Personal information',
-                              style: GoogleFonts.dmSerifDisplay(
+                              style: GoogleFonts.playfairDisplay(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
+                                fontWeight: FontWeight.w700,
+                                color: _kTextTitle,
                               ),
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () =>
-                                  context.push(AppRoutes.customerEditProfile),
+                              onPressed: () => context.push(AppRoutes.customerEditProfile),
                               icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.cherry,
+                              color: _kPrimary,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
                           ],
                         ),
-                        _InfoRow(
-                          label: AppStrings.fullName,
-                          value: _fmtText(user?.name),
-                        ),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(
-                          label: 'Date of birth',
-                          value: _fmtDob(user?.dateOfBirth),
-                        ),
-                        const Divider(color: AppColors.sand, height: 1),
+                        _InfoRow(label: AppStrings.fullName, value: _fmtText(user?.name)),
+                        Divider(color: _kSoftBg, height: 1),
+                        _InfoRow(label: 'Date of birth', value: _fmtDob(user?.dateOfBirth)),
+                        Divider(color: _kSoftBg, height: 1),
                         _InfoRow(label: 'Phone', value: _fmtText(user?.phone)),
-                        const Divider(color: AppColors.sand, height: 1),
-                        _InfoRow(
-                          label: 'Gender',
-                          value: _fmtText(user?.gender),
-                        ),
+                        Divider(color: _kSoftBg, height: 1),
+                        _InfoRow(label: 'Gender', value: _fmtText(user?.gender)),
                       ],
                     ),
                   ),
-                  _Card(
+
+                  // ── Health profile ────────────────────────────────────
+                  _SectionCard(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,19 +453,17 @@ class ProfileScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Health profile',
-                              style: GoogleFonts.dmSerifDisplay(
+                              style: GoogleFonts.playfairDisplay(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.espresso,
+                                fontWeight: FontWeight.w700,
+                                color: _kTextTitle,
                               ),
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push(
-                                '${AppRoutes.customerEditProfile}?step=2',
-                              ),
+                              onPressed: () => context.push('${AppRoutes.customerEditProfile}?step=2'),
                               icon: const Icon(Icons.edit_outlined),
-                              color: AppColors.cherry,
+                              color: _kPrimary,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
@@ -465,7 +474,7 @@ class ProfileScreen extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.fog,
+                            color: _kTextMuted,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -478,24 +487,24 @@ class ProfileScreen extends StatelessWidget {
                           emptyStyle: GoogleFonts.inter(
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
-                            color: AppColors.fog,
+                            color: _kTextMuted,
                           ),
                           chipBuilder: (c) => _Chip(
                             text: c,
-                            bg: AppColors.cherryBlush,
-                            border: AppColors.cherry,
-                            fg: AppColors.cherry,
+                            bg: _kSoftBg,
+                            border: _kPrimary.withValues(alpha: 0.4),
+                            fg: _kDeep,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Divider(color: AppColors.sand, height: 1),
+                        Divider(color: _kSoftBg, height: 1),
                         const SizedBox(height: 10),
                         Text(
                           'Dietary preferences',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.fog,
+                            color: _kTextMuted,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -505,40 +514,38 @@ class ProfileScreen extends StatelessWidget {
                           emptyStyle: GoogleFonts.inter(
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
-                            color: AppColors.fog,
+                            color: _kTextMuted,
                           ),
                           chipBuilder: (c) => _Chip(
                             text: c,
-                            bg: AppColors.oliveMist,
-                            border: AppColors.olive,
-                            fg: AppColors.olive,
+                            bg: _kSoftBg,
+                            border: _kPrimary.withValues(alpha: 0.4),
+                            fg: _kDeep,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Divider(color: AppColors.sand, height: 1),
+                        Divider(color: _kSoftBg, height: 1),
                         const SizedBox(height: 10),
                         Text(
                           'Allergens',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.fog,
+                            color: _kTextMuted,
                           ),
                         ),
                         const SizedBox(height: 8),
                         FutureBuilder<List<String>>(
-                          future: _loadAllergens(user),
+                          future: _loadAllergens(),
                           builder: (context, snap) {
-                            final allergens =
-                                (snap.data ?? const <String>[]).toList()
-                                  ..sort();
+                            final allergens = (snap.data ?? const <String>[]).toList()..sort();
                             if (allergens.isEmpty) {
                               return Text(
                                 'No allergens flagged',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontStyle: FontStyle.italic,
-                                  color: AppColors.fog,
+                                  color: _kTextMuted,
                                 ),
                               );
                             }
@@ -549,25 +556,22 @@ class ProfileScreen extends StatelessWidget {
                               children: allergens
                                   .map(
                                     (a) => Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: AppColors.butter,
+                                        color: _kDanger.withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: AppColors.riskModerateText,
+                                          color: _kDanger.withValues(alpha: 0.3),
                                           width: 0.5,
                                         ),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.warning_amber_rounded,
                                             size: 10,
-                                            color: AppColors.riskModerateText,
+                                            color: _kDanger,
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
@@ -575,7 +579,7 @@ class ProfileScreen extends StatelessWidget {
                                             style: GoogleFonts.inter(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w500,
-                                              color: AppColors.riskModerateText,
+                                              color: _kDanger,
                                             ),
                                           ),
                                         ],
@@ -589,207 +593,181 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  _Card(
+
+                  // ── Activity ──────────────────────────────────────────
+                  _SectionCard(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Activity',
-                          style: GoogleFonts.dmSerifDisplay(
+                          style: GoogleFonts.playfairDisplay(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.espresso,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
                           ),
                         ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            Expanded(
-                              child: _MetricTile(
-                                number: '$scansTotal',
-                                label: 'Total scans',
-                              ),
-                            ),
+                            Expanded(child: _MetricTile(number: '$scansTotal', label: 'Total scans')),
                             const SizedBox(width: 10),
-                            Expanded(
-                              child: _MetricTile(
-                                number: '$scansThisWeek',
-                                label: 'This week',
-                              ),
-                            ),
+                            Expanded(child: _MetricTile(number: '$scansThisWeek', label: 'This week')),
                             const SizedBox(width: 10),
-                            Expanded(
-                              child: _MetricTile(
-                                number: avgRiskLabel(),
-                                label: 'Avg risk',
-                              ),
-                            ),
+                            Expanded(child: _MetricTile(number: avgRiskLabel(), label: 'Avg risk')),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  _Card(
+
+                  // ── Settings ──────────────────────────────────────────
+                  _SectionCard(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Settings',
-                          style: GoogleFonts.dmSerifDisplay(
+                          style: GoogleFonts.playfairDisplay(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.espresso,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
                           ),
                         ),
                         const SizedBox(height: 6),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(
-                            alpha: 0.25,
-                          ),
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: _kPrimary,
                           title: Text(
                             'Daily intake summary',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
                           value: user?.notifyDailyIntake ?? true,
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(
-                              existing.copyWith(notifyDailyIntake: v),
-                            );
+                            userProvider.saveProfile(existing.copyWith(notifyDailyIntake: v));
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(
-                            alpha: 0.25,
-                          ),
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: _kPrimary,
                           title: Text(
                             'Allergen alerts',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
                           value: user?.notifyAllergens ?? true,
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(
-                              existing.copyWith(notifyAllergens: v),
-                            );
+                            userProvider.saveProfile(existing.copyWith(notifyAllergens: v));
                           },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: AppColors.cherry,
-                          activeTrackColor: AppColors.cherry.withValues(
-                            alpha: 0.25,
-                          ),
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: _kPrimary,
                           title: Text(
                             'Weekly health report',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
                           value: user?.notifyWeeklyReport ?? true,
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(
-                              existing.copyWith(notifyWeeklyReport: v),
-                            );
+                            userProvider.saveProfile(existing.copyWith(notifyWeeklyReport: v));
                           },
                         ),
-                        const Divider(color: AppColors.sand, height: 1),
+                        Divider(color: _kSoftBg, height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.flag_outlined,
-                            color: AppColors.cherry,
-                          ),
+                          leading: Icon(Icons.flag_outlined, color: _kPrimary),
                           title: Text(
                             'Nutrition goals',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
                           onTap: () => context.go('/customer/nutrition-goals'),
+                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.history,
-                            color: AppColors.cherry,
-                          ),
+                          leading: Icon(Icons.history, color: _kPrimary),
                           title: Text(
                             'Scan history',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
                           onTap: () => context.go(AppRoutes.customerHistory),
+                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.info_outline,
-                            color: AppColors.fog,
-                          ),
+                          leading: Icon(Icons.info_outline, color: _kTextMuted),
                           title: Text(
                             'About the project',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.espresso,
+                              color: _kTextTitle,
                             ),
                           ),
+                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
                           onTap: () {
                             showDialog<void>(
                               context: context,
                               builder: (context) {
                                 return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppRadii.xl),
+                                  ),
                                   title: Text(
                                     'About the project',
-                                    style: GoogleFonts.dmSerifDisplay(
+                                    style: GoogleFonts.playfairDisplay(
                                       fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.espresso,
+                                      fontWeight: FontWeight.w700,
+                                      color: _kTextTitle,
                                     ),
                                   ),
                                   content: Text(
                                     AppStrings.taglineLong,
                                     style: GoogleFonts.inter(
                                       fontSize: 13,
-                                      color: AppColors.cocoa,
+                                      color: _kTextBody,
                                       height: 1.5,
                                     ),
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
+                                      onPressed: () => Navigator.of(context).pop(),
                                       child: Text(
                                         AppStrings.ok,
                                         style: GoogleFonts.inter(
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.cherry,
+                                          color: _kPrimary,
                                         ),
                                       ),
                                     ),
@@ -799,46 +777,38 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
-                        const Divider(color: AppColors.sand, height: 1),
+                        Divider(color: _kSoftBg, height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.delete_outline,
-                            color: AppColors.cherry,
-                          ),
+                          leading: Icon(Icons.delete_outline, color: _kDanger),
                           title: Text(
                             'Clear history',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.cherry,
+                              color: _kDanger,
                             ),
                           ),
                           onTap: () async {
                             final ok = await _confirmDialog(
                               context,
                               title: 'Clear history',
-                              body:
-                                  'This will clear your scan history on this device.',
+                              body: 'This will clear your scan history on this device.',
+                              isDanger: true,
                             );
                             if (!context.mounted || !ok) return;
-                            await context
-                                .read<ScanHistoryProvider>()
-                                .clearAll();
+                            await context.read<ScanHistoryProvider>().clearAll();
                           },
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.logout,
-                            color: AppColors.cherry,
-                          ),
+                          leading: Icon(Icons.logout, color: _kDanger),
                           title: Text(
                             'Sign out',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.cherry,
+                              color: _kDanger,
                             ),
                           ),
                           onTap: () async {
@@ -846,6 +816,7 @@ class ProfileScreen extends StatelessWidget {
                               context,
                               title: 'Sign out',
                               body: 'Are you sure you want to sign out?',
+                              isDanger: true,
                             );
                             if (!context.mounted || !ok) return;
                             await userProvider.logout();
@@ -866,19 +837,6 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _ArcPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.06);
-    final center = Offset(size.width * 0.86, size.height * 0.14);
-    final radius = size.width * 0.78;
-    canvas.drawCircle(center, radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
 class _StatPill extends StatelessWidget {
   final String label;
 
@@ -889,7 +847,7 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.butter.withValues(alpha: 0.12),
+        color: Colors.white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
@@ -897,7 +855,7 @@ class _StatPill extends StatelessWidget {
         style: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: AppColors.butter,
+          color: Colors.white,
           height: 1.2,
         ),
       ),
@@ -905,22 +863,22 @@ class _StatPill extends StatelessWidget {
   }
 }
 
-class _Card extends StatelessWidget {
+class _SectionCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry margin;
 
-  const _Card({required this.child, required this.margin});
+  const _SectionCard({required this.child, required this.margin});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       margin: margin,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        boxShadow: AppShadows.sm(_kPrimary),
       ),
       child: child,
     );
@@ -949,7 +907,7 @@ class _MiniProgressRow extends StatelessWidget {
       height: 36,
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.cocoa),
+          Icon(icon, size: 16, color: _kTextMuted),
           const SizedBox(width: 10),
           SizedBox(
             width: 92,
@@ -958,7 +916,7 @@ class _MiniProgressRow extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.cocoa,
+                color: _kTextBody,
               ),
             ),
           ),
@@ -968,7 +926,7 @@ class _MiniProgressRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
-                backgroundColor: AppColors.oatDeep,
+                backgroundColor: _kSoftBg,
                 valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
             ),
@@ -982,7 +940,7 @@ class _MiniProgressRow extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: AppColors.cherry,
+                color: _kPrimary,
               ),
             ),
           ),
@@ -1010,7 +968,7 @@ class _InfoRow extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: AppColors.fog,
+                color: _kTextMuted,
               ),
             ),
           ),
@@ -1022,7 +980,7 @@ class _InfoRow extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.espresso,
+                color: _kTextTitle,
               ),
             ),
           ),
@@ -1043,18 +1001,17 @@ class _MetricTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.oat,
+        color: _kSoftBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.sand, width: 0.5),
       ),
       child: Column(
         children: [
           Text(
             number,
-            style: GoogleFonts.dmSerifDisplay(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: AppColors.cherry,
+              color: _kPrimary,
               height: 1.0,
             ),
           ),
@@ -1065,7 +1022,7 @@ class _MetricTile extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: AppColors.cocoa,
+              color: _kTextBody,
               height: 1.2,
             ),
           ),

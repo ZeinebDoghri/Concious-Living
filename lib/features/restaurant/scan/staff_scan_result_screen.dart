@@ -1,7 +1,5 @@
-import 'dart:typed_data';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,9 +10,17 @@ import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/olive_header.dart';
-import 'annotated_contamination_image.dart';
-import 'food_contamination_service.dart';
+import '../../../shared/widgets/nutrient_card.dart';
+import '../../../shared/widgets/risk_badge.dart';
+
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary   = Color(0xFFF2A7A7);
+const _rDeep      = Color(0xFFE47878);
+const _rSurface   = Color(0xFFFFF5F5);
+const _rSoftBg    = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextBody  = Color(0xFF7A4040);
+const _rTextMuted = Color(0xFFB08080);
 
 class StaffScanResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -27,7 +33,7 @@ class StaffScanResultScreen extends StatefulWidget {
 
 class _StaffScanResultScreenState extends State<StaffScanResultScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _fadeController;
+  late final AnimationController _nutrientController;
   late final TextEditingController _dishNameController;
 
   bool _saved = false;
@@ -39,17 +45,25 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
     final initialDishName = (widget.args['dishName'] as String?)?.trim() ?? '';
     _dishNameController = TextEditingController(text: initialDishName);
 
-    _fadeController = AnimationController(
+    _nutrientController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1400),
     )..forward();
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    _nutrientController.dispose();
     _dishNameController.dispose();
     super.dispose();
+  }
+
+  NutrientResult _parseResult() {
+    final raw = widget.args['result'];
+    if (raw is Map<String, dynamic>) {
+      return NutrientResult.fromJson(raw);
+    }
+    return NutrientResult.fromJson(const <String, dynamic>{});
   }
 
   void _snack(String message) {
@@ -62,42 +76,16 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
     if (_saved) return;
 
     final dish = _dishNameController.text.trim().isEmpty
-        ? 'Scan Result'
+        ? 'Dish'
         : _dishNameController.text.trim();
 
     final imagePath = (widget.args['imagePath'] as String?)?.trim();
+    final result = _parseResult();
 
     final item = ScanHistoryItem(
       dishName: dish,
       scannedAt: DateTime.now(),
-      result: const NutrientResult(
-        cholesterol: NutrientValue(
-          value: 0,
-          unit: 'mg',
-          dailyValuePct: 0,
-          riskLevel: 'low',
-        ),
-        saturatedFat: NutrientValue(
-          value: 0,
-          unit: 'g',
-          dailyValuePct: 0,
-          riskLevel: 'low',
-        ),
-        sodium: NutrientValue(
-          value: 0,
-          unit: 'mg',
-          dailyValuePct: 0,
-          riskLevel: 'low',
-        ),
-        sugar: NutrientValue(
-          value: 0,
-          unit: 'g',
-          dailyValuePct: 0,
-          riskLevel: 'low',
-        ),
-        overallRisk: 'low',
-        message: 'Restaurant scan saved',
-      ),
+      result: result,
       imagePath: imagePath,
     );
 
@@ -112,131 +100,276 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
   @override
   Widget build(BuildContext context) {
     final imagePath = (widget.args['imagePath'] as String?)?.trim();
-    final imageBytes = widget.args['imageBytes'] as Uint8List?;
-    final freshnessResult = (widget.args['freshnessResult'] as Map<String, dynamic>?) ?? {};
-    final compostResult = (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
-    final contaminationResult = (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
-    final contamination = contaminationResult.isNotEmpty
-        ? FoodAnalysisResult.fromJson(contaminationResult)
-        : null;
+    final result = _parseResult();
+
+    final riskColor = NutrientCard.riskColor(result.overallRisk);
+    final riskBg = NutrientCard.riskBg(result.overallRisk);
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _rSurface,
       body: SafeArea(
         child: Column(
           children: [
-            const OliveHeader(
-              title: 'Analysis Results',
-              subtitle: 'Freshness, compost & contamination insights',
-              showBack: true,
-              height: 140,
+            // ── Pastel header ───────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_rSoftBg, _rSurface],
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                      color: _rPrimary.withValues(alpha: 0.2)),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: _rPrimary.withValues(alpha: 0.3)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _rPrimary.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.arrow_back_ios_new,
+                          color: _rDeep, size: 16),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Scan insights',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: _rTextTitle,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Save for reporting, then jump to Waste or Inventory.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: _rTextMuted,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
                   ),
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                  child: FadeTransition(
-                    opacity: _fadeController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Image Preview
-                        if ((imagePath != null && imagePath.isNotEmpty) || imageBytes != null) ...[
-                          Hero(
-                            tag: 'scan_image',
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(AppRadii.screenCard),
-                              child: AspectRatio(
-                                aspectRatio: 16 / 10,
-                                child: contamination != null && imageBytes != null
-                                    ? AnnotatedContaminationImage(
-                                        imageBytes: imageBytes,
-                                        detections: contamination.detections,
-                                      )
-                                    : imageBytes != null
-                                        ? Image.memory(
-                                            imageBytes,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : kIsWeb
-                                            ? Container(
-                                                color: Colors.grey[300],
-                                                child: const Center(
-                                                  child: Icon(Icons.image),
-                                                ),
-                                              )
-                                            : Image.file(
-                                                File(imagePath!),
-                                                fit: BoxFit.cover,
-                                              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (imagePath != null && imagePath.isNotEmpty) ...[
+                        Hero(
+                          tag: 'scan_image',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: AspectRatio(
+                              aspectRatio: 16 / 10,
+                              child: Image.file(
+                                File(imagePath),
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 18),
-                        ],
-
-                        if (contamination != null) ...[
-                          _buildContaminationCard(contamination, imageBytes),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Dish Name Input
-                        TextField(
-                          controller: _dishNameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Dish / item name',
-                            prefixIcon: Icon(
-                              Icons.restaurant_menu,
-                              color: AppColors.cocoa,
-                            ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      // Dish name field
+                      TextField(
+                        controller: _dishNameController,
+                        style: GoogleFonts.inter(
+                            fontSize: 14, color: _rTextTitle),
+                        decoration: InputDecoration(
+                          labelText: 'Dish / item name',
+                          labelStyle: GoogleFonts.inter(
+                              fontSize: 13, color: _rTextMuted),
+                          prefixIcon: Icon(Icons.restaurant_menu,
+                              color: _rDeep, size: 20),
+                          filled: true,
+                          fillColor: _rSurface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                                color: _rPrimary.withValues(alpha: 0.3)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                                color: _rPrimary.withValues(alpha: 0.3)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide:
+                                const BorderSide(color: _rPrimary, width: 1.5),
                           ),
                         ),
-                        const SizedBox(height: 20),
-
-                        // SECTION 1: FRESHNESS ANALYSIS
-                        _buildFreshnessCard(freshnessResult),
-                        const SizedBox(height: 16),
-
-                        // SECTION 2: COMPOST ANALYSIS
-                        _buildCompostCard(compostResult),
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        AnimatedButton(
-                          label: _saved ? 'Saved' : 'Save scan',
-                          color: _saved ? AppColors.olive : AppColors.olive,
-                          textColor: AppColors.butter,
-                          onTap: _save,
-                          height: 52,
+                      ),
+                      const SizedBox(height: 14),
+                      // Overall signal card
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: riskBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: riskColor.withValues(alpha: 0.25),
+                              width: 0.8),
                         ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => context.go(AppRoutes.restaurantWaste),
-                          icon: const Icon(Icons.delete_outline),
-                          label: const Text('Go to Waste'),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                Icons.insights_outlined,
+                                color: riskColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Overall signal',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _rTextBody,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  RiskBadge(result.overallRisk),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        OutlinedButton.icon(
-                          onPressed: () =>
-                              context.go(AppRoutes.restaurantInventory),
-                          icon: const Icon(Icons.inventory_2_outlined),
-                          label: const Text('Go to Inventory & Expiry'),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Summary',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: _rTextTitle,
+                          height: 1.2,
                         ),
-                        const SizedBox(height: 10),
-                        OutlinedButton(
-                          onPressed: () => context.go(AppRoutes.restaurantScan),
-                          child: const Text('Scan another dish'),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        result.message,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: _rTextBody,
+                          height: 1.6,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 18),
+                      NutrientCard(
+                        name: AppStrings.cholesterolLabel,
+                        value: result.cholesterol.value,
+                        unit: result.cholesterol.unit,
+                        dailyPct: result.cholesterol.dailyValuePct,
+                        riskLevel: result.cholesterol.riskLevel,
+                        controller: _nutrientController,
+                        delay: const Duration(milliseconds: 0),
+                      ),
+                      const SizedBox(height: 12),
+                      NutrientCard(
+                        name: AppStrings.saturatedFatLabel,
+                        value: result.saturatedFat.value,
+                        unit: result.saturatedFat.unit,
+                        dailyPct: result.saturatedFat.dailyValuePct,
+                        riskLevel: result.saturatedFat.riskLevel,
+                        controller: _nutrientController,
+                        delay: const Duration(milliseconds: 150),
+                      ),
+                      const SizedBox(height: 12),
+                      NutrientCard(
+                        name: AppStrings.sodiumLabel,
+                        value: result.sodium.value,
+                        unit: result.sodium.unit,
+                        dailyPct: result.sodium.dailyValuePct,
+                        riskLevel: result.sodium.riskLevel,
+                        controller: _nutrientController,
+                        delay: const Duration(milliseconds: 300),
+                      ),
+                      const SizedBox(height: 12),
+                      NutrientCard(
+                        name: AppStrings.sugarLabel,
+                        value: result.sugar.value,
+                        unit: result.sugar.unit,
+                        dailyPct: result.sugar.dailyValuePct,
+                        riskLevel: result.sugar.riskLevel,
+                        controller: _nutrientController,
+                        delay: const Duration(milliseconds: 450),
+                      ),
+                      const SizedBox(height: 18),
+                      AnimatedButton(
+                        label: _saved ? 'Saved ✓' : 'Save scan',
+                        color: _saved ? const Color(0xFF52C98A) : _rDeep,
+                        textColor: Colors.white,
+                        onTap: _save,
+                        height: 52,
+                      ),
+                      const SizedBox(height: 12),
+                      _OutlinedPastelButton(
+                        icon: Icons.delete_outline,
+                        label: 'Go to Waste',
+                        onTap: () => context.go(AppRoutes.restaurantWaste),
+                      ),
+                      const SizedBox(height: 10),
+                      _OutlinedPastelButton(
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Go to Inventory & Expiry',
+                        onTap: () =>
+                            context.go(AppRoutes.restaurantInventory),
+                      ),
+                      const SizedBox(height: 10),
+                      _OutlinedPastelButton(
+                        icon: Icons.document_scanner_outlined,
+                        label: 'Scan another dish',
+                        onTap: () => context.go(AppRoutes.restaurantScan),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -246,355 +379,45 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
       ),
     );
   }
+}
 
-  Widget _buildFreshnessCard(Map<String, dynamic> result) {
-    final status = (result['status'] as String?)?.toLowerCase() ?? 'unknown';
-    final confidence = (result['confidence'] as num?)?.toDouble() ?? 0.0;
-    final confidencePct = (confidence * 100).toStringAsFixed(1);
+class _OutlinedPastelButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _OutlinedPastelButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
-    // Determine colors and icons based on status
-    Color bgColor;
-    Color iconColor;
-    String statusText;
-    Color borderColor;
-
-    switch (status) {
-      case 'fresh':
-        bgColor = const Color(0xFFF0FFF4);
-        iconColor = const Color(0xFF10B981);
-        statusText = 'Fraîche ✅';
-        borderColor = const Color(0xFFA7F3D0);
-        break;
-      case 'not_fresh':
-        bgColor = const Color(0xFFFFF5F5);
-        iconColor = const Color(0xFFEF4444);
-        statusText = 'Pas Fraîche ❌';
-        borderColor = const Color(0xFFFCA5A5);
-        break;
-      default:
-        bgColor = const Color(0xFFF3F4F6);
-        iconColor = const Color(0xFF6B7280);
-        statusText = 'Non détecté';
-        borderColor = const Color(0xFFD1D5DB);
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(color: borderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: iconColor.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                status == 'fresh'
-                    ? Icons.check_circle_rounded
-                    : status == 'not_fresh'
-                        ? Icons.cancel_rounded
-                        : Icons.help_outline_rounded,
-                color: iconColor,
-                size: 48,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Freshness Analysis 🌡️',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.espresso,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      statusText,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: iconColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Confiance: $confidencePct%',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.cocoa,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Confidence bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: confidence.clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.5),
-              valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompostCard(Map<String, dynamic> result) {
-    final compostablePct = ((result['compostablePct'] as num?)?.toDouble() ?? 0.0)
-        .clamp(0.0, 100.0);
-    final nonCompostablePct = ((result['nonCompostablePct'] as num?)?.toDouble() ?? 0.0)
-        .clamp(0.0, 100.0);
-    final backgroundPct = ((result['backgroundPct'] as num?)?.toDouble() ?? 0.0)
-        .clamp(0.0, 100.0);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(
-          color: const Color(0xFFA7F3D0),
-          width: 1.5,
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: _rSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _rPrimary.withValues(alpha: 0.4)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF10B981).withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.eco_rounded,
-                color: const Color(0xFF10B981),
-                size: 48,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Compost Analysis 🌱',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.espresso,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Segmentation Results',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.cocoa,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Compostable percentage
-          _buildPercentageItem(
-            label: 'Compostable',
-            value: compostablePct,
-            color: const Color(0xFF10B981),
-          ),
-          const SizedBox(height: 10),
-          // Non-compostable percentage
-          _buildPercentageItem(
-            label: 'Non-Compostable',
-            value: nonCompostablePct,
-            color: const Color(0xFFEF4444),
-          ),
-          const SizedBox(height: 10),
-          // Background percentage
-          _buildPercentageItem(
-            label: 'Background',
-            value: backgroundPct,
-            color: const Color(0xFF9CA3AF),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContaminationCard(
-    FoodAnalysisResult result,
-    Uint8List? imageBytes,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: result.isContaminated
-            ? const Color(0xFFFFF5F5)
-            : const Color(0xFFF0FFF4),
-        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(
-          color: result.isContaminated
-              ? const Color(0xFFFCA5A5)
-              : const Color(0xFFA7F3D0),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (result.isContaminated
-                    ? const Color(0xFFEF4444)
-                    : const Color(0xFF10B981))
-                .withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                result.isContaminated
-                    ? Icons.warning_rounded
-                    : Icons.check_circle_rounded,
-                color: result.isContaminated
-                    ? const Color(0xFFEF4444)
-                    : const Color(0xFF10B981),
-                size: 48,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Contamination Analysis 🦠',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.espresso,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      result.isContaminated
-                          ? 'Contamination détectée'
-                          : 'Aucune contamination détectée',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: result.isContaminated
-                            ? const Color(0xFFEF4444)
-                            : const Color(0xFF10B981),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Confiance: ${result.confidence.toStringAsFixed(1)}%',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.cocoa,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (imageBytes != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: AnnotatedContaminationImage(
-                imageBytes: imageBytes,
-                detections: result.detections,
-              ),
-            ),
-            const SizedBox(height: 14),
-          ],
-          Text(
-            result.detectionCount > 0
-                ? '${result.detectionCount} détection(s) trouvée(s)'
-                : 'Aucune boîte YOLO retournée par le modèle',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.cocoa,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPercentageItem({
-    required String label,
-    required double value,
-    required Color color,
-  }) {
-    final displayValue = value.toStringAsFixed(1);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(icon, color: _rDeep, size: 18),
+            const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.cocoa,
-              ),
-            ),
-            Text(
-              '$displayValue%',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _rDeep,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: (value / 100).clamp(0.0, 1.0),
-            minHeight: 5,
-            backgroundColor: color.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

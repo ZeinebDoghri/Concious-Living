@@ -6,7 +6,19 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/olive_header.dart';
+
+// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+const _rPrimary   = Color(0xFFF2A7A7);
+const _rDeep      = Color(0xFFE47878);
+const _rSurface   = Color(0xFFFFF5F5);
+const _rSoftBg    = Color(0xFFFFE4E4);
+const _rTextTitle = Color(0xFF3D1515);
+const _rTextBody  = Color(0xFF7A4040);
+const _rTextMuted = Color(0xFFB08080);
+const _fresh      = Color(0xFF52C98A);
+const _freshBg    = Color(0xFFE8F9F1);
+const _danger     = Color(0xFFFF7070);
+const _dangerBg   = Color(0xFFFFEEEE);
 
 class AlertDetailScreen extends StatelessWidget {
   final String id;
@@ -21,20 +33,22 @@ class AlertDetailScreen extends StatelessWidget {
       barrierDismissible: true,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: AppColors.parchment,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
           title: Text(
             AppStrings.markAsResolved,
-            style: GoogleFonts.dmSerifDisplay(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.espresso,
+              fontWeight: FontWeight.w700,
+              color: _rTextTitle,
             ),
           ),
           content: Text(
             AppStrings.resolveAlertConfirm,
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: AppColors.cocoa,
+              color: _rTextBody,
               height: 1.35,
             ),
           ),
@@ -45,7 +59,7 @@ class AlertDetailScreen extends StatelessWidget {
                 AppStrings.cancel,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.cocoa,
+                  color: _rTextMuted,
                 ),
               ),
             ),
@@ -55,7 +69,7 @@ class AlertDetailScreen extends StatelessWidget {
                 AppStrings.confirm,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.olive,
+                  color: _fresh,
                 ),
               ),
             ),
@@ -85,18 +99,18 @@ class AlertDetailScreen extends StatelessWidget {
 
     if (alert == null) {
       return Scaffold(
-        backgroundColor: AppColors.oat,
+        backgroundColor: _rSurface,
         body: SafeArea(
           child: Column(
             children: [
-              OliveHeader(title: AppStrings.alertDetails, showBack: true),
+              _buildHeader(context, AppStrings.alertDetails),
               Expanded(
                 child: Center(
                   child: Text(
                     AppStrings.alertNotFound,
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: AppColors.cocoa,
+                      color: _rTextMuted,
                     ),
                   ),
                 ),
@@ -110,19 +124,18 @@ class AlertDetailScreen extends StatelessWidget {
     final isPending = alert.status == 'pending';
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
+      backgroundColor: _rSurface,
       body: SafeArea(
         child: Column(
           children: [
-            OliveHeader(title: AppStrings.alertDetails, showBack: true),
+            _buildHeader(context, AppStrings.alertDetails),
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(24),
                   ),
                 ),
                 child: SingleChildScrollView(
@@ -143,7 +156,7 @@ class AlertDetailScreen extends StatelessWidget {
                       _InfoTile(
                         label: AppStrings.allergen,
                         value: alert.allergen,
-                        valueColor: AppColors.cherry,
+                        valueColor: _danger,
                       ),
                       const SizedBox(height: 10),
                       _InfoTile(
@@ -151,17 +164,15 @@ class AlertDetailScreen extends StatelessWidget {
                         value: isPending
                             ? AppStrings.pending
                             : AppStrings.resolved,
-                        valueColor: isPending
-                            ? AppColors.cherry
-                            : AppColors.olive,
+                        valueColor: isPending ? _danger : _fresh,
                       ),
                       const SizedBox(height: 18),
                       Text(
                         AppStrings.recommendedNextSteps,
-                        style: GoogleFonts.dmSerifDisplay(
+                        style: GoogleFonts.playfairDisplay(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.espresso,
+                          fontWeight: FontWeight.w700,
+                          color: _rTextTitle,
                           height: 1.2,
                         ),
                       ),
@@ -174,8 +185,8 @@ class AlertDetailScreen extends StatelessWidget {
                         label: isPending
                             ? AppStrings.markAsResolved
                             : AppStrings.markedResolved,
-                        color: isPending ? AppColors.olive : AppColors.sand,
-                        textColor: isPending ? AppColors.butter : AppColors.cocoa,
+                        color: isPending ? _rDeep : _rSoftBg,
+                        textColor: isPending ? Colors.white : _rTextMuted,
                         onTap: isPending ? () => _resolve(context) : null,
                         height: 52,
                       ),
@@ -183,9 +194,57 @@ class AlertDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, String title) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_rSoftBg, _rSurface],
+        ),
+        border: Border(
+          bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: _rPrimary.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Icon(Icons.arrow_back_ios_new,
+                  color: _rDeep, size: 16),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            title,
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: _rTextTitle,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -207,9 +266,10 @@ class _InfoTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.parchment,
-        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-        border: Border.all(color: AppColors.sand, width: 0.5),
+        color: _rSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
       ),
       child: Row(
         children: [
@@ -219,7 +279,7 @@ class _InfoTile extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.cocoa,
+                color: _rTextMuted,
                 height: 1.2,
               ),
             ),
@@ -232,7 +292,7 @@ class _InfoTile extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: valueColor ?? AppColors.espresso,
+                color: valueColor ?? _rTextTitle,
                 height: 1.2,
               ),
             ),
@@ -255,10 +315,10 @@ class _Bullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 2),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
             child: Icon(Icons.check_circle_outline,
-                size: 16, color: AppColors.olive),
+                size: 16, color: _fresh),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -267,7 +327,7 @@ class _Bullet extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: AppColors.cocoa,
+                color: _rTextBody,
                 height: 1.35,
               ),
             ),

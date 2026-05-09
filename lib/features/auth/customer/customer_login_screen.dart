@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,7 +7,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
-import '../../../shared/widgets/animated_button.dart';
+import '../../../providers/venue_type_provider.dart';
+
+// Customer (violet/lavender) role colors
+const _primary = Color(0xFFA78BFA);
+const _deep = Color(0xFF7C3AED);
+const _softBg = Color(0xFFEDE9FE);
+const _textTitle = Color(0xFF2D1B69);
+const _textMuted = Color(0xFF8B7BC0);
 
 class CustomerLoginScreen extends StatefulWidget {
   const CustomerLoginScreen({super.key});
@@ -21,48 +30,49 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
 
   bool _obscure = true;
   bool _isLoading = false;
+  bool _pressed = false;
 
-  late final AnimationController _cardController;
+  late final AnimationController _blobController;
   late final Animation<Offset> _cardSlide;
 
   @override
   void initState() {
     super.initState();
-    _cardController = AnimationController(
+    _blobController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
-    )..forward();
+      duration: const Duration(seconds: 12),
+    )..repeat();
 
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic),
-    );
+    // card slide-up on load
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _blobController,
+            curve: const Interval(0, 0.04, curve: Curves.easeOutQuart),
+          ),
+        );
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _cardController.dispose();
+    _blobController.dispose();
     super.dispose();
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _readableError(Object e) {
     final message = e.toString();
-    if (message.startsWith('Exception: ')) {
+    if (message.startsWith('Exception: '))
       return message.substring('Exception: '.length);
-    }
-    if (message.startsWith('StateError: ')) {
+    if (message.startsWith('StateError: '))
       return message.substring('StateError: '.length);
-    }
     return message;
   }
 
@@ -84,11 +94,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
     setState(() => _isLoading = true);
 
     try {
+      await context.read<VenueTypeProvider>().clear();
+      if (!mounted) return;
       await context.read<UserProvider>().login(
-            email: email,
-            password: password,
-            role: 'customer',
-          );
+        email: email,
+        password: password,
+        role: 'customer',
+      );
       if (!mounted) return;
       context.go(AppRoutes.customerHome);
     } catch (e) {
@@ -100,211 +112,315 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.cherry),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 56,
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.06),
-                    ),
-                  ),
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            onPressed: () => context.go(AppRoutes.roleSelector),
-                            icon: const Icon(Icons.arrow_back_ios_new),
-                            color: AppColors.cherryHeaderText,
-                            splashColor: AppColors.cherryHeaderText.withValues(alpha: 0.15),
-                          ),
-                          const Spacer(),
-                          Center(
-                            child: Column(
-                              children: [
-                                Text(
-                                  AppStrings.welcomeBack,
-                                  style: GoogleFonts.dmSerifDisplay(
-                                    fontSize: 24,
-                                    color: AppColors.cherryHeaderText,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  AppStrings.signInToContinue,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w400,
-                                    color: AppColors.cherryBlush,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH = screenH * 0.42;
 
-            Expanded(
-              child: SlideTransition(
-                position: _cardSlide,
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.parchment,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
+    return Scaffold(
+      backgroundColor: _primary,
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        children: [
+          // ── Hero zone ────────────────────────────────────────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: heroH,
+            child: Stack(
+              children: [
+                Container(color: _primary),
+                AnimatedBuilder(
+                  animation: _blobController,
+                  builder: (_, __) => CustomPaint(
+                    painter: _BlobPainter(_blobController.value, _primary),
+                    size: Size(double.infinity, heroH),
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          AppStrings.customerSignInTitle,
-                          style: GoogleFonts.dmSerifDisplay(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.cherry,
-                            height: 1.2,
-                          ),
+                        IconButton(
+                          onPressed: () => context.go(AppRoutes.roleSelector),
+                          icon: const Icon(Icons.arrow_back_ios_new),
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          AppStrings.customerSignInSubtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: AppColors.cocoa,
-                            height: 1.6,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: AppStrings.emailAddress,
-                            prefixIcon: const Icon(Icons.email_outlined, color: AppColors.cocoa),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscure,
-                          decoration: InputDecoration(
-                            labelText: AppStrings.password,
-                            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.cocoa),
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(() => _obscure = !_obscure),
-                              icon: Icon(
-                                _obscure ? Icons.visibility : Icons.visibility_off,
-                                color: AppColors.cocoa,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => context.go(AppRoutes.customerForgot),
-                            child: Text(
-                              AppStrings.forgotPassword,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.cherry,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedButton(
-                          label: AppStrings.signIn,
-                          color: AppColors.cherry,
-                          textColor: AppColors.cherryHeaderText,
-                          onTap: _signIn,
-                          isLoading: _isLoading,
-                          height: 52,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Divider(color: AppColors.sand, thickness: 0.5),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                AppStrings.orSignInWith,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: AppColors.cocoa,
-                                  height: 1.2,
+                        const Spacer(),
+                        Center(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Welcome back',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ),
-                            const Expanded(
-                              child: Divider(color: AppColors.sand, thickness: 0.5),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        OutlinedButton(
-                          onPressed: () => context.go(AppRoutes.customerRegister),
-                          child: Text(AppStrings.createAccount),
-                        ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => context.go(AppRoutes.roleSelector),
-                            child: Text(
-                              AppStrings.notACustomer,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.cocoa,
-                                height: 1.2,
+                              const SizedBox(height: 6),
+                              Text(
+                                'Your health journey continues',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // ── Floating card ────────────────────────────────────────────
+          Positioned(
+            top: heroH - 24,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SlideTransition(
+              position: _cardSlide,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                  boxShadow: AppShadows.lg(_primary),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Email
+                      _buildInput(
+                        controller: _emailController,
+                        label: AppStrings.emailAddress,
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password
+                      _buildInput(
+                        controller: _passwordController,
+                        label: AppStrings.password,
+                        icon: Icons.lock_outline,
+                        obscure: _obscure,
+                        onToggleObscure: () =>
+                            setState(() => _obscure = !_obscure),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Forgot password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => context.go(AppRoutes.customerForgot),
+                          child: Text(
+                            AppStrings.forgotPassword,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // CTA
+                      _buildCta(label: 'Sign In', onTap: _signIn),
+
+                      const SizedBox(height: 20),
+
+                      // Create account link
+                      Center(
+                        child: TextButton(
+                          onPressed: () =>
+                              context.go(AppRoutes.customerRegister),
+                          child: Text(
+                            'Create account',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool? obscure,
+    VoidCallback? onToggleObscure,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure ?? false,
+      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        filled: true,
+        fillColor: _softBg,
+        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        suffixIcon: onToggleObscure != null
+            ? IconButton(
+                onPressed: onToggleObscure,
+                icon: Icon(
+                  obscure! ? Icons.visibility : Icons.visibility_off,
+                  color: _textMuted,
+                  size: 20,
+                ),
+              )
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
         ),
       ),
     );
   }
+
+  Widget _buildCta({
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          height: 54,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            gradient: const LinearGradient(
+              colors: [_primary, _deep],
+              begin: Alignment.centerLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _primary.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color primary;
+  _BlobPainter(this.t, this.primary);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    final c1 = Offset(
+      size.width * 0.15 + math.cos(angle) * 20,
+      size.height * 0.35 + math.sin(angle) * 15,
+    );
+    canvas.drawCircle(
+      c1,
+      size.width * 0.5,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)),
+    );
+    final c2 = Offset(
+      size.width * 0.85 + math.sin(angle * 0.7) * 18,
+      size.height * 0.6 + math.cos(angle * 0.7) * 22,
+    );
+    canvas.drawCircle(
+      c2,
+      size.width * 0.4,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)),
+    );
+    final c3 = Offset(
+      size.width * 0.5 + math.cos(angle * 1.4) * 14,
+      size.height * 0.2 + math.sin(angle * 1.4) * 10,
+    );
+    canvas.drawCircle(
+      c3,
+      size.width * 0.3,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) => old.t != t;
 }

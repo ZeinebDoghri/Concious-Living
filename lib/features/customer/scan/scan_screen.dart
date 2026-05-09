@@ -1,21 +1,15 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
-import 'dart:typed_data';
 
 import '../../../core/api_service.dart';
 import '../../../core/constants.dart';
-import '../../../shared/widgets/animated_button.dart';
-import '../../../shared/widgets/cherry_header.dart';
+import '../../../core/models/nutrient_result.dart';
+import '../../../shared/widgets/role_scan_experience.dart';
 import '../allergens/allergy_service.dart';
-import '../nutrition/calorie_provider.dart';
 import '../nutrition/calorie_inference_service.dart';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -24,39 +18,13 @@ class ScanScreen extends StatefulWidget {
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen>
-    with SingleTickerProviderStateMixin {
+class _ScanScreenState extends State<ScanScreen> {
   final _picker = ImagePicker();
-  final _allergyService = AllergyService();
 
   XFile? _selected;
   Uint8List? _selectedBytes;
   bool _isAnalysing = false;
-  String? _allergyError;
   String? _calorieError;
-
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-
-    // Wake up both APIs in the background as soon as screen loads
-    _allergyService.warmUpApi();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CalorieProvider>().warmUpApi();
-    });
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   void _snack(String message) {
     ScaffoldMessenger.of(
@@ -70,75 +38,58 @@ class _ScanScreenState extends State<ScanScreen>
     try {
       final file = await _picker.pickImage(source: source, imageQuality: 90);
       if (file == null) return;
+
+      final imageBytes = await file.readAsBytes();
       if (!mounted) return;
 
       setState(() {
         _selected = file;
-        _selectedBytes = null;
+        _selectedBytes = imageBytes;
         _isAnalysing = true;
-        _allergyError = null;
         _calorieError = null;
       });
 
-      final imageBytes = await file.readAsBytes();
-      if (!mounted) return;
-      setState(() {
-        _selectedBytes = imageBytes;
-      });
+      final allergyFuture = AllergyService()
+          .detectAllergens(
+            imageBytes: imageBytes,
+            filename: file.name.isEmpty ? 'image.jpg' : file.name,
+          )
+          .then<AllergyResult?>((result) => result)
+          .catchError((e) {
+            debugPrint('[CustomerScan] Allergy model error: $e');
+            return null;
+          });
 
-      // Run all three APIs in parallel to save time
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         ApiService.predictNutrients(imageBytes),
-        // Wrap in an async closure so we can return a nullable AllergyResult
-        (() async {
-          try {
-            return await _allergyService.detectAllergens(
-              imageFile: kIsWeb ? null : File(file.path),
-              imageBytes: imageBytes,
-              filename: file.name,
-            );
-          } catch (e) {
-            _allergyError = e.toString();
-            return null;
-          }
-        })(),
-        // Calorie inference in parallel
-        (() async {
-          try {
-            final calorieService = CalorieInferenceService();
-            return await calorieService.predict(imageBytes);
-          } catch (e) {
-            _calorieError = e.toString();
-            debugPrint('[CalorieAPI] $e');
-            return null;
-          }
-        })(),
+        allergyFuture,
+        CalorieInferenceService()
+            .predict(imageBytes)
+            .then<NutritionResult?>((result) => result)
+            .catchError((e) {
+              _calorieError = e.toString();
+              debugPrint('[CustomerScan] Calorie model error: $e');
+              return null;
+            }),
       ]);
 
-      if (!mounted) return;
-      setState(() => _isAnalysing = false);
-
-      final nutrientResult = results[0];
+      final result = results[0] as NutrientResult;
       final allergyResult = results[1] as AllergyResult?;
       final calorieResult = results[2] as NutritionResult?;
+      if (!mounted) return;
+
+      setState(() => _isAnalysing = false);
 
       context.go(
         AppRoutes.customerResult,
         extra: <String, dynamic>{
-          'dishName': allergyResult?.dish ?? 'Dish',
-          'imagePath': kIsWeb ? null : file.path,
+          'dishName': 'Dish',
+          'imagePath': file.path,
           'imageBytes': imageBytes,
-          'result': (nutrientResult as dynamic).toJson(),
-          // Allergy data — null if API failed
-          'allergyDish': allergyResult?.dish,
-          'allergens': allergyResult?.allergens ?? [],
-          'ingredients': allergyResult?.ingredients ?? [],
-          'allergenSource': allergyResult?.allergenSource ?? 'none',
-          'allergyError': _allergyError,
-          'top5': allergyResult?.top5 ?? [],
-          // Calorie data — null if API failed
+          'allergyResult': allergyResult?.toJson(),
           'calorieResult': calorieResult?.toJson(),
           'calorieError': _calorieError,
+          'result': result.toJson(),
         },
       );
     } catch (e) {
@@ -150,234 +101,20 @@ class _ScanScreenState extends State<ScanScreen>
 
   @override
   Widget build(BuildContext context) {
-    final image = _selected;
-
-    return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            CherryHeader(
-              title: AppStrings.scanYourDish,
-              subtitle: AppStrings.centerDishHint,
-              showBack: false,
-            ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppStrings.takePhotoOrUpload,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.cocoa,
-                              height: 1.6,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _PreviewFrame(
-                            imagePath: image?.path,
-                            imageBytes: _selectedBytes,
-                            pulse: _pulseController,
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AnimatedButton(
-                                  label: AppStrings.scanYourDish,
-                                  color: AppColors.cherry,
-                                  textColor: AppColors.butter,
-                                  onTap: () => _pick(ImageSource.camera),
-                                  height: 52,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          OutlinedButton.icon(
-                            onPressed: () => _pick(ImageSource.gallery),
-                            icon: const Icon(Icons.photo_library_outlined),
-                            label: Text(AppStrings.uploadFromGallery),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_isAnalysing)
-                      _AnalysingOverlay(pulse: _pulseController),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PreviewFrame extends StatelessWidget {
-  final String? imagePath;
-  final Uint8List? imageBytes;
-  final Animation<double> pulse;
-
-  const _PreviewFrame({
-    required this.imagePath,
-    required this.imageBytes,
-    required this.pulse,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final path = imagePath;
-
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.oat,
-          borderRadius: BorderRadius.circular(AppRadii.screenCard),
-          border: Border.all(color: AppColors.sand, width: 1),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.screenCard),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (imageBytes != null)
-                Image.memory(imageBytes!, fit: BoxFit.cover)
-              else if (path != null && !kIsWeb)
-                Image.file(File(path), fit: BoxFit.cover)
-              else
-                Container(
-                  color: AppColors.oat,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.camera_alt_outlined,
-                    size: 56,
-                    color: AppColors.cocoa,
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: AnimatedBuilder(
-                  animation: pulse,
-                  builder: (context, _) {
-                    final v = (0.35 + (pulse.value * 0.35)).clamp(0.0, 1.0);
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppRadii.innerCard),
-                        border: Border.all(
-                          color: AppColors.butter.withValues(alpha: v),
-                          width: 2,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  margin: const EdgeInsets.only(top: 14),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.espresso.withValues(alpha: 0.55),
-                    borderRadius: BorderRadius.circular(AppRadii.badge),
-                  ),
-                  child: Text(
-                    AppStrings.centerDishHint,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.cream,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AnalysingOverlay extends StatelessWidget {
-  final Animation<double> pulse;
-
-  const _AnalysingOverlay({required this.pulse});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.espresso.withValues(alpha: 0.45),
-      child: Center(
-        child: AnimatedBuilder(
-          animation: pulse,
-          builder: (context, _) {
-            final scale = 0.95 + (pulse.value * 0.03);
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: 240,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.circular(AppRadii.screenCard),
-                  border: Border.all(color: AppColors.sand, width: 0.5),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 4),
-                    const CircularProgressIndicator(color: AppColors.cherry),
-                    const SizedBox(height: 14),
-                    Text(
-                      AppStrings.analysingDish,
-                      style: GoogleFonts.dmSerifDisplay(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.espresso,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      AppStrings.takePhotoOrUpload,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.cocoa,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+    return RoleScanExperience(
+      role: ScanExperienceRole.customer,
+      title: 'Food Label Scan',
+      subtitle: 'Nutrition and allergen detection',
+      hint: 'Point at a food label...',
+      liveTitle: 'Nutrition scan',
+      liveSubtitle: 'Calories, allergens, and chronic risk',
+      imagePath: _selected?.path,
+      imageBytes: _selectedBytes,
+      isLoading: _isAnalysing,
+      onBack: () => context.pop(),
+      onCameraTap: () => _pick(ImageSource.camera),
+      onGalleryTap: () => _pick(ImageSource.gallery),
+      onInfoTap: () => _snack('Scan a clear food label or meal photo.'),
     );
   }
 }

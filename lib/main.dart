@@ -14,9 +14,8 @@ import 'providers/inventory_provider.dart';
 import 'providers/scan_history_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/venue_type_provider.dart';
+import 'shared/animations/role_animated_background.dart';
 import 'theme/app_theme.dart';
-import 'features/customer/allergens/allergy_service.dart';
-import 'features/customer/nutrition/calorie_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,9 +28,6 @@ Future<void> main() async {
       persistenceEnabled: false,
     );
   }
-
-  // Wake up the HuggingFace Space early so it's ready when user scans
-  AllergyService().warmUpApi();
 
   runApp(const ConsciousLivingApp());
 }
@@ -46,6 +42,22 @@ class ConsciousLivingApp extends StatefulWidget {
 class _ConsciousLivingAppState extends State<ConsciousLivingApp> {
   late final router = createAppRouter();
 
+  AmbientRole _ambientRole(String role) {
+    return switch (role) {
+      'restaurant' => AmbientRole.restaurant,
+      'hotel' => AmbientRole.hotel,
+      _ => AmbientRole.customer,
+    };
+  }
+
+  int _ambientSeed(String role) {
+    return switch (role) {
+      'restaurant' => 2,
+      'hotel' => 4,
+      _ => 1,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -57,13 +69,25 @@ class _ConsciousLivingAppState extends State<ConsciousLivingApp> {
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => CompostProvider()),
         ChangeNotifierProvider(create: (_) => ContaminationProvider()),
-        ChangeNotifierProvider(create: (_) => CalorieProvider()),
       ],
-      child: MaterialApp.router(
-        title: AppStrings.appName,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme(),
-        routerConfig: router,
+      child: Consumer<VenueTypeProvider>(
+        builder: (context, venueType, _) {
+          final role = venueType.venueType.isEmpty
+              ? 'customer'
+              : venueType.venueType;
+          return MaterialApp.router(
+            title: AppStrings.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(role: role),
+            routerConfig: router,
+            builder: (context, child) => RoleAnimatedBackground(
+              role: _ambientRole(role),
+              activeIndex: _ambientSeed(role),
+              intensity: 1.45,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          );
+        },
       ),
     );
   }

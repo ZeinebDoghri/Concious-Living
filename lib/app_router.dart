@@ -28,42 +28,41 @@ import 'features/hotel/dashboard/hotel_dashboard_screen.dart';
 import 'features/hotel/hotel_shell.dart';
 import 'features/hotel/profile/edit_hotel_profile_screen.dart';
 import 'features/hotel/profile/hotel_profile_screen.dart';
+import 'features/hotel/scan/hotel_contamination_result_screen.dart';
+import 'features/hotel/scan/hotel_contamination_scan_screen.dart';
+import 'features/hotel/scan/hotel_result_screen.dart';
+import 'features/hotel/scan/hotel_scan_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/restaurant/alerts/alert_detail_screen.dart';
 import 'features/restaurant/alerts/alerts_screen.dart';
 import 'features/restaurant/dashboard/dashboard_screen.dart';
+import 'features/restaurant/expiry_date.dart';
 import 'features/restaurant/inventory/inventory_item_screen.dart';
 import 'features/restaurant/inventory/inventory_screen.dart';
 import 'features/restaurant/profile/edit_restaurant_profile_screen.dart';
 import 'features/restaurant/profile/restaurant_profile_screen.dart';
 import 'features/restaurant/restaurant_shell.dart';
+import 'features/restaurant/scan/contamination_result_screen.dart';
+import 'features/restaurant/scan/contamination_scan_screen.dart';
+import 'features/restaurant/scan/food_contamination_service.dart';
 import 'features/restaurant/scan/staff_result_screen.dart';
 import 'features/restaurant/scan/staff_scan_screen.dart';
-import 'features/restaurant/scan/contamination_scan_screen.dart';
-import 'features/restaurant/scan/contamination_result_screen.dart';
-import 'features/restaurant/scan/food_contamination_service.dart';
-import 'features/hotel/scan/hotel_contamination_scan_screen.dart';
-import 'features/hotel/scan/hotel_contamination_result_screen.dart';
-import 'features/hotel/scan/hotel_scan_screen.dart';
-import 'features/hotel/scan/hotel_result_screen.dart';
 import 'features/restaurant/waste/compost_screen.dart';
-import 'features/restaurant/expiry_date.dart';
-import 'features/freshness/freshness_check.dart';
 import 'features/restaurant/waste/waste_screen.dart';
 import 'features/role_selector/role_selector_screen.dart';
 import 'features/splash/splash_screen.dart';
 
-CustomTransitionPage<T> slidePage<T>({
-  required Widget child,
-  LocalKey? key,
-}) {
+CustomTransitionPage<T> slidePage<T>({required Widget child, LocalKey? key}) {
   return CustomTransitionPage<T>(
     key: key,
     transitionDuration: const Duration(milliseconds: 350),
     reverseTransitionDuration: const Duration(milliseconds: 350),
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
       final tween = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero);
       return SlideTransition(position: tween.animate(curved), child: child);
     },
@@ -80,11 +79,13 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        pageBuilder: (context, state) => slidePage(child: const OnboardingScreen()),
+        pageBuilder: (context, state) =>
+            slidePage(child: const OnboardingScreen()),
       ),
       GoRoute(
         path: AppRoutes.roleSelector,
-        pageBuilder: (context, state) => slidePage(child: const RoleSelectorScreen()),
+        pageBuilder: (context, state) =>
+            slidePage(child: const RoleSelectorScreen()),
       ),
 
       GoRoute(
@@ -106,80 +107,17 @@ GoRouter createAppRouter() {
         path: AppRoutes.customerProfileSetup,
         pageBuilder: (context, state) {
           final extra = state.extra;
-          final args = extra is Map<String, dynamic> ? extra : <String, dynamic>{};
+          final args = extra is Map<String, dynamic>
+              ? extra
+              : <String, dynamic>{};
           return slidePage(child: CustomerProfileSetupScreen(args: args));
         },
       ),
 
       GoRoute(
         path: AppRoutes.restaurantProfileEdit,
-        pageBuilder: (context, state) => slidePage(child: const EditRestaurantProfileScreen()),
-      ),
-      // ── Hotel shell ─────────────────────────────────────────────────────────
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          return HotelShell(navigationShell: navigationShell);
-        },
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.hotelDashboard,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const HotelDashboardScreen()),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.hotelScan,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const HotelScanScreen()),
-              ),
-              GoRoute(
-                path: AppRoutes.hotelScanResult,
-                pageBuilder: (context, state) {
-                  final extra = state.extra;
-                  final args = extra is Map<String, dynamic>
-                      ? extra
-                      : <String, dynamic>{};
-                  return slidePage(child: HotelResultScreen(args: args));
-                },
-              ),
-              GoRoute(
-                path: AppRoutes.hotelContaminationScan,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const HotelContaminationScanScreen()),
-              ),
-              GoRoute(
-                path: AppRoutes.hotelContaminationResult,
-                pageBuilder: (context, state) {
-                  final result = state.extra;
-                  return slidePage(
-                    child: HotelContaminationResultScreen(
-                      payload: result as ContaminationScanResultPayload,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.hotelProfile,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const HotelProfileScreen()),
-              ),
-              GoRoute(
-                path: AppRoutes.hotelProfileEdit,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const EditHotelProfileScreen()),
-              ),
-            ],
-          ),
-        ],
+        pageBuilder: (context, state) =>
+            slidePage(child: const EditRestaurantProfileScreen()),
       ),
 
       GoRoute(
@@ -201,18 +139,22 @@ GoRouter createAppRouter() {
         path: AppRoutes.restaurantSetup,
         pageBuilder: (context, state) {
           final extra = state.extra;
-          final args = extra is Map<String, dynamic> ? extra : <String, dynamic>{};
+          final args = extra is Map<String, dynamic>
+              ? extra
+              : <String, dynamic>{};
           return slidePage(child: RestaurantSetupScreen(args: args));
         },
       ),
 
       GoRoute(
         path: AppRoutes.hotelLogin,
-        pageBuilder: (context, state) => slidePage(child: const HotelLoginScreen()),
+        pageBuilder: (context, state) =>
+            slidePage(child: const HotelLoginScreen()),
       ),
       GoRoute(
         path: AppRoutes.hotelRegister,
-        pageBuilder: (context, state) => slidePage(child: const HotelRegisterScreen()),
+        pageBuilder: (context, state) =>
+            slidePage(child: const HotelRegisterScreen()),
       ),
       GoRoute(
         path: AppRoutes.hotelForgotPassword,
@@ -223,7 +165,9 @@ GoRouter createAppRouter() {
         path: AppRoutes.hotelSetup,
         pageBuilder: (context, state) {
           final extra = state.extra;
-          final args = extra is Map<String, dynamic> ? extra : <String, dynamic>{};
+          final args = extra is Map<String, dynamic>
+              ? extra
+              : <String, dynamic>{};
           return slidePage(child: HotelSetupScreen(args: args));
         },
       ),
@@ -253,7 +197,9 @@ GoRouter createAppRouter() {
                 path: AppRoutes.customerResult,
                 pageBuilder: (context, state) {
                   final extra = state.extra;
-                  final args = extra is Map<String, dynamic> ? extra : <String, dynamic>{};
+                  final args = extra is Map<String, dynamic>
+                      ? extra
+                      : <String, dynamic>{};
                   return slidePage(child: ResultScreen(args: args));
                 },
               ),
@@ -293,7 +239,8 @@ GoRouter createAppRouter() {
               ),
               GoRoute(
                 path: AppRoutes.customerEditProfile,
-                pageBuilder: (context, state) => slidePage(child: const EditProfileScreen()),
+                pageBuilder: (context, state) =>
+                    slidePage(child: const EditProfileScreen()),
               ),
               GoRoute(
                 path: AppRoutes.nutritionGoals,
@@ -309,6 +256,78 @@ GoRouter createAppRouter() {
                 path: AppRoutes.healthGoals,
                 pageBuilder: (context, state) =>
                     slidePage(child: const HealthGoalsScreen()),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return HotelShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelDashboard,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelDashboardScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelScan,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelScanScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelScanResult,
+                pageBuilder: (context, state) {
+                  final extra = state.extra;
+                  final args = extra is Map<String, dynamic>
+                      ? extra
+                      : <String, dynamic>{};
+                  return slidePage(child: HotelResultScreen(args: args));
+                },
+              ),
+              GoRoute(
+                path: AppRoutes.hotelContaminationScan,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelContaminationScanScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelContaminationResult,
+                pageBuilder: (context, state) {
+                  final extra = state.extra;
+                  if (extra is ContaminationScanResultPayload) {
+                    return slidePage(
+                      child: HotelContaminationResultScreen(payload: extra),
+                    );
+                  }
+                  return slidePage(child: const HotelContaminationScanScreen());
+                },
+              ),
+              GoRoute(
+                path: AppRoutes.hotelExpiryDate,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const ExpiryDatePage()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelProfile,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelProfileScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelProfileEdit,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const EditHotelProfileScreen()),
               ),
             ],
           ),
@@ -354,13 +373,19 @@ GoRouter createAppRouter() {
               GoRoute(
                 path: AppRoutes.restaurantContaminationResult,
                 pageBuilder: (context, state) {
-                  final result = state.extra;
-                  return slidePage(
-                    child: ContaminationResultScreen(
-                      payload: result as ContaminationScanResultPayload,
-                    ),
-                  );
+                  final extra = state.extra;
+                  if (extra is ContaminationScanResultPayload) {
+                    return slidePage(
+                      child: ContaminationResultScreen(payload: extra),
+                    );
+                  }
+                  return slidePage(child: const ContaminationScanScreen());
                 },
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantFreshnessCheck,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const StaffScanScreen()),
               ),
             ],
           ),
@@ -397,16 +422,6 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) =>
                     slidePage(child: const CompostScreen()),
               ),
-              GoRoute(
-                path: AppRoutes.restaurantExpiryDate,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const ExpiryDatePage()),
-              ),
-              GoRoute(
-                path: AppRoutes.restaurantFreshnessCheck,
-                pageBuilder: (context, state) =>
-                    slidePage(child: const FreshnessCheckPage()),
-              ),
             ],
           ),
           StatefulShellBranch(
@@ -422,6 +437,11 @@ GoRouter createAppRouter() {
                   final id = state.pathParameters['id'] ?? '';
                   return slidePage(child: InventoryItemScreen(id: id));
                 },
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantExpiryDate,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const ExpiryDatePage()),
               ),
             ],
           ),

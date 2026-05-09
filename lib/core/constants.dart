@@ -1,28 +1,90 @@
 import 'package:flutter/material.dart';
 
+// ── FreshGuard v2 — Pastel Vibrant Design System ────────────────────────────
+
+class FreshGuardTheme {
+  // Restaurant — Rose Corail & Creme
+  static const restaurantPrimary = Color(0xFFF2A7A7);
+  static const restaurantDeep = Color(0xFFE47878);
+  static const restaurantSurface = Color(0xFFFFF5F5);
+  static const restaurantCardBg = Color(0xFFFFFFFF);
+  static const restaurantSoftPink = Color(0xFFFFE4E4);
+  static const restaurantCream = Color(0xFFFFF8F0);
+  static const restaurantTextTitle = Color(0xFF3D1515);
+  static const restaurantTextBody = Color(0xFF7A4040);
+  static const restaurantTextMuted = Color(0xFFB08080);
+  static const restaurantAiDark = Color(0xFF3D1515);
+  static const restaurantAiLight = Color(0xFFFFD6D6);
+  static const restaurantHeroBlob1 = Color(0xFFFFB8B8);
+  static const restaurantHeroBlob2 = Color(0xFFFFD6D6);
+
+  // Hotel — Vert Sauge & Ivoire
+  static const hotelPrimary = Color(0xFF7DC5A0);
+  static const hotelDeep = Color(0xFF4A8A6A);
+  static const hotelSurface = Color(0xFFF4FAF7);
+  static const hotelCardBg = Color(0xFFFFFFFF);
+  static const hotelSoftGreen = Color(0xFFDFF2E9);
+  static const hotelMint = Color(0xFFEDF7F3);
+  static const hotelTextTitle = Color(0xFF0D2E1E);
+  static const hotelTextBody = Color(0xFF3A6A52);
+  static const hotelTextMuted = Color(0xFF7AAA90);
+  static const hotelAiDark = Color(0xFF0D2E1E);
+  static const hotelAiLight = Color(0xFFC8EDD9);
+  static const hotelHeroBlob1 = Color(0xFFA8DCBE);
+  static const hotelHeroBlob2 = Color(0xFFC8EDD9);
+
+  // Customer — Violet Lavande & Blanc
+  static const customerPrimary = Color(0xFFA78BFA);
+  static const customerDeep = Color(0xFF7C3AED);
+  static const customerSurface = Color(0xFFF5F3FF);
+  static const customerCardBg = Color(0xFFFFFFFF);
+  static const customerSoftLavender = Color(0xFFEDE9FE);
+  static const customerLilac = Color(0xFFF3F0FF);
+  static const customerTextTitle = Color(0xFF2D1B69);
+  static const customerTextBody = Color(0xFF4B3B8C);
+  static const customerTextMuted = Color(0xFF8B7BC0);
+  static const customerAiDark = Color(0xFF2D1B69);
+  static const customerAiLight = Color(0xFFDDD6FE);
+  static const customerHeroBlob1 = Color(0xFFC4B5FD);
+  static const customerHeroBlob2 = Color(0xFFDDD6FE);
+
+  // Semantic colors (shared)
+  static const fresh = Color(0xFF52C98A);
+  static const warning = Color(0xFFFFAB5B);
+  static const danger = Color(0xFFFF7070);
+  static const alertBg = Color(0xFFFFF0F0);
+  static const alertBorder = Color(0xFFFFB3B3);
+  static const yellow = Color(0xFFFFE566);
+  static const sky = Color(0xFF7DD3FC);
+  static const peach = Color(0xFFFBBF8A);
+}
+
 class AppColors {
-  // Primary palette (brand)
+  static const primary = FreshGuardTheme.restaurantPrimary;
+  static const secondary = FreshGuardTheme.restaurantDeep;
+  static const danger = FreshGuardTheme.danger;
+  static const textSecondary = cocoa;
+  static const cardBackground = parchment;
+  static const cardBackgroundAlt = cream;
+  static const borderLight = sand;
+
   static const cherry = Color(0xFF8B1A1F);
   static const cherryDark = Color(0xFF6B1215);
   static const cherryLight = Color(0xFFB03A3F);
   static const cherryBlush = Color(0xFFFDEAEB);
-
   static const cherryHeaderText = Color(0xFFFFF8EE);
 
   static const olive = Color(0xFF5A7A18);
   static const oliveDark = Color(0xFF445C12);
   static const oliveLight = Color(0xFF7A9E22);
   static const oliveMist = Color(0xFFE8F3CC);
-
   static const oliveHeaderText = Color(0xFFF5FAE8);
 
   static const butter = Color(0xFFFFF3C4);
   static const butterDeep = Color(0xFFDDB93A);
-
   static const oat = Color(0xFFF7F2EC);
   static const oatDeep = Color(0xFFEDE5D8);
 
-  // Extended neutrals
   static const parchment = Color(0xFFFFFFFF);
   static const sand = Color(0xFFE8DDD2);
   static const cocoa = Color(0xFF6B4F52);
@@ -30,28 +92,31 @@ class AppColors {
   static const cream = Color(0xFFFDFAF7);
   static const fog = Color(0xFFA89698);
 
-  // Semantic backgrounds (lightened)
   static const riskLowBg = oliveMist;
   static const riskModerateBg = butter;
   static const riskHighBg = cherryBlush;
-
   static const freshnessFreshBg = riskLowBg;
   static const freshnessWarnBg = riskModerateBg;
   static const freshnessBadBg = riskHighBg;
 
-  // Semantic
   static const riskModerateText = Color(0xFF7A5E00);
   static const infoText = Color(0xFF185FA5);
   static const infoBg = Color(0xFFE6F1FB);
 }
 
 class AppRadii {
-  static const screenCard = 20.0;
-  static const innerCard = 16.0;
-  static const button = 12.0;
-  static const chip = 8.0;
-  static const badge = 6.0;
-  static const input = 12.0;
+  static const xl = 32.0;
+  static const lg = 24.0;
+  static const md = 16.0;
+  static const sm = 12.0;
+  static const xs = 8.0;
+  static const pill = 999.0;
+  static const screenCard = 32.0;
+  static const innerCard = 24.0;
+  static const button = 999.0;
+  static const chip = 999.0;
+  static const badge = 999.0;
+  static const input = 16.0;
 }
 
 class AppSpacing {
@@ -63,6 +128,42 @@ class AppSpacing {
   static const x24 = 24.0;
   static const x32 = 32.0;
   static const x48 = 48.0;
+}
+
+class AppShadows {
+  static List<BoxShadow> sm(Color primary) => [
+    BoxShadow(
+      color: primary.withValues(alpha: 0.08),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
+    ),
+  ];
+
+  static List<BoxShadow> md(Color primary) => [
+    BoxShadow(
+      color: primary.withValues(alpha: 0.12),
+      blurRadius: 20,
+      offset: const Offset(0, 6),
+    ),
+  ];
+
+  static List<BoxShadow> lg(Color primary) => [
+    BoxShadow(
+      color: primary.withValues(alpha: 0.18),
+      blurRadius: 40,
+      offset: const Offset(0, 12),
+    ),
+  ];
+}
+
+class AppDurations {
+  static const xs = Duration(milliseconds: 80);
+  static const sm = Duration(milliseconds: 150);
+  static const md = Duration(milliseconds: 250);
+  static const lg = Duration(milliseconds: 400);
+  static const xl = Duration(milliseconds: 600);
+  static const stat = Duration(milliseconds: 800);
+  static const hero = Duration(milliseconds: 500);
 }
 
 class AppLimits {
@@ -112,30 +213,31 @@ class AppRoutes {
   static const restaurantDashboard = '/restaurant/dashboard';
   static const restaurantScan = '/restaurant/scan';
   static const restaurantScanResult = '/restaurant/scan/result';
-  static const restaurantContaminationScan = '/restaurant/contamination-scan';
-  static const restaurantContaminationResult = '/restaurant/contamination-result';
+  static const restaurantContaminationScan = '/restaurant/scan/contamination';
+  static const restaurantContaminationResult =
+      '/restaurant/scan/contamination/result';
+  static const restaurantFreshnessCheck = '/restaurant/scan/freshness';
+  static const restaurantExpiryDate = '/restaurant/expiry-date';
   static const restaurantAlerts = '/restaurant/alerts';
   static const restaurantWaste = '/restaurant/waste';
   static const restaurantCompost = '/restaurant/compost';
-  static const restaurantExpiryDate = '/expiry-date';
-  static const restaurantFreshnessCheck = '/freshness-check';
   static const restaurantInventory = '/restaurant/inventory';
   static const restaurantProfile = '/restaurant/profile';
   static const restaurantProfileEdit = '/restaurant/profile/edit';
 
   static const hotelDashboard = '/hotel/dashboard';
-  static const hotelProfile = '/hotel/profile';
-  static const hotelProfileEdit = '/hotel/profile/edit';
   static const hotelScan = '/hotel/scan';
   static const hotelScanResult = '/hotel/scan/result';
-  static const hotelContaminationScan = '/hotel/contamination-scan';
-  static const hotelContaminationResult = '/hotel/contamination-result';
+  static const hotelContaminationScan = '/hotel/scan/contamination';
+  static const hotelContaminationResult = '/hotel/scan/contamination/result';
+  static const hotelExpiryDate = '/hotel/expiry-date';
+  static const hotelProfile = '/hotel/profile';
+  static const hotelProfileEdit = '/hotel/profile/edit';
 
   static String customerHistoryDetail(String id) => '/customer/history/$id';
-
   static String restaurantAlertDetail(String id) => '/restaurant/alert/$id';
-
-  static String restaurantInventoryItem(String id) => '/restaurant/inventory/$id';
+  static String restaurantInventoryItem(String id) =>
+      '/restaurant/inventory/$id';
 }
 
 class AppData {
@@ -155,8 +257,8 @@ class AppData {
 }
 
 class AppStrings {
-  static const appNameUpper = 'CONSCIOUS LIVING';
-  static const appName = 'Conscious Living';
+  static const appNameUpper = 'FRESHGUARD';
+  static const appName = 'FreshGuard';
   static const tagline = 'Eat smart. Waste less.';
   static const taglineLong = 'Eat smart · Waste less · Live better';
 
@@ -169,12 +271,16 @@ class AppStrings {
   static const iAmCustomer = "I'm a Customer";
   static const iAmRestaurant = "I'm Restaurant Staff";
   static const iAmHotel = "I'm Hotel Staff";
-  static const customerCardSubtitle = 'Scan dishes · Track nutrition · Allergen alerts';
-  static const restaurantCardSubtitle = 'Waste monitoring · Food safety · Inventory alerts';
-  static const hotelCardSubtitle = 'Room service · Guest health · Kitchen alerts';
+  static const customerCardSubtitle =
+      'Scan dishes · Track nutrition · Allergen alerts';
+  static const restaurantCardSubtitle =
+      'Waste monitoring · Food safety · Inventory alerts';
+  static const hotelCardSubtitle =
+      'Room service · Guest health · Kitchen alerts';
 
   static const chooseBusinessType = 'Choose business type';
-  static const chooseBusinessTypeSubtitle = 'Select what kind of place you manage.';
+  static const chooseBusinessTypeSubtitle =
+      'Select what kind of place you manage.';
   static const restaurant = 'Restaurant';
   static const hotel = 'Hotel';
 
@@ -195,7 +301,7 @@ class AppStrings {
   static const notRestaurantStaff = 'Not restaurant staff?';
 
   static const createYourAccount = 'Create your account';
-  static const joinToday = 'Join Conscious Living today';
+  static const joinToday = 'Join FreshGuard today';
   static const fullName = 'Full name';
   static const confirmPassword = 'Confirm password';
   static const createAccountCta = 'Create account';
@@ -206,12 +312,14 @@ class AppStrings {
 
   static const resetPassword = 'Reset password';
   static const resetYourPassword = 'Reset password';
-  static const resetPasswordSubtitle = "Enter your email and we'll send a reset link.";
+  static const resetPasswordSubtitle =
+      "Enter your email and we'll send a reset link.";
   static const enterYourEmail = "Enter your email and we'll send a reset link.";
   static const checkYourEmail = 'Check your email';
   static const resetEmailSent = 'We sent a reset link to your inbox.';
   static const forgotYourPasswordTitle = 'Forgot your password?';
-  static const forgotYourPasswordBody = "Enter your email and we'll send a reset link.";
+  static const forgotYourPasswordBody =
+      "Enter your email and we'll send a reset link.";
   static const sendResetLink = 'Send reset link';
   static const resetSentTitle = 'Reset link sent!';
   static const resetSentBody = 'Check your inbox and follow the instructions.';
@@ -259,10 +367,12 @@ class AppStrings {
   static const scanAgain = 'Scan again';
 
   static const myAllergenProfile = 'My allergen profile';
-  static const allergenBanner = 'Your allergens are flagged every time you scan a dish.';
+  static const allergenBanner =
+      'Your allergens are flagged every time you scan a dish.';
   static const myAllergens = 'My allergens';
   static const noAllergensTitle = 'No allergens registered';
-  static const noAllergensSubtitle = 'Update your health profile to add allergens';
+  static const noAllergensSubtitle =
+      'Update your health profile to add allergens';
   static const editAllergenProfile = 'Edit allergen profile';
   static const recentAllergenWarnings = 'Recent allergen warnings';
   static const allergenInformation = 'Allergen information';
@@ -338,11 +448,15 @@ class AppStrings {
   static const allergen = 'Allergen';
   static const status = 'Status';
   static const recommendedNextSteps = 'Recommended next steps';
-  static const stepConfirmWithCustomer = 'Confirm the allergen with the customer.';
-  static const stepCheckIngredients = 'Check the ingredient list and prep surfaces.';
-  static const stepSanitizeStation = 'Sanitize the station and prevent cross-contact.';
+  static const stepConfirmWithCustomer =
+      'Confirm the allergen with the customer.';
+  static const stepCheckIngredients =
+      'Check the ingredient list and prep surfaces.';
+  static const stepSanitizeStation =
+      'Sanitize the station and prevent cross-contact.';
 
-  static const resolveAlertConfirm = 'This will mark the alert as resolved. You can undo it.';
+  static const resolveAlertConfirm =
+      'This will mark the alert as resolved. You can undo it.';
 
   static const remove = 'Remove';
   static const keep = 'Keep';
@@ -374,7 +488,8 @@ class AppStrings {
   static const daysAgo = 'd ago';
 
   static const validationInvalidEmail = 'Please enter a valid email.';
-  static const validationPasswordMin = 'Password must be at least 6 characters.';
+  static const validationPasswordMin =
+      'Password must be at least 6 characters.';
   static const validationRequiredField = 'This field is required.';
   static const validationPasswordsMismatch = 'Passwords do not match';
   static const genericError = 'Something went wrong. Please try again.';
@@ -386,21 +501,15 @@ class AppStrings {
   }
 
   static String kcal(int value) => '$value kcal';
-
   static String expiresOn(String date) => 'Expires: $date';
-
-  static String expiringSoonUseBefore(String date) => 'Expiring soon. Use before $date';
-
+  static String expiringSoonUseBefore(String date) =>
+      'Expiring soon. Use before $date';
   static String savedOnDate(String date) => '$savedOn $date';
-
   static String unresolvedCount(int count) => '[$count] $unresolved';
-
-  static String itemsNeedAttentionCount(int count) => '[$count] $itemsNeedAttention';
-
-  static String containsAllergen(String allergen) => '⚠ Contains $allergen';
-
-  static String allergenDetected(String allergen) => '⚠ $allergen detected';
-
+  static String itemsNeedAttentionCount(int count) =>
+      '[$count] $itemsNeedAttention';
+  static String containsAllergen(String allergen) => 'Contains $allergen';
+  static String allergenDetected(String allergen) => '$allergen detected';
   static String percent(int value) => '$value%';
 
   static const freshnessFresh = 'Fresh';

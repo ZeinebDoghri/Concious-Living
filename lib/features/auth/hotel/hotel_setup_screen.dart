@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,15 @@ import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 
+// Hotel (green/sage) role colors
+const _primary   = Color(0xFF7DC5A0);
+const _deep      = Color(0xFF4A8A6A);
+const _surface   = Color(0xFFF4FAF7);
+const _softBg    = Color(0xFFDFF2E9);
+const _textTitle = Color(0xFF0D2E1E);
+const _textBody  = Color(0xFF3A6A52);
+const _textMuted = Color(0xFF7AAA90);
+
 class HotelSetupScreen extends StatefulWidget {
   final Map<String, dynamic>? args;
 
@@ -22,7 +32,7 @@ class HotelSetupScreen extends StatefulWidget {
 
 class _HotelSetupScreenState extends State<HotelSetupScreen>
     with TickerProviderStateMixin {
-  int _step = 0;
+  int _step     = 0;
   int _prevStep = 0;
 
   final _hotelNameController = TextEditingController();
@@ -30,41 +40,37 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
   Uint8List? _logoBytes;
 
   String _hotelType = 'Boutique';
-  double _rooms = 80;
+  double _rooms     = 80;
 
-  int _staffCount = 12;
-  final Set<String> _roles = <String>{'Manager'};
-  bool _allergyHandling = true;
+  int           _staffCount     = 12;
+  final Set<String> _roles      = <String>{'Manager'};
+  bool          _allergyHandling = true;
 
-  bool _notifySpoilage = true;
-  bool _notifyLowInventory = true;
-  bool _notifyWasteTips = true;
-  double _wasteThreshold = 20;
+  bool   _notifySpoilage     = true;
+  bool   _notifyLowInventory = true;
+  bool   _notifyWasteTips    = true;
+  double _wasteThreshold     = 20;
 
   bool _completing = false;
 
-  static const _typeOptions = <String>[
-    'Boutique',
-    'Business',
-    'Resort',
-    'Budget',
-    'Other',
-  ];
+  late final AnimationController _blobController;
 
-  static const _roleOptions = <String>[
-    'Housekeeping',
-    'Kitchen',
-    'Front Desk',
-    'Manager',
-  ];
+  static const _typeOptions = <String>['Boutique', 'Business', 'Resort', 'Budget', 'Other'];
+  static const _roleOptions = <String>['Housekeeping', 'Kitchen', 'Front Desk', 'Manager'];
 
   @override
   void initState() {
     super.initState();
-    final args = widget.args ?? const <String, dynamic>{};
+
+    _blobController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat();
+
+    final args     = widget.args ?? const <String, dynamic>{};
     final hotelName = (args['hotelName'] as String?)?.trim();
-    final type = (args['hotelType'] as String?)?.trim();
-    final rooms = args['rooms'];
+    final type      = (args['hotelType'] as String?)?.trim();
+    final rooms     = args['rooms'];
 
     if (hotelName != null && hotelName.isNotEmpty) {
       _hotelNameController.text = hotelName;
@@ -82,6 +88,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
   @override
   void dispose() {
     _hotelNameController.dispose();
+    _blobController.dispose();
     super.dispose();
   }
 
@@ -91,12 +98,8 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
 
   String _readableError(Object e) {
     final message = e.toString();
-    if (message.startsWith('Exception: ')) {
-      return message.substring('Exception: '.length);
-    }
-    if (message.startsWith('StateError: ')) {
-      return message.substring('StateError: '.length);
-    }
+    if (message.startsWith('Exception: ')) return message.substring('Exception: '.length);
+    if (message.startsWith('StateError: ')) return message.substring('StateError: '.length);
     return message;
   }
 
@@ -104,7 +107,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
     if (_step >= 2) return;
     setState(() {
       _prevStep = _step;
-      _step += 1;
+      _step    += 1;
     });
   }
 
@@ -112,21 +115,17 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
     if (_step <= 0) return;
     setState(() {
       _prevStep = _step;
-      _step -= 1;
+      _step    -= 1;
     });
   }
 
   Future<void> _pickLogo() async {
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file   = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (file == null) return;
-
     final bytes = await file.readAsBytes();
     if (!mounted) return;
-
-    setState(() {
-      _logoBytes = bytes;
-    });
+    setState(() => _logoBytes = bytes);
   }
 
   void _toggleRole(String role) {
@@ -152,7 +151,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
 
     try {
       final userProvider = context.read<UserProvider>();
-      final current = userProvider.currentUser;
+      final current      = userProvider.currentUser;
       if (current == null) {
         _snack('Please sign in again.');
         return;
@@ -236,159 +235,154 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
   @override
   Widget build(BuildContext context) {
     final forward = _step >= _prevStep;
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH   = screenH * 0.32;
 
     return Scaffold(
-      backgroundColor: AppColors.oat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: const BoxDecoration(color: AppColors.butter),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 56,
-                    child: Container(
-                      color: Colors.white.withValues(alpha: 0.08),
+      backgroundColor: _primary,
+      resizeToAvoidBottomInset: true,
+      body: Stack(
+        children: [
+          // ── Hero zone ────────────────────────────────────────────────
+          Positioned(
+            top: 0, left: 0, right: 0,
+            height: heroH,
+            child: Stack(
+              children: [
+                Container(color: _primary),
+                AnimatedBuilder(
+                  animation: _blobController,
+                  builder: (_, __) => CustomPaint(
+                    painter: _BlobPainter(_blobController.value, _primary),
+                    size: Size(double.infinity, heroH),
+                  ),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                if (_step > 0) {
+                                  _back();
+                                } else {
+                                  context.go(AppRoutes.hotelRegister);
+                                }
+                              },
+                              icon: const Icon(Icons.arrow_back_ios_new),
+                              color: Colors.white,
+                            ),
+                            const Spacer(),
+                          ],
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Hotel setup',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'A few details to get started',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
                   ),
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  if (_step > 0) {
-                                    _back();
-                                  } else {
-                                    context.go(AppRoutes.hotelRegister);
-                                  }
-                                },
-                                icon: const Icon(Icons.arrow_back_ios_new),
-                                color: AppColors.cherry,
-                                splashColor: AppColors.cherry.withValues(alpha: 0.12),
-                              ),
-                              const Spacer(),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            'Hotel setup',
-                            style: GoogleFonts.dmSerifDisplay(
-                              fontSize: 24,
-                              color: AppColors.cherry,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'A few details to get started',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.espresso,
-                              height: 1.3,
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Floating card ────────────────────────────────────────────
+          Positioned(
+            top: heroH - 24,
+            left: 0, right: 0, bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft:  Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+                boxShadow: AppShadows.lg(_primary),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  _ThreeStepHeader(step: _step),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeInOut,
+                      switchOutCurve: Curves.easeInOut,
+                      transitionBuilder: (child, animation) {
+                        final inTween = Tween<Offset>(
+                          begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
+                          end: Offset.zero,
+                        );
+                        final outTween = Tween<Offset>(
+                          begin: Offset.zero,
+                          end: forward ? const Offset(-1, 0) : const Offset(1, 0),
+                        );
+                        final isIncoming = child.key == ValueKey(_step);
+                        final offsetAnim = isIncoming
+                            ? inTween.animate(animation)
+                            : outTween.animate(animation);
+                        return SlideTransition(position: offsetAnim, child: child);
+                      },
+                      child: SingleChildScrollView(
+                        key: ValueKey(_step),
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                        child: _stepContent(),
                       ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: AnimatedButton(
+                      label: _step == 2 ? 'Start managing' : AppStrings.continueCta,
+                      color: _primary,
+                      textColor: Colors.white,
+                      onTap: _step == 2
+                          ? _complete
+                          : () async {
+                              if (_step == 0 && _hotelNameController.text.trim().isEmpty) {
+                                _snack(AppStrings.validationRequiredField);
+                                return;
+                              }
+                              _next();
+                            },
+                      isLoading: _completing,
+                      height: 52,
                     ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.parchment,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _ThreeStepHeader(step: _step),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeInOut,
-                        switchOutCurve: Curves.easeInOut,
-                        transitionBuilder: (child, animation) {
-                          final inTween = Tween<Offset>(
-                            begin: forward
-                                ? const Offset(1, 0)
-                                : const Offset(-1, 0),
-                            end: Offset.zero,
-                          );
-                          final outTween = Tween<Offset>(
-                            begin: Offset.zero,
-                            end: forward
-                                ? const Offset(-1, 0)
-                                : const Offset(1, 0),
-                          );
-
-                          final isIncoming = child.key == ValueKey(_step);
-                          final offsetAnim = isIncoming
-                              ? inTween.animate(animation)
-                              : outTween.animate(animation);
-
-                          return SlideTransition(position: offsetAnim, child: child);
-                        },
-                        child: SingleChildScrollView(
-                          key: ValueKey(_step),
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                          child: _stepContent(),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      child: AnimatedButton(
-                        label: _step == 2 ? 'Start managing' : AppStrings.continueCta,
-                        color: AppColors.butter,
-                        textColor: AppColors.cherry,
-                        onTap: _step == 2
-                            ? _complete
-                            : () async {
-                                if (_step == 0 &&
-                                    _hotelNameController.text.trim().isEmpty) {
-                                  _snack(AppStrings.validationRequiredField);
-                                  return;
-                                }
-                                _next();
-                              },
-                        isLoading: _completing,
-                        height: 52,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
+// ── Step progress ────────────────────────────────────────────────────────────
+
 class _ThreeStepHeader extends StatelessWidget {
   final int step;
-
   const _ThreeStepHeader({required this.step});
 
   @override
@@ -398,13 +392,9 @@ class _ThreeStepHeader extends StatelessWidget {
       child: Row(
         children: [
           _dot(active: step == 0, complete: step > 0),
-          Expanded(
-            child: Container(height: 2, color: step > 0 ? AppColors.cherry : AppColors.sand),
-          ),
+          Expanded(child: Container(height: 2, color: step > 0 ? _primary : const Color(0xFFE2E8F0))),
           _dot(active: step == 1, complete: step > 1),
-          Expanded(
-            child: Container(height: 2, color: step > 1 ? AppColors.cherry : AppColors.sand),
-          ),
+          Expanded(child: Container(height: 2, color: step > 1 ? _primary : const Color(0xFFE2E8F0))),
           _dot(active: step == 2, complete: false),
         ],
       ),
@@ -412,62 +402,47 @@ class _ThreeStepHeader extends StatelessWidget {
   }
 
   Widget _dot({required bool active, required bool complete}) {
-    if (complete) {
-      return const _FilledDot(size: 16, color: AppColors.cherry);
-    }
-    if (active) {
-      return const _FilledDot(size: 24, color: AppColors.cherry);
-    }
-    return const _OutlinedDot(size: 16, color: AppColors.sand);
+    if (complete) return const _FilledDot(size: 16, color: _deep);
+    if (active)   return const _FilledDot(size: 24, color: _primary);
+    return const _OutlinedDot(size: 16, color: Color(0xFFE2E8F0));
   }
 }
 
 class _FilledDot extends StatelessWidget {
   final double size;
   final Color color;
-
   const _FilledDot({required this.size, required this.color});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: size, height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
 class _OutlinedDot extends StatelessWidget {
   final double size;
   final Color color;
-
   const _OutlinedDot({required this.size, required this.color});
-
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 2),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width: size, height: size,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(color: color, width: 2),
+        ),
+      );
 }
+
+// ── Step 0: Hotel details ────────────────────────────────────────────────────
 
 class _HotelDetailsStep extends StatelessWidget {
   final Uint8List? logoBytes;
   final Future<void> Function() onPickLogo;
-
   final TextEditingController hotelNameController;
-
   final String hotelType;
   final List<String> typeOptions;
   final ValueChanged<String> onHotelType;
-
   final double rooms;
   final ValueChanged<double> onRooms;
 
@@ -488,8 +463,8 @@ class _HotelDetailsStep extends StatelessWidget {
         ? CircleAvatar(radius: 45, backgroundImage: MemoryImage(logoBytes!))
         : const CircleAvatar(
             radius: 45,
-            backgroundColor: AppColors.cherry,
-            child: Icon(Icons.hotel, size: 42, color: AppColors.parchment),
+            backgroundColor: _softBg,
+            child: Icon(Icons.hotel, size: 42, color: _primary),
           );
 
     return Column(
@@ -501,20 +476,14 @@ class _HotelDetailsStep extends StatelessWidget {
             children: [
               logo,
               Positioned(
-                right: 0,
-                bottom: 0,
+                right: 0, bottom: 0,
                 child: GestureDetector(
                   onTap: onPickLogo,
                   child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: const BoxDecoration(
-                      color: AppColors.cherry,
-                      shape: BoxShape.circle,
-                    ),
+                    width: 28, height: 28,
+                    decoration: const BoxDecoration(color: _primary, shape: BoxShape.circle),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt,
-                        size: 14, color: AppColors.parchment),
+                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -524,65 +493,58 @@ class _HotelDetailsStep extends StatelessWidget {
         const SizedBox(height: 20),
         TextField(
           controller: hotelNameController,
-          decoration: const InputDecoration(
+          style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+          decoration: InputDecoration(
             labelText: 'Hotel name',
-            prefixIcon: Icon(Icons.hotel, color: AppColors.cocoa),
+            labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+            prefixIcon: const Icon(Icons.hotel, color: _textMuted, size: 20),
+            filled: true, fillColor: _softBg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: const BorderSide(color: _primary, width: 1.5)),
           ),
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           initialValue: hotelType,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Hotel type',
-            prefixIcon: Icon(Icons.apartment, color: AppColors.cocoa),
+            labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+            prefixIcon: const Icon(Icons.apartment, color: _textMuted, size: 20),
+            filled: true, fillColor: _softBg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: const BorderSide(color: _primary, width: 1.5)),
           ),
-          items: typeOptions
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(growable: false),
-          onChanged: (v) {
-            if (v != null) onHotelType(v);
-          },
+          items: typeOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(growable: false),
+          onChanged: (v) { if (v != null) onHotelType(v); },
         ),
         const SizedBox(height: 18),
         Text(
           'Number of rooms: ${rooms.round()}',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
+          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody),
         ),
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.cherry,
-            inactiveTrackColor: AppColors.sand,
-            thumbColor: AppColors.cherry,
-            overlayColor: AppColors.cherry.withValues(alpha: 0.12),
-            trackHeight: 4,
+            activeTrackColor: _primary, inactiveTrackColor: _softBg,
+            thumbColor: _deep, overlayColor: _primary.withValues(alpha: 0.12), trackHeight: 4,
           ),
-          child: Slider(
-            value: rooms,
-            min: 10,
-            max: 500,
-            divisions: 49,
-            onChanged: onRooms,
-          ),
+          child: Slider(value: rooms, min: 10, max: 500, divisions: 49, onChanged: onRooms),
         ),
       ],
     );
   }
 }
 
+// ── Step 1: Team setup ───────────────────────────────────────────────────────
+
 class _TeamSetupStep extends StatelessWidget {
   final int staffCount;
   final ValueChanged<int> onStaffCount;
-
   final Set<String> roles;
   final List<String> roleOptions;
   final ValueChanged<String> onToggleRole;
-
   final bool allergyHandling;
   final ValueChanged<bool> onAllergyHandling;
 
@@ -601,40 +563,20 @@ class _TeamSetupStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Team setup',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            color: AppColors.cherry,
-            height: 1.2,
-          ),
-        ),
+        Text('Team setup', style: GoogleFonts.playfairDisplay(fontSize: 18, color: _textTitle)),
         const SizedBox(height: 12),
-        Text(
-          'Staff count',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
-        ),
+        Text('Staff count', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody)),
         const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppColors.cherry,
-                  inactiveTrackColor: AppColors.sand,
-                  thumbColor: AppColors.cherry,
-                  overlayColor: AppColors.cherry.withValues(alpha: 0.12),
+                  activeTrackColor: _primary, inactiveTrackColor: _softBg,
+                  thumbColor: _deep, overlayColor: _primary.withValues(alpha: 0.12),
                 ),
                 child: Slider(
-                  value: staffCount.toDouble(),
-                  min: 1,
-                  max: 120,
-                  divisions: 119,
+                  value: staffCount.toDouble(), min: 1, max: 120, divisions: 119,
                   onChanged: (v) => onStaffCount(v.round()),
                 ),
               ),
@@ -644,25 +586,13 @@ class _TeamSetupStep extends StatelessWidget {
               child: Text(
                 '$staffCount',
                 textAlign: TextAlign.right,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.cherry,
-                ),
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: _primary),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          'Roles in your team',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
-        ),
+        Text('Roles in your team', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
@@ -673,13 +603,12 @@ class _TeamSetupStep extends StatelessWidget {
               label: Text(r),
               selected: selected,
               onSelected: (_) => onToggleRole(r),
-              selectedColor: AppColors.cherryBlush,
-              backgroundColor: AppColors.parchment,
-              side: const BorderSide(color: AppColors.sand, width: 0.7),
+              selectedColor: _softBg,
+              backgroundColor: Colors.white,
+              side: BorderSide(color: selected ? _primary : const Color(0xFFE2E8F0), width: 1.5),
               labelStyle: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.cherry : AppColors.espresso,
+                fontSize: 12, fontWeight: FontWeight.w600,
+                color: selected ? _deep : _textMuted,
               ),
             );
           }).toList(growable: false),
@@ -687,28 +616,25 @@ class _TeamSetupStep extends StatelessWidget {
         const SizedBox(height: 18),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.parchment,
+            color: _surface,
             borderRadius: BorderRadius.circular(AppRadii.innerCard),
-            border: Border.all(color: AppColors.sand, width: 0.5),
+            border: Border.all(color: _softBg, width: 1),
           ),
           child: SwitchListTile(
             value: allergyHandling,
             onChanged: onAllergyHandling,
-            activeThumbColor: AppColors.cherry,
-            title: Text(
-              'Allergy handling',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.espresso,
-              ),
-            ),
+            activeColor: _primary,
+            activeTrackColor: _softBg,
+            title: Text('Allergy handling',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
           ),
         ),
       ],
     );
   }
 }
+
+// ── Step 2: Alert preferences ────────────────────────────────────────────────
 
 class _AlertPreferencesStep extends StatelessWidget {
   final bool notifySpoilage;
@@ -717,7 +643,6 @@ class _AlertPreferencesStep extends StatelessWidget {
   final ValueChanged<bool> onNotifySpoilage;
   final ValueChanged<bool> onNotifyLowInventory;
   final ValueChanged<bool> onNotifyWasteTips;
-
   final double wasteThreshold;
   final ValueChanged<double> onWasteThreshold;
 
@@ -737,63 +662,35 @@ class _AlertPreferencesStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Alert preferences',
-          style: GoogleFonts.dmSerifDisplay(
-            fontSize: 18,
-            color: AppColors.cherry,
-            height: 1.2,
-          ),
-        ),
+        Text('Alert preferences', style: GoogleFonts.playfairDisplay(fontSize: 18, color: _textTitle)),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.parchment,
+            color: _surface,
             borderRadius: BorderRadius.circular(AppRadii.innerCard),
-            border: Border.all(color: AppColors.sand, width: 0.5),
+            border: Border.all(color: _softBg, width: 1),
           ),
           child: Column(
             children: [
               SwitchListTile(
-                value: notifySpoilage,
-                onChanged: onNotifySpoilage,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  'Spoilage alerts',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                value: notifySpoilage, onChanged: onNotifySpoilage,
+                activeColor: _primary, activeTrackColor: _softBg,
+                title: Text('Spoilage alerts',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
-              const Divider(color: AppColors.sand, thickness: 0.5, height: 0.5),
+              Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
-                value: notifyLowInventory,
-                onChanged: onNotifyLowInventory,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  'Low inventory alerts',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                value: notifyLowInventory, onChanged: onNotifyLowInventory,
+                activeColor: _primary, activeTrackColor: _softBg,
+                title: Text('Low inventory alerts',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
-              const Divider(color: AppColors.sand, thickness: 0.5, height: 0.5),
+              Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
-                value: notifyWasteTips,
-                onChanged: onNotifyWasteTips,
-                activeThumbColor: AppColors.cherry,
-                title: Text(
-                  'Waste reduction tips',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.espresso,
-                  ),
-                ),
+                value: notifyWasteTips, onChanged: onNotifyWasteTips,
+                activeColor: _primary, activeTrackColor: _softBg,
+                title: Text('Waste reduction tips',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
               ),
             ],
           ),
@@ -801,31 +698,45 @@ class _AlertPreferencesStep extends StatelessWidget {
         const SizedBox(height: 18),
         Text(
           'Waste threshold: ${wasteThreshold.round()}%',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.espresso,
-            height: 1.2,
-          ),
+          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody),
         ),
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.cherry,
-            inactiveTrackColor: AppColors.sand,
-            thumbColor: AppColors.cherry,
-            overlayColor: AppColors.cherry.withValues(alpha: 0.12),
-            trackHeight: 4,
+            activeTrackColor: _primary, inactiveTrackColor: _softBg,
+            thumbColor: _deep, overlayColor: _primary.withValues(alpha: 0.12), trackHeight: 4,
           ),
-          child: Slider(
-            value: wasteThreshold,
-            min: 0,
-            max: 100,
-            divisions: 20,
-            onChanged: onWasteThreshold,
-          ),
+          child: Slider(value: wasteThreshold, min: 0, max: 100, divisions: 20, onChanged: onWasteThreshold),
         ),
       ],
     );
   }
+}
+
+// ── Blob painter ─────────────────────────────────────────────────────────────
+
+class _BlobPainter extends CustomPainter {
+  final double t;
+  final Color primary;
+  _BlobPainter(this.t, this.primary);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    final c1 = Offset(size.width * 0.15 + math.cos(angle) * 20, size.height * 0.35 + math.sin(angle) * 15);
+    canvas.drawCircle(c1, size.width * 0.5, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)));
+    final c2 = Offset(size.width * 0.85 + math.sin(angle * 0.7) * 18, size.height * 0.6 + math.cos(angle * 0.7) * 22);
+    canvas.drawCircle(c2, size.width * 0.4, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)));
+    final c3 = Offset(size.width * 0.5 + math.cos(angle * 1.4) * 14, size.height * 0.2 + math.sin(angle * 1.4) * 10);
+    canvas.drawCircle(c3, size.width * 0.3, Paint()
+      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent])
+          .createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)));
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) => old.t != t;
 }
