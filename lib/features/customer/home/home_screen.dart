@@ -13,6 +13,7 @@ import '../../../core/models/scan_history_item.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/nutrient_tracking_service.dart';
 import '../../../widgets/animated_chat_fab.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
@@ -112,35 +113,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   List<double> _goalProgresses(UserProvider provider, double overall) {
-    final goalSeed = provider.currentUser?.calorieGoal.toDouble() ?? 2200;
-    final offset = ((goalSeed / 2200) * 10).clamp(0, 12);
-    final calories = overall.clamp(0.0, 130.0).toDouble();
-    final carbs = (overall + 6 + offset * 0.15).clamp(0.0, 130.0).toDouble();
-    final fats = (overall - 4 + offset * 0.1).clamp(0.0, 130.0).toDouble();
-    final proteins = (overall + 2 - offset * 0.08).clamp(0.0, 130.0).toDouble();
-    return [calories, carbs, fats, proteins];
+    // Get daily intake from mockDailyIntakePct
+    final intakePct = provider.mockDailyIntakePct;
+    
+    final cholesterol = (intakePct['cholesterol_mg'] ?? 0).toDouble().clamp(0.0, 130.0);
+    final sodium = (intakePct['sodium_mg'] ?? 0).toDouble().clamp(0.0, 130.0);
+    final saturatedFat = (intakePct['saturated_fat_g'] ?? 0).toDouble().clamp(0.0, 130.0);
+    final sugar = (intakePct['sugar_g'] ?? 0).toDouble().clamp(0.0, 130.0);
+    
+    return [cholesterol, sodium, saturatedFat, sugar];
   }
 
-  List<_AlertCardData> _alertCards(List<double> progresses) {
+  List<_AlertCardData> _alertCards(Map<String, dynamic> log, Map<String, dynamic> limits) {
     final data = <_AlertCardData>[];
-    final names = ['Calories', 'Carbs', 'Fats', 'Proteins'];
-    for (var i = 0; i < progresses.length; i++) {
-      final value = progresses[i];
-      if (value > 100) {
+    final nutrients = [
+      {'name': 'Cholesterol', 'key': 'cholesterol_mg'},
+      {'name': 'Sodium', 'key': 'sodium_mg'},
+      {'name': 'Saturated Fats', 'key': 'saturated_fat_g'},
+      {'name': 'Sugar', 'key': 'sugar_g'},
+    ];
+
+    for (final nutrient in nutrients) {
+      final name = nutrient['name'] as String;
+      final key = nutrient['key'] as String;
+      final value = (log[key] as num?)?.toDouble() ?? 0;
+      final limit = (limits[key] as num?)?.toDouble() ?? 1;
+      final pct = limit <= 0 ? 0.0 : (value / limit) * 100;
+
+      if (pct > 100) {
         data.add(
           _AlertCardData(
             icon: Icons.error_outline,
-            title: '${names[i]} exceeded',
-            subtitle: 'You are over your target for today.',
+            title: '$name exceeded',
+            subtitle: 'You are over your daily limit.',
             color: _kDanger,
           ),
         );
-      } else if (value >= 80) {
+      } else if (pct >= 80) {
         data.add(
           _AlertCardData(
             icon: Icons.info_outline,
-            title: '${names[i]} approaching limit',
-            subtitle: 'You are close to your daily goal.',
+            title: '$name approaching limit',
+            subtitle: 'You are close to your daily limit.',
             color: _kWarning,
           ),
         );
@@ -148,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         data.add(
           _AlertCardData(
             icon: Icons.check_circle_outline,
-            title: '${names[i]} on track',
+            title: '$name on track',
             subtitle: 'Nice work keeping this in range.',
             color: _kFresh,
           ),
@@ -159,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   List<String> _tipsFor(UserProvider provider) {
+    final allergens = provider.currentUser?.allergens ?? [];
     final dietary =
         provider.currentUser?.dietaryOptions
             .map((e) => e.trim().toLowerCase())
@@ -168,6 +183,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final hasKeto = dietary.any((e) => e.contains('keto'));
     final hasVegetarian = dietary.any((e) => e.contains('vegetarian'));
     final hasVegan = dietary.any((e) => e.contains('vegan'));
+
+    // Allergen-specific tips take priority
+    if (allergens.isNotEmpty) {
+      final allergenList = allergens.join(', ').toLowerCase();
+      return [
+        'Always check labels for $allergenList — they hide in unexpected places.',
+        'Cross-contamination matters: use separate utensils when preparing meals.',
+        'Keep an updated list of $allergenList in your phone for quick reference.',
+        'When dining out, always inform staff about your $allergenList allergies.',
+        'Read ingredient lists even on products you\'ve bought before — formulas change.',
+        'Batch-prep allergen-free meals to make safe choices automatic.',
+        'Keep safe backup snacks on hand: nuts, fruit, or approved proteins.',
+        'Learn the alternative names for your allergens to spot them faster.',
+        'Build a list of certified allergen-free brands you trust.',
+        'After an accidental exposure, document symptoms to share with your doctor.',
+      ];
+    }
 
     if (hasKeto) {
       return const [
@@ -198,15 +230,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ];
     }
     return const [
+      'Watch your daily sodium: aim to stay under 2,300 mg for heart health.',
+      'Saturated fats should be less than 5-6% of your daily calories.',
+      'Sugar limit is around 50g daily — check sneaky sources like yogurt.',
+      'Cholesterol intake matters: keep total under 300 mg daily.',
       'Scan your next meal before eating so you can adjust portions early.',
       'Keep water visible to make hydration automatic.',
       'Use half-plate vegetables to reduce energy density.',
       'Try eating at consistent times to make hunger easier to predict.',
-      'Choose one item to improve today rather than changing the whole meal.',
-      'Leftovers are better than waste — plan smaller servings if unsure.',
-      'If a dish looks heavy, balance it with a lighter snack later.',
-      'A short walk after meals can help you notice fullness sooner.',
-      'Check the highest-risk nutrient first when reviewing a scan result.',
+      'Choose one nutrient to improve today rather than changing everything.',
       'Progress compounds when you repeat small, simple choices every day.',
     ];
   }
@@ -253,28 +285,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final intakePct = userProvider.mockDailyIntakePct;
     final overall = _overallDailyPct(intakePct);
     final progresses = _goalProgresses(userProvider, overall);
-    final alertCards = _alertCards(progresses);
 
     final scans = scanProvider.items.toList()
       ..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
     final recentScans = scans.take(3).toList(growable: false);
     final weeklyCounts = _weeklyCounts(scans);
     final totalWeeklyScans = weeklyCounts.fold<int>(0, (a, b) => a + b);
-    final goalsMet = progresses.where((v) => v <= 100).length;
     final averageRisk = _averageRiskLabel(overall);
     final healthScore = (100 - (overall - 60).clamp(0, 40)).round();
     final allergens = user?.allergens ?? [];
 
-    final headerStats = [
+    // Alert count will be updated dynamically from Firebase data
+    final baseHeaderStats = [
       '${scanProvider.items.length} scans',
-      '${alertsProvider.pendingCount} alerts',
+      // Alert count will be updated in real-time via StreamBuilder
       '${overall.round()}% goals',
     ];
 
     final tipPool = _tipsFor(userProvider);
     final tip = tipPool[now.day % tipPool.length];
-    final tipTitle =
-        userProvider.currentUser?.dietaryOptions.any(
+    final tipTitle = allergens.isNotEmpty
+        ? 'Safe eating essentials'
+        : userProvider.currentUser?.dietaryOptions.any(
               (e) => e.trim().toLowerCase().contains('keto'),
             ) ==
             true
@@ -286,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ) ==
               true
         ? 'Build better plant protein'
-        : 'Reduce waste before it starts';
+        : 'Watch your nutrients';
 
     return Scaffold(
       backgroundColor: _kSurface,
@@ -368,45 +400,145 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ],
                                 ),
                               ),
-                              _HealthScoreRing(score: healthScore),
+                              if (user?.id != null)
+                                StreamBuilder<Map<String, dynamic>>(
+                                  stream: NutrientTrackingService.watchTodayLog(user!.id),
+                                  builder: (context, logSnap) {
+                                    return StreamBuilder<Map<String, dynamic>>(
+                                      stream: NutrientTrackingService.watchLimits(user!.id),
+                                      builder: (context, limitSnap) {
+                                        final log = logSnap.data ?? const <String, dynamic>{};
+                                        final limits = limitSnap.data ?? const {
+                                          'cholesterol_mg': 300,
+                                          'saturated_fat_g': 20,
+                                          'sodium_mg': 2300,
+                                          'sugar_g': 50,
+                                        };
+                                        // Count exceeded nutrients
+                                        int exceededCount = 0;
+                                        limits.forEach((key, limit) {
+                                          if (log[key] != null && (log[key] as num) > (limit as num)) {
+                                            exceededCount++;
+                                          }
+                                        });
+                                        return _HealthScoreRing(
+                                          exceededCount: exceededCount,
+                                          totalNutrients: limits.length,
+                                        );
+                                      },
+                                    );
+                                  },
+                                )
+                              else
+                                const _HealthScoreRing(exceededCount: 0, totalNutrients: 4),
                             ],
                           ),
                           const SizedBox(height: 20),
-                          // Quick stats chips
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: headerStats
-                                .map(
-                                  (stat) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.18,
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.25,
-                                        ),
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      stat,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
+                          // Quick stats chips - with dynamic alert count
+                          if (user?.id != null)
+                            StreamBuilder<Map<String, dynamic>>(
+                              stream: NutrientTrackingService.watchTodayLog(user!.id),
+                              builder: (context, logSnap) {
+                                return StreamBuilder<Map<String, dynamic>>(
+                                  stream: NutrientTrackingService.watchLimits(user!.id),
+                                  builder: (context, limitSnap) {
+                                    final log = logSnap.data ?? const <String, dynamic>{};
+                                    final limits = limitSnap.data ?? const {
+                                      'cholesterol_mg': 300,
+                                      'saturated_fat_g': 20,
+                                      'sodium_mg': 2300,
+                                      'sugar_g': 50,
+                                    };
+                                    // Count alerts (approaching or exceeded)
+                                    int alertCount = 0;
+                                    limits.forEach((key, limit) {
+                                      if (log[key] != null) {
+                                        final pct = (log[key] as num) / (limit as num);
+                                        if (pct >= 0.8) alertCount++; // Alert if >= 80%
+                                      }
+                                    });
+
+                                    final headerStats = [
+                                      '${scanProvider.items.length} scans',
+                                      '$alertCount alerts',
+                                      '${overall.round()}% goals',
+                                    ];
+
+                                    return Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: headerStats
+                                          .map(
+                                            (stat) => Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 6,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.18,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: Colors.white.withValues(
+                                                    alpha: 0.25,
+                                                  ),
+                                                  width: 0.8,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                stat,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
                                         color: Colors.white,
                                       ),
                                     ),
                                   ),
                                 )
                                 .toList(growable: false),
-                          ),
+                                    );
+                                  },
+                                );
+                              },
+                            )
+                          else
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: baseHeaderStats
+                                  .map(
+                                    (stat) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.18,
+                                        ),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        stat,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
                           // Allergen quick-chips
                           if (allergens.isNotEmpty) ...[
                             const SizedBox(height: 14),
@@ -504,89 +636,181 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _SectionTitle(
               title: "Today's nutrition",
               actionLabel: 'Details',
-              onTap: () => context.go(AppRoutes.nutritionProgress),
+              onTap: () => context.push(AppRoutes.nutritionProgress),
             ),
             _PastelCard(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.05,
-                    children: List.generate(4, (index) {
-                      final labels = const [
-                        'Calories',
-                        'Carbs',
-                        'Fats',
-                        'Proteins',
+              child: StreamBuilder<Map<String, dynamic>>(
+                stream: user?.id != null ? NutrientTrackingService.watchTodayLog(user!.id) : null,
+                builder: (context, logSnap) {
+                  return StreamBuilder<Map<String, dynamic>>(
+                    stream: user?.id != null ? NutrientTrackingService.watchLimits(user!.id) : null,
+                    builder: (context, limitSnap) {
+                      final log = logSnap.data ?? const <String, dynamic>{};
+                      final limits = limitSnap.data ?? const {
+                        'cholesterol_mg': 300,
+                        'saturated_fat_g': 20,
+                        'sodium_mg': 2300,
+                        'sugar_g': 50,
+                      };
+
+                      final nutrients = [
+                        {
+                          'label': 'Cholesterol',
+                          'key': 'cholesterol_mg',
+                          'unit': 'mg',
+                          'icon': Icons.favorite_rounded,
+                        },
+                        {
+                          'label': 'Sodium',
+                          'key': 'sodium_mg',
+                          'unit': 'mg',
+                          'icon': Icons.grain_rounded,
+                        },
+                        {
+                          'label': 'Saturated Fats',
+                          'key': 'saturated_fat_g',
+                          'unit': 'g',
+                          'icon': Icons.water_drop_rounded,
+                        },
+                        {
+                          'label': 'Sugar',
+                          'key': 'sugar_g',
+                          'unit': 'g',
+                          'icon': Icons.candlestick_chart_rounded,
+                        },
                       ];
-                      final icons = const [
-                        Icons.local_fire_department_rounded,
-                        Icons.grain_rounded,
-                        Icons.water_drop_rounded,
-                        Icons.fitness_center_rounded,
-                      ];
-                      final value = progresses[index];
-                      return _ProgressTile(
-                        label: labels[index],
-                        icon: icons[index],
-                        value: value,
-                        color: _progressColor(value),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => context.go(AppRoutes.customerScan),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _kSoftBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _kPrimary.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '＋ Scan your next meal to update',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _kPrimary,
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GridView.count(
+                            crossAxisCount: 2,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1.05,
+                            children: List.generate(4, (index) {
+                              final nutrient = nutrients[index];
+                              final key = nutrient['key'] as String;
+                              final value = (log[key] as num?)?.toDouble() ?? 0;
+                              final limit = (limits[key] as num?)?.toDouble() ?? 1;
+                              final pct = limit <= 0 ? 0.0 : value / limit;
+                              final color = _progressColor((pct * 100).toDouble());
+
+                              return _ProgressTile(
+                                label: nutrient['label'] as String,
+                                icon: nutrient['icon'] as IconData,
+                                value: value,
+                                limit: limit,
+                                unit: nutrient['unit'] as String,
+                                color: color,
+                              );
+                            }),
                           ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
 
             // ── Alerts ──────────────────────────────────────────────────────
-            if (alertCards.isNotEmpty) ...[
-              _SectionTitle(
-                title: 'Your alerts',
-                actionLabel: 'See all',
-                onTap: () => context.go(AppRoutes.nutritionProgress),
-              ),
-              SizedBox(
-                height: 90,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: alertCards.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) =>
-                      _AlertCard(data: alertCards[index]),
-                ),
+            if (user?.id != null) ...[
+              StreamBuilder<Map<String, dynamic>>(
+                stream: NutrientTrackingService.watchTodayLog(user!.id),
+                builder: (context, logSnap) {
+                  return StreamBuilder<Map<String, dynamic>>(
+                    stream: NutrientTrackingService.watchLimits(user!.id),
+                    builder: (context, limitSnap) {
+                      final log = logSnap.data ?? const <String, dynamic>{};
+                      final limits = limitSnap.data ?? const {
+                        'cholesterol_mg': 300,
+                        'saturated_fat_g': 20,
+                        'sodium_mg': 2300,
+                        'sugar_g': 50,
+                      };
+                      final alertCards = _alertCards(log, limits);
+                      final hasWarnings = alertCards.any((a) => a.color == _kWarning || a.color == _kDanger);
+                      final hasCritical = alertCards.any((a) => a.color == _kDanger);
+
+                      if (alertCards.isEmpty) return const SizedBox.shrink();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+                            child: Row(
+                              children: [
+                                if (hasCritical)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _kDanger.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: _kDanger, width: 2),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.warning_rounded, color: _kDanger, size: 16),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '⚠ Limits Reached!',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                            color: _kDanger,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else if (hasWarnings)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: _kWarning.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: _kWarning, width: 2),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.info_rounded, color: _kWarning, size: 16),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Approaching Limits',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: _kWarning,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 110,
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: alertCards.length,
+                              separatorBuilder: (_, __) => const SizedBox(width: 12),
+                              itemBuilder: (context, index) =>
+                                  _AlertCard(data: alertCards[index]),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ],
 
@@ -618,14 +842,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _QuickAction(
-                      icon: Icons.insights_outlined,
-                      label: 'Progress',
-                      onTap: () => context.go(AppRoutes.nutritionProgress),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _QuickAction(
                       icon: Icons.history,
                       label: 'History',
                       onTap: () => context.go(AppRoutes.customerHistory),
@@ -636,8 +852,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: _QuickAction(
                       icon: Icons.psychology_rounded,
                       label: 'Ask Nora',
-                      color: const Color(0xFF45C4B0),
-                      backgroundColor: const Color(0xFFE0F7F2),
                       onTap: () => context.go('/customer/nutritionist'),
                     ),
                   ),
@@ -687,24 +901,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _MetricPill(
-                        label: '$totalWeeklyScans dishes scanned',
-                        good: totalWeeklyScans >= 4,
-                      ),
-                      _MetricPill(
-                        label: 'Avg risk: $averageRisk',
-                        good: averageRisk == 'Low',
-                      ),
-                      _MetricPill(
-                        label: '$goalsMet goals met',
-                        good: goalsMet >= 3,
-                      ),
-                    ],
-                  ),
+                  if (user?.id != null)
+                    StreamBuilder<Map<String, dynamic>>(
+                      stream: NutrientTrackingService.watchTodayLog(user!.id),
+                      builder: (context, logSnap) {
+                        return StreamBuilder<Map<String, dynamic>>(
+                          stream: NutrientTrackingService.watchLimits(user!.id),
+                          builder: (context, limitSnap) {
+                            final log = logSnap.data ?? const <String, dynamic>{};
+                            final limits = limitSnap.data ?? const {
+                              'cholesterol_mg': 300,
+                              'saturated_fat_g': 20,
+                              'sodium_mg': 2300,
+                              'sugar_g': 50,
+                            };
+
+                            var goalsMet = 0;
+                            final keys = ['cholesterol_mg', 'sodium_mg', 'saturated_fat_g', 'sugar_g'];
+                            for (final key in keys) {
+                              final value = (log[key] as num?)?.toDouble() ?? 0;
+                              final limit = (limits[key] as num?)?.toDouble() ?? 1;
+                              if (limit > 0 && value <= limit) {
+                                goalsMet++;
+                              }
+                            }
+
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetricPill(
+                                  label: '$totalWeeklyScans dishes scanned',
+                                  good: totalWeeklyScans >= 4,
+                                ),
+                                _MetricPill(
+                                  label: 'Avg risk: $averageRisk',
+                                  good: averageRisk == 'Low',
+                                ),
+                                _MetricPill(
+                                  label: '$goalsMet goals met',
+                                  good: goalsMet >= 3,
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _MetricPill(
+                          label: '$totalWeeklyScans dishes scanned',
+                          good: totalWeeklyScans >= 4,
+                        ),
+                        _MetricPill(
+                          label: 'Avg risk: $averageRisk',
+                          good: averageRisk == 'Low',
+                        ),
+                        _MetricPill(
+                          label: '0 goals met',
+                          good: false,
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   SizedBox(
                     height: 58,
@@ -832,24 +1094,28 @@ class _BlobPainter extends CustomPainter {
 
 // ── Health Score Ring ──────────────────────────────────────────────────────────
 class _HealthScoreRing extends StatelessWidget {
-  final int score;
-  const _HealthScoreRing({required this.score});
+  final int exceededCount;
+  final int totalNutrients;
+  const _HealthScoreRing({
+    required this.exceededCount,
+    required this.totalNutrients,
+  });
 
   Color get _color {
-    if (score >= 80) return _kFresh;
-    if (score >= 60) return _kWarning;
+    if (exceededCount == 0) return _kFresh;
+    if (exceededCount <= 2) return _kWarning;
     return _kDanger;
   }
 
   String get _label {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    return 'Watch out';
+    if (exceededCount == 0) return 'All Good';
+    if (exceededCount == 1) return 'Limit Alert';
+    return 'Action Needed';
   }
 
   @override
   Widget build(BuildContext context) {
-    final pct = (score / 100).clamp(0.0, 1.0);
+    final pct = totalNutrients > 0 ? (exceededCount / totalNutrients).clamp(0.0, 1.0) : 0.0;
     return Column(
       children: [
         CircularPercentIndicator(
@@ -863,21 +1129,23 @@ class _HealthScoreRing extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '$score',
+                '$exceededCount',
                 style: GoogleFonts.playfairDisplay(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                   height: 1,
                 ),
               ),
-              Text(
-                '/100',
-                style: GoogleFonts.inter(
-                  fontSize: 9,
-                  color: Colors.white.withValues(alpha: 0.65),
+              if (exceededCount > 0)
+                Text(
+                  'exceeded',
+                  style: GoogleFonts.inter(
+                    fontSize: 8,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    height: 1,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -887,7 +1155,7 @@ class _HealthScoreRing extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: _color,
+            color: exceededCount > 2 ? const Color(0xFFFFAB5B) : _color,
           ),
         ),
       ],
@@ -971,18 +1239,22 @@ class _ProgressTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final double value;
+  final double limit;
+  final String unit;
   final Color color;
 
   const _ProgressTile({
     required this.label,
     required this.icon,
     required this.value,
+    required this.limit,
+    required this.unit,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final pct = (value / 100).clamp(0.0, 1.0);
+    final pct = limit <= 0 ? 0.0 : (value / limit).clamp(0.0, 1.0);
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.06),
@@ -1006,7 +1278,7 @@ class _ProgressTile extends StatelessWidget {
                 Icon(icon, color: color, size: 14),
                 const SizedBox(height: 2),
                 Text(
-                  '${value.round()}%',
+                  '${(pct * 100).round()}%',
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -1023,6 +1295,15 @@ class _ProgressTile extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w500,
               color: _kTextMuted,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${value.toStringAsFixed(1)} / ${limit.toStringAsFixed(0)} $unit',
+            style: GoogleFonts.inter(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -1130,7 +1411,7 @@ class _ScanBannerState extends State<_ScanBanner>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Calories · Allergens · Chronic risk',
+                      'Cholesterol · Sodium · Sugar · Saturated Fats',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -1175,47 +1456,70 @@ class _AlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCritical = data.color == _kDanger;
+    final isWarning = data.color == _kWarning;
+
     return Container(
-      width: 250,
-      padding: const EdgeInsets.all(14),
+      width: 280,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: data.color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: _kSoftBg, width: 1),
-        boxShadow: AppShadows.sm(_kPrimary),
+        border: Border.all(
+          color: data.color,
+          width: isCritical ? 2.5 : isWarning ? 2 : 1.5,
+        ),
+        boxShadow: [
+          if (isCritical || isWarning)
+            BoxShadow(
+              color: data.color.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(data.icon, color: data.color, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _kTextTitle,
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  data.subtitle,
-                  style: GoogleFonts.inter(fontSize: 11, color: _kTextMuted),
+                child: Icon(data.icon, color: data.color, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: data.color,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      data.subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: _kTextBody,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
