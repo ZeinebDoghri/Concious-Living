@@ -11,13 +11,13 @@ import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 
-const _kPrimary = Color(0xFF7DC5A0);
-const _kDeep    = Color(0xFF4A8A6A);
-const _kSurface = Color(0xFFF4FAF7);
-const _kSoftBg  = Color(0xFFDFF2E9);
-const _kTitle   = Color(0xFF0D2E1E);
-const _kBody    = Color(0xFF3A6A52);
-const _kMuted   = Color(0xFF7AAA90);
+const _kPrimary = Color(0xFF5A9FC9);
+const _kDeep = Color(0xFF35658F);
+const _kSurface = Color(0xFFF0F5F8);
+const _kSoftBg = Color(0xFFD9E9F5);
+const _kTitle = Color(0xFF26201B);
+const _kBody = Color(0xFF5C4F48);
+const _kMuted = Color(0xFF8C7E78);
 
 class EditHotelProfileScreen extends StatefulWidget {
   const EditHotelProfileScreen({super.key});
@@ -28,29 +28,40 @@ class EditHotelProfileScreen extends StatefulWidget {
 
 class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
     with TickerProviderStateMixin {
-  int _step     = 0;
+  int _step = 0;
   int _prevStep = 0;
 
   final _hotelNameController = TextEditingController();
 
   Uint8List? _newLogoBytes;
 
-  String _hotelType    = 'Boutique';
-  double _rooms        = 80;
-  int    _staffCount   = 12;
+  String _hotelType = 'Boutique';
+  double _rooms = 80;
+  int _staffCount = 12;
   final Set<String> _roles = <String>{'Manager'};
-  bool   _allergyHandling  = true;
+  bool _allergyHandling = true;
 
-  bool   _notifySpoilage     = true;
-  bool   _notifyLowInventory = true;
-  bool   _notifyWasteTips    = true;
-  double _wasteThreshold     = 20;
+  bool _notifySpoilage = true;
+  bool _notifyLowInventory = true;
+  bool _notifyWasteTips = true;
+  double _wasteThreshold = 20;
 
-  bool _saving              = false;
+  bool _saving = false;
   bool _didHandleInitialStep = false;
 
-  static const _typeOptions = <String>['Boutique', 'Business', 'Resort', 'Budget', 'Other'];
-  static const _roleOptions = <String>['Housekeeping', 'Kitchen', 'Front Desk', 'Manager'];
+  static const _typeOptions = <String>[
+    'Boutique',
+    'Business',
+    'Resort',
+    'Budget',
+    'Other',
+  ];
+  static const _roleOptions = <String>[
+    'Housekeeping',
+    'Kitchen',
+    'Front Desk',
+    'Manager',
+  ];
 
   @override
   void initState() {
@@ -59,7 +70,8 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
     _hotelNameController.text = user?.hotelName ?? '';
 
     final type = (user?.hotelType ?? '').trim();
-    if (type.isNotEmpty) _hotelType = _typeOptions.contains(type) ? type : 'Other';
+    if (type.isNotEmpty)
+      _hotelType = _typeOptions.contains(type) ? type : 'Other';
 
     final rooms = user?.rooms;
     if (rooms != null) _rooms = rooms.toDouble().clamp(10, 500);
@@ -69,15 +81,17 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
 
     final staffRoles = user?.staffRoles ?? const <String>[];
     if (staffRoles.isNotEmpty) {
-      _roles..clear()..addAll(staffRoles.map((e) => e.trim()).where((e) => e.isNotEmpty));
+      _roles
+        ..clear()
+        ..addAll(staffRoles.map((e) => e.trim()).where((e) => e.isNotEmpty));
       if (_roles.isEmpty) _roles.add('Manager');
     }
 
-    _allergyHandling   = user?.allergyHandling    ?? true;
-    _notifySpoilage    = user?.notifyAllergens     ?? true;
+    _allergyHandling = user?.allergyHandling ?? true;
+    _notifySpoilage = user?.notifyAllergens ?? true;
     _notifyLowInventory = user?.notifyWeeklyReport ?? true;
-    _notifyWasteTips   = user?.notifyDailyIntake   ?? true;
-    _wasteThreshold    = (user?.wasteThreshold ?? 20).clamp(0, 100).toDouble();
+    _notifyWasteTips = user?.notifyDailyIntake ?? true;
+    _wasteThreshold = (user?.wasteThreshold ?? 20).clamp(0, 100).toDouble();
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleInitialStep());
   }
@@ -94,17 +108,26 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
     final stepParam = GoRouterState.of(context).uri.queryParameters['step'];
     if (stepParam == null) return;
     final idx = ((int.tryParse(stepParam) ?? 1) - 1).clamp(0, 2);
-    setState(() { _step = idx; _prevStep = idx; });
+    setState(() {
+      _step = idx;
+      _prevStep = idx;
+    });
   }
 
   void _next() {
     if (_step >= 2) return;
-    setState(() { _prevStep = _step; _step++; });
+    setState(() {
+      _prevStep = _step;
+      _step++;
+    });
   }
 
   void _back() {
     if (_step <= 0) return;
-    setState(() { _prevStep = _step; _step--; });
+    setState(() {
+      _prevStep = _step;
+      _step--;
+    });
   }
 
   void _snack(String msg) =>
@@ -112,13 +135,17 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
 
   String _readableError(Object e) {
     final s = e.toString();
-    if (s.startsWith('Exception: '))  return s.substring(11);
+    if (s.startsWith('Exception: ')) return s.substring(11);
     if (s.startsWith('StateError: ')) return s.substring(12);
     return s;
   }
 
   Future<void> _pickLogo() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1400);
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1400,
+    );
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
@@ -127,24 +154,37 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
 
   void _toggleRole(String role) {
     setState(() {
-      if (_roles.contains(role)) { _roles.remove(role); } else { _roles.add(role); }
+      if (_roles.contains(role)) {
+        _roles.remove(role);
+      } else {
+        _roles.add(role);
+      }
     });
   }
 
   Future<void> _save() async {
     if (_saving) return;
     final hotelName = _hotelNameController.text.trim();
-    if (hotelName.isEmpty) { _snack(AppStrings.validationRequiredField); return; }
+    if (hotelName.isEmpty) {
+      _snack(AppStrings.validationRequiredField);
+      return;
+    }
     setState(() => _saving = true);
     try {
       final userProvider = context.read<UserProvider>();
       final current = userProvider.currentUser;
-      if (current == null) { _snack('Please sign in again.'); return; }
+      if (current == null) {
+        _snack('Please sign in again.');
+        return;
+      }
 
       String? uploadedLogoUrl;
       if (_newLogoBytes != null) {
         try {
-          uploadedLogoUrl = await FirebaseService.uploadProfilePhoto(userId: current.id, bytes: _newLogoBytes!);
+          uploadedLogoUrl = await FirebaseService.uploadProfilePhoto(
+            userId: current.id,
+            bytes: _newLogoBytes!,
+          );
         } catch (_) {}
       }
 
@@ -165,7 +205,7 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
 
       await userProvider.saveProfile(updated);
       if (!mounted) return;
-      context.pop();
+      context.canPop() ? context.pop() : context.go(AppRoutes.hotelProfile);
     } catch (e) {
       _snack(_readableError(e));
     } finally {
@@ -175,7 +215,7 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user    = context.watch<UserProvider>().currentUser;
+    final user = context.watch<UserProvider>().currentUser;
     final forward = _step >= _prevStep;
 
     return Scaffold(
@@ -200,7 +240,11 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
-                      onPressed: () => _step > 0 ? _back() : context.pop(),
+                      onPressed: () => _step > 0
+                          ? _back()
+                          : context.canPop()
+                          ? context.pop()
+                          : context.go(AppRoutes.hotelProfile),
                       icon: const Icon(Icons.arrow_back_ios_new, size: 18),
                       color: Colors.white,
                     ),
@@ -212,12 +256,19 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
                         children: [
                           Text(
                             'Edit hotel profile',
-                            style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.white),
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Update hotel details and preferences',
-                            style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.75),
+                            ),
                           ),
                         ],
                       ),
@@ -233,7 +284,9 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppRadii.xl),
+                ),
               ),
               child: Column(
                 children: [
@@ -247,9 +300,24 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
                       switchOutCurve: Curves.easeInOut,
                       transitionBuilder: (child, animation) {
                         final isIncoming = child.key == ValueKey(_step);
-                        final inTween  = Tween<Offset>(begin: forward ? const Offset(1, 0) : const Offset(-1, 0), end: Offset.zero);
-                        final outTween = Tween<Offset>(begin: Offset.zero, end: forward ? const Offset(-1, 0) : const Offset(1, 0));
-                        return SlideTransition(position: (isIncoming ? inTween : outTween).animate(animation), child: child);
+                        final inTween = Tween<Offset>(
+                          begin: forward
+                              ? const Offset(1, 0)
+                              : const Offset(-1, 0),
+                          end: Offset.zero,
+                        );
+                        final outTween = Tween<Offset>(
+                          begin: Offset.zero,
+                          end: forward
+                              ? const Offset(-1, 0)
+                              : const Offset(1, 0),
+                        );
+                        return SlideTransition(
+                          position: (isIncoming ? inTween : outTween).animate(
+                            animation,
+                          ),
+                          child: child,
+                        );
                       },
                       child: SingleChildScrollView(
                         key: ValueKey(_step),
@@ -261,13 +329,16 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                     child: AnimatedButton(
-                      label: _step == 2 ? 'Save changes' : AppStrings.continueCta,
+                      label: _step == 2
+                          ? 'Save changes'
+                          : AppStrings.continueCta,
                       color: _kPrimary,
                       textColor: Colors.white,
                       onTap: _step == 2
                           ? _save
                           : () async {
-                              if (_step == 0 && _hotelNameController.text.trim().isEmpty) {
+                              if (_step == 0 &&
+                                  _hotelNameController.text.trim().isEmpty) {
                                 _snack(AppStrings.validationRequiredField);
                                 return;
                               }
@@ -338,9 +409,13 @@ class _StepIndicator extends StatelessWidget {
       child: Row(
         children: [
           _Dot(active: step == 0, complete: step > 0),
-          Expanded(child: Container(height: 2, color: step > 0 ? _kPrimary : _kSoftBg)),
+          Expanded(
+            child: Container(height: 2, color: step > 0 ? _kPrimary : _kSoftBg),
+          ),
           _Dot(active: step == 1, complete: step > 1),
-          Expanded(child: Container(height: 2, color: step > 1 ? _kPrimary : _kSoftBg)),
+          Expanded(
+            child: Container(height: 2, color: step > 1 ? _kPrimary : _kSoftBg),
+          ),
           _Dot(active: step == 2, complete: false),
         ],
       ),
@@ -355,17 +430,23 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size  = active ? 24.0 : 14.0;
+    final size = active ? 24.0 : 14.0;
     final color = (active || complete) ? _kPrimary : _kSoftBg;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: size, height: size,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: (active || complete) ? _kPrimary : _kMuted, width: 1.5),
+        border: Border.all(
+          color: (active || complete) ? _kPrimary : _kMuted,
+          width: 1.5,
+        ),
       ),
-      child: complete ? const Icon(Icons.check, size: 10, color: Colors.white) : null,
+      child: complete
+          ? const Icon(Icons.check, size: 10, color: Colors.white)
+          : null,
     );
   }
 }
@@ -373,7 +454,7 @@ class _Dot extends StatelessWidget {
 // ── Step 0: Hotel details ──────────────────────────────────────────────────────
 class _HotelDetailsStep extends StatelessWidget {
   final Uint8List? newLogoBytes;
-  final String?   existingLogoUrl;
+  final String? existingLogoUrl;
   final Future<void> Function() onPickLogo;
   final TextEditingController hotelNameController;
   final String hotelType;
@@ -383,10 +464,15 @@ class _HotelDetailsStep extends StatelessWidget {
   final ValueChanged<double> onRooms;
 
   const _HotelDetailsStep({
-    required this.newLogoBytes, required this.existingLogoUrl,
-    required this.onPickLogo, required this.hotelNameController,
-    required this.hotelType, required this.typeOptions,
-    required this.onHotelType, required this.rooms, required this.onRooms,
+    required this.newLogoBytes,
+    required this.existingLogoUrl,
+    required this.onPickLogo,
+    required this.hotelNameController,
+    required this.hotelType,
+    required this.typeOptions,
+    required this.onHotelType,
+    required this.rooms,
+    required this.onRooms,
   });
 
   @override
@@ -395,9 +481,12 @@ class _HotelDetailsStep extends StatelessWidget {
     final Widget avatar = newLogoBytes != null
         ? CircleAvatar(radius: 45, backgroundImage: MemoryImage(newLogoBytes!))
         : (url.isNotEmpty
-            ? CircleAvatar(radius: 45, backgroundImage: NetworkImage(url))
-            : const CircleAvatar(radius: 45, backgroundColor: _kSoftBg,
-                child: Icon(Icons.hotel, size: 42, color: _kDeep)));
+              ? CircleAvatar(radius: 45, backgroundImage: NetworkImage(url))
+              : const CircleAvatar(
+                  radius: 45,
+                  backgroundColor: _kSoftBg,
+                  child: Icon(Icons.hotel, size: 42, color: _kDeep),
+                ));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,13 +496,22 @@ class _HotelDetailsStep extends StatelessWidget {
             children: [
               avatar,
               Positioned(
-                right: 0, bottom: 0,
+                right: 0,
+                bottom: 0,
                 child: GestureDetector(
                   onTap: onPickLogo,
                   child: Container(
-                    width: 28, height: 28,
-                    decoration: const BoxDecoration(color: _kPrimary, shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: _kPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -428,8 +526,14 @@ class _HotelDetailsStep extends StatelessWidget {
             prefixIcon: const Icon(Icons.hotel, color: _kMuted),
             filled: true,
             fillColor: _kSoftBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: const BorderSide(color: _kPrimary, width: 1.5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -440,14 +544,31 @@ class _HotelDetailsStep extends StatelessWidget {
             prefixIcon: const Icon(Icons.apartment_outlined, color: _kMuted),
             filled: true,
             fillColor: _kSoftBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input), borderSide: const BorderSide(color: _kPrimary, width: 1.5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+            ),
           ),
-          items: typeOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(growable: false),
-          onChanged: (v) { if (v != null) onHotelType(v); },
+          items: typeOptions
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(growable: false),
+          onChanged: (v) {
+            if (v != null) onHotelType(v);
+          },
         ),
         const SizedBox(height: 20),
-        Text('Rooms: ${rooms.round()}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Rooms: ${rooms.round()}',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
@@ -457,7 +578,13 @@ class _HotelDetailsStep extends StatelessWidget {
             overlayColor: _kPrimary.withValues(alpha: 0.12),
             trackHeight: 4,
           ),
-          child: Slider(value: rooms, min: 10, max: 500, divisions: 49, onChanged: onRooms),
+          child: Slider(
+            value: rooms,
+            min: 10,
+            max: 500,
+            divisions: 49,
+            onChanged: onRooms,
+          ),
         ),
       ],
     );
@@ -475,9 +602,13 @@ class _TeamSetupStep extends StatelessWidget {
   final ValueChanged<bool> onAllergyHandling;
 
   const _TeamSetupStep({
-    required this.staffCount, required this.onStaffCount,
-    required this.roles, required this.roleOptions, required this.onToggleRole,
-    required this.allergyHandling, required this.onAllergyHandling,
+    required this.staffCount,
+    required this.onStaffCount,
+    required this.roles,
+    required this.roleOptions,
+    required this.onToggleRole,
+    required this.allergyHandling,
+    required this.onAllergyHandling,
   });
 
   @override
@@ -485,59 +616,120 @@ class _TeamSetupStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Team setup', style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Team setup',
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 16),
-        Text('Staff count', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Staff count',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: _kPrimary, inactiveTrackColor: _kSoftBg,
-                  thumbColor: _kPrimary, overlayColor: _kPrimary.withValues(alpha: 0.12),
+                  activeTrackColor: _kPrimary,
+                  inactiveTrackColor: _kSoftBg,
+                  thumbColor: _kPrimary,
+                  overlayColor: _kPrimary.withValues(alpha: 0.12),
                 ),
-                child: Slider(value: staffCount.toDouble(), min: 1, max: 80, divisions: 79, onChanged: (v) => onStaffCount(v.round())),
+                child: Slider(
+                  value: staffCount.toDouble(),
+                  min: 1,
+                  max: 80,
+                  divisions: 79,
+                  onChanged: (v) => onStaffCount(v.round()),
+                ),
               ),
             ),
             SizedBox(
               width: 48,
-              child: Text('$staffCount', textAlign: TextAlign.right,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: _kPrimary)),
+              child: Text(
+                '$staffCount',
+                textAlign: TextAlign.right,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: _kPrimary,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Text('Roles in your team', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Roles in your team',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 10, runSpacing: 10,
-          children: roleOptions.map((r) {
-            final selected = roles.contains(r);
-            return GestureDetector(
-              onTap: () => onToggleRole(r),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: selected ? _kSoftBg : Colors.white,
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                  border: Border.all(color: selected ? _kPrimary : _kSoftBg, width: 1.5),
-                ),
-                child: Text(r, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600,
-                    color: selected ? _kDeep : _kMuted)),
-              ),
-            );
-          }).toList(growable: false),
+          spacing: 10,
+          runSpacing: 10,
+          children: roleOptions
+              .map((r) {
+                final selected = roles.contains(r);
+                return GestureDetector(
+                  onTap: () => onToggleRole(r),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? _kSoftBg : Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      border: Border.all(
+                        color: selected ? _kPrimary : _kSoftBg,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      r,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? _kDeep : _kMuted,
+                      ),
+                    ),
+                  ),
+                );
+              })
+              .toList(growable: false),
         ),
         const SizedBox(height: 20),
         Container(
-          decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(AppRadii.md)),
+          decoration: BoxDecoration(
+            color: _kSoftBg,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+          ),
           child: SwitchListTile(
             value: allergyHandling,
             onChanged: onAllergyHandling,
             activeColor: _kPrimary,
-            title: Text('Allergy handling', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+            title: Text(
+              'Allergy handling',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _kTitle,
+              ),
+            ),
           ),
         ),
       ],
@@ -557,9 +749,14 @@ class _AlertPreferencesStep extends StatelessWidget {
   final ValueChanged<double> onWasteThreshold;
 
   const _AlertPreferencesStep({
-    required this.notifySpoilage, required this.notifyLowInventory, required this.notifyWasteTips,
-    required this.onNotifySpoilage, required this.onNotifyLowInventory, required this.onNotifyWasteTips,
-    required this.wasteThreshold, required this.onWasteThreshold,
+    required this.notifySpoilage,
+    required this.notifyLowInventory,
+    required this.notifyWasteTips,
+    required this.onNotifySpoilage,
+    required this.onNotifyLowInventory,
+    required this.onNotifyWasteTips,
+    required this.wasteThreshold,
+    required this.onWasteThreshold,
   });
 
   @override
@@ -567,40 +764,91 @@ class _AlertPreferencesStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Alert preferences', style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Alert preferences',
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 16),
         Container(
-          decoration: BoxDecoration(color: _kSoftBg, borderRadius: BorderRadius.circular(AppRadii.md)),
+          decoration: BoxDecoration(
+            color: _kSoftBg,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+          ),
           child: Column(
             children: [
               SwitchListTile(
-                value: notifySpoilage, onChanged: onNotifySpoilage, activeColor: _kPrimary,
-                title: Text('Spoilage alerts', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+                value: notifySpoilage,
+                onChanged: onNotifySpoilage,
+                activeColor: _kPrimary,
+                title: Text(
+                  'Spoilage alerts',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kTitle,
+                  ),
+                ),
               ),
               Divider(color: _kPrimary.withValues(alpha: 0.1), height: 1),
               SwitchListTile(
-                value: notifyLowInventory, onChanged: onNotifyLowInventory, activeColor: _kPrimary,
-                title: Text('Low inventory alerts', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+                value: notifyLowInventory,
+                onChanged: onNotifyLowInventory,
+                activeColor: _kPrimary,
+                title: Text(
+                  'Low inventory alerts',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kTitle,
+                  ),
+                ),
               ),
               Divider(color: _kPrimary.withValues(alpha: 0.1), height: 1),
               SwitchListTile(
-                value: notifyWasteTips, onChanged: onNotifyWasteTips, activeColor: _kPrimary,
-                title: Text('Waste reduction tips', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+                value: notifyWasteTips,
+                onChanged: onNotifyWasteTips,
+                activeColor: _kPrimary,
+                title: Text(
+                  'Waste reduction tips',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _kTitle,
+                  ),
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 20),
-        Text('Waste threshold: ${wasteThreshold.round()}%',
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
+        Text(
+          'Waste threshold: ${wasteThreshold.round()}%',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kTitle,
+          ),
+        ),
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: _kPrimary, inactiveTrackColor: _kSoftBg,
-            thumbColor: _kPrimary, overlayColor: _kPrimary.withValues(alpha: 0.12),
+            activeTrackColor: _kPrimary,
+            inactiveTrackColor: _kSoftBg,
+            thumbColor: _kPrimary,
+            overlayColor: _kPrimary.withValues(alpha: 0.12),
             trackHeight: 4,
           ),
-          child: Slider(value: wasteThreshold, min: 0, max: 100, divisions: 20, onChanged: onWasteThreshold),
+          child: Slider(
+            value: wasteThreshold,
+            min: 0,
+            max: 100,
+            divisions: 20,
+            onChanged: onWasteThreshold,
+          ),
         ),
       ],
     );

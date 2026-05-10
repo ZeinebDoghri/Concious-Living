@@ -8,17 +8,17 @@ import '../../../providers/alerts_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody  = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
-const _fresh      = Color(0xFF52C98A);
-const _freshBg    = Color(0xFFE8F9F1);
-const _danger     = Color(0xFFFF7070);
-const _dangerBg   = Color(0xFFFFEEEE);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
+const _fresh = Color(0xFF52C98A);
+const _freshBg = Color(0xFFE8F9F1);
+const _danger = Color(0xFFFF7070);
+const _dangerBg = Color(0xFFFFEEEE);
 
 class AlertDetailScreen extends StatelessWidget {
   final String id;
@@ -35,7 +35,8 @@ class AlertDetailScreen extends StatelessWidget {
         return AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             AppStrings.markAsResolved,
             style: GoogleFonts.playfairDisplay(
@@ -108,10 +109,7 @@ class AlertDetailScreen extends StatelessWidget {
                 child: Center(
                   child: Text(
                     AppStrings.alertNotFound,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: _rTextMuted,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 13, color: _rTextMuted),
                   ),
                 ),
               ),
@@ -134,19 +132,14 @@ class AlertDetailScreen extends StatelessWidget {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _InfoTile(
-                        label: AppStrings.dish,
-                        value: alert.dishName,
-                      ),
+                      _InfoTile(label: AppStrings.dish, value: alert.dishName),
                       const SizedBox(height: 10),
                       _InfoTile(
                         label: AppStrings.customer,
@@ -217,9 +210,12 @@ class AlertDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.canPop()
+                ? context.pop()
+                : context.go(AppRoutes.restaurantAlerts),
             child: Container(
-              width: 38, height: 38,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -231,8 +227,7 @@ class AlertDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(Icons.arrow_back_ios_new,
-                  color: _rDeep, size: 16),
+              child: Icon(Icons.arrow_back_ios_new, color: _rDeep, size: 16),
             ),
           ),
           const SizedBox(width: 14),
@@ -255,11 +250,7 @@ class _InfoTile extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _InfoTile({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoTile({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -268,8 +259,7 @@ class _InfoTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: _rSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
+        border: Border.all(color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
       ),
       child: Row(
         children: [
@@ -317,8 +307,7 @@ class _Bullet extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(Icons.check_circle_outline,
-                size: 16, color: _fresh),
+            child: Icon(Icons.check_circle_outline, size: 16, color: _fresh),
           ),
           const SizedBox(width: 10),
           Expanded(

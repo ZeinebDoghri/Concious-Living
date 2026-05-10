@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import '../core/firebase_service.dart';
+import '../core/models/scan_result.dart';
 import '../core/models/scan_history_item.dart';
+import '../services/nutrient_tracking_service.dart';
 
 class ScanHistoryProvider extends ChangeNotifier {
   final List<ScanHistoryItem> _items = [];
@@ -45,10 +48,19 @@ class ScanHistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addScan(ScanHistoryItem item) async {
+  Future<void> addScan(
+    ScanHistoryItem item, {
+    bool updateNutritionTracker = false,
+  }) async {
     final uid = _userId;
     if (uid == null || uid.isEmpty) return;
     await FirebaseService.saveScan(uid, item);
+    if (updateNutritionTracker) {
+      await NutrientTrackingService.onScanSaved(
+        uid,
+        _nutritionFromScanHistory(item),
+      );
+    }
   }
 
   Future<ScanHistoryItem?> removeScan(String id) async {
@@ -57,6 +69,13 @@ class ScanHistoryProvider extends ChangeNotifier {
 
     final existing = byId(id);
     await FirebaseService.deleteScan(uid, id);
+    if (existing != null) {
+      await NutrientTrackingService().deleteScan(
+        ScanResult.fromHistoryItem(existing, uid),
+        uid,
+        DateFormat('yyyy-MM-dd').format(existing.scannedAt),
+      );
+    }
     return existing;
   }
 
@@ -88,5 +107,16 @@ class ScanHistoryProvider extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  static Map<String, dynamic> _nutritionFromScanHistory(ScanHistoryItem item) {
+    return {
+      'scanId': item.id,
+      'cholesterol_mg': item.result.cholesterol.value,
+      'saturated_fat_g': item.result.saturatedFat.value,
+      'sodium_mg': item.result.sodium.value,
+      'sugar_g': item.result.sugar.value,
+      'calories': 0.0,
+    };
   }
 }

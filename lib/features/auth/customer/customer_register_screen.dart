@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,12 +11,18 @@ import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
 import '../../../providers/venue_type_provider.dart';
 
-// Customer (violet/lavender) role colors
-const _primary = Color(0xFFA78BFA);
-const _deep = Color(0xFF7C3AED);
-const _softBg = Color(0xFFEDE9FE);
-const _textTitle = Color(0xFF2D1B69);
-const _textMuted = Color(0xFF8B7BC0);
+// ── Customer — Twilight Lupine (rosy terracotta) ───────────────────────────────
+const _kBg = Color(0xFFFDF5F4); // lightest tint of customer rose
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kBorder = Color(0xFFEFCCE0);
+const _kTitle = Color(0xFF26201B);
+const _kMuted = Color(0xFF8C7E78);
+
+// accent dots from other roles
+const _kRestAccent = Color(0xFF8FA84A);
+const _kHotelAccent = Color(0xFF5A9FC9);
 
 class CustomerRegisterScreen extends StatefulWidget {
   const CustomerRegisterScreen({super.key});
@@ -26,10 +33,10 @@ class CustomerRegisterScreen extends StatefulWidget {
 
 class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
 
   final _passwordFocus = FocusNode();
 
@@ -40,32 +47,32 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
 
   String? _emailError;
 
-  late final AnimationController _blobController;
+  late final AnimationController _blobCtrl;
 
   @override
   void initState() {
     super.initState();
-    _blobController = AnimationController(
+    _blobCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
+      duration: const Duration(seconds: 20),
     )..repeat();
 
-    _emailController.addListener(_validateEmailRealtime);
+    _emailCtrl.addListener(_validateEmailRealtime);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmController.dispose();
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     _passwordFocus.dispose();
-    _blobController.dispose();
+    _blobCtrl.dispose();
     super.dispose();
   }
 
   void _validateEmailRealtime() {
-    final email = _emailController.text.trim();
+    final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
       if (_emailError != null) setState(() => _emailError = null);
       return;
@@ -81,39 +88,68 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     if (v.length >= 6) score++;
     if (v.length >= 10) score++;
     if (RegExp(r'[A-Z]').hasMatch(v)) score++;
-    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v))
+    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
       score++;
+    }
     return score.clamp(0, 4);
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  void _showRegisterError(Object error) {
+    final message = _readable(error);
+    String snackMessage = message;
+    String? actionLabel;
+    String? actionRoute;
+
+    if (message.toLowerCase().contains('already in use')) {
+      snackMessage = 'This email is already registered.';
+      actionLabel = 'Sign In';
+      actionRoute = AppRoutes.customerLogin;
+    } else if (message.toLowerCase().contains('weak')) {
+      snackMessage = 'Password too weak (minimum 6 characters).';
+    } else if (message.toLowerCase().contains('valid email')) {
+      snackMessage = 'Invalid email address.';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(snackMessage),
+        action: actionLabel == null
+            ? null
+            : SnackBarAction(
+                label: actionLabel,
+                textColor: Colors.white,
+                onPressed: () => context.go(actionRoute!),
+              ),
+        duration: const Duration(seconds: 5),
+        backgroundColor: const Color(0xFFFF6B8A),
+      ),
+    );
   }
 
-  String _readableError(Object e) {
-    final message = e.toString();
-    if (message.startsWith('Exception: '))
-      return message.substring('Exception: '.length);
-    if (message.startsWith('StateError: '))
-      return message.substring('StateError: '.length);
-    return message;
+  String _readable(Object e) {
+    final s = e.toString();
+    if (s.startsWith('Exception: ')) return s.substring(11);
+    if (s.startsWith('StateError: ')) return s.substring(12);
+    return s;
   }
 
   Future<void> _createAccount() async {
     if (_isLoading) return;
+    HapticFeedback.selectionClick();
 
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    final confirm = _confirmController.text;
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    final confirm = _confirmCtrl.text;
 
     if (name.isEmpty) {
       _snack(AppStrings.validationRequiredField);
       return;
     }
-    if (!EmailValidator.validate(email)) {
+    if (email.isEmpty || !email.contains('@')) {
       _snack(AppStrings.validationInvalidEmail);
       return;
     }
@@ -127,7 +163,6 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     }
 
     setState(() => _isLoading = true);
-
     try {
       await context.read<VenueTypeProvider>().clear();
       if (!mounted) return;
@@ -139,7 +174,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
       if (!mounted) return;
       context.go(AppRoutes.customerProfileSetup);
     } catch (e) {
-      _snack(_readableError(e));
+      _showRegisterError(e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -148,86 +183,164 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final heroH = screenH * 0.42;
+    final heroH = screenH * 0.46;
 
-    final password = _passwordController.text;
+    final password = _passwordCtrl.text;
     final strength = _passwordStrength(password);
     final showStrength = _passwordFocus.hasFocus && password.isNotEmpty;
     final mismatch =
-        _confirmController.text.isNotEmpty &&
-        _passwordController.text != _confirmController.text;
+        _confirmCtrl.text.isNotEmpty && _passwordCtrl.text != _confirmCtrl.text;
 
     return Scaffold(
-      backgroundColor: _primary,
+      backgroundColor: _kBg,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
+          // ── Full background blobs ────────────────────────────────────
+          AnimatedBuilder(
+            animation: _blobCtrl,
+            builder: (_, __) => CustomPaint(
+              painter: _BlobBgPainter(_blobCtrl.value),
+              size: Size(double.infinity, MediaQuery.of(context).size.height),
+            ),
+          ),
+
           // ── Hero zone ────────────────────────────────────────────────
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: heroH,
-            child: Stack(
-              children: [
-                Container(color: _primary),
-                AnimatedBuilder(
-                  animation: _blobController,
-                  builder: (_, __) => CustomPaint(
-                    painter: _BlobPainter(_blobController.value, _primary),
-                    size: Size(double.infinity, heroH),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_kPrimary.withOpacity(0.92), _kDeep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+              ),
+              child: Stack(
+                children: [
+                  // hero blobs
+                  AnimatedBuilder(
+                    animation: _blobCtrl,
+                    builder: (_, __) => CustomPaint(
+                      painter: _HeroBlobPainter(_blobCtrl.value),
+                      size: Size(double.infinity, heroH),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          onPressed: () => context.go(AppRoutes.customerLogin),
-                          icon: const Icon(Icons.arrow_back_ios_new),
-                          color: Colors.white,
-                        ),
-                        const Spacer(),
-                        Center(
-                          child: Column(
-                            children: [
-                              Text(
-                                'Create account',
-                                style: GoogleFonts.playfairDisplay(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Join FreshGuard today',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ),
-                            ],
+                  ),
+
+                  // decorative circle bottom-right
+                  Positioned(
+                    right: -heroH * 0.16,
+                    bottom: -heroH * 0.12,
+                    child: Container(
+                      width: heroH * 0.68,
+                      height: heroH * 0.68,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+
+                  // decorative circle top-left
+                  Positioned(
+                    left: -heroH * 0.10,
+                    top: -heroH * 0.08,
+                    child: Container(
+                      width: heroH * 0.50,
+                      height: heroH * 0.50,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.04),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Back button
+                          IconButton(
+                            onPressed: () =>
+                                context.go(AppRoutes.customerLogin),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 20,
+                            ),
+                            color: Colors.white,
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+
+                          const Spacer(),
+
+                          // Brand + illustration
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Fresh',
+                                        style: GoogleFonts.cormorantGaramond(
+                                          fontSize: 40,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Guard',
+                                        style: GoogleFonts.cormorantGaramond(
+                                          fontSize: 40,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'AI FOOD SAFETY',
+                                        style: GoogleFonts.dmSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withOpacity(0.72),
+                                          letterSpacing: 2.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const _SaladIllustration(size: 108),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
           // ── Floating card ────────────────────────────────────────────
           Positioned(
-            top: heroH - 24,
+            top: heroH - 26,
             left: 0,
             right: 0,
             bottom: 0,
@@ -238,34 +351,105 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                   topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
-                boxShadow: AppShadows.lg(_primary),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kPrimary.withOpacity(0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.fromLTRB(28, 30, 28, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Card header row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Join us',
+                                style: GoogleFonts.cormorantGaramond(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kTitle,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Start your health journey',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  color: _kMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Role chip
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _kSoftBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: _kBorder, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: _kPrimary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Customer',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kDeep,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 26),
+
                     // Full name
                     _buildInput(
-                      controller: _nameController,
+                      controller: _nameCtrl,
                       label: AppStrings.fullName,
                       icon: Icons.person_outline,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Email
                     _buildInput(
-                      controller: _emailController,
+                      controller: _emailCtrl,
                       label: AppStrings.emailAddress,
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       errorText: _emailError,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Password
                     _buildInput(
-                      controller: _passwordController,
+                      controller: _passwordCtrl,
                       label: AppStrings.password,
                       icon: Icons.lock_outline,
                       obscure: _obscure,
@@ -285,14 +469,14 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                           if (!filled) {
                             color = const Color(0xFFE2E8F0);
                           } else {
-                            if (i == 0)
+                            if (i == 0) {
                               color = const Color(0xFFF87171);
-                            else if (i == 1)
+                            } else if (i == 1)
                               color = const Color(0xFFFBBF24);
                             else if (i == 2)
                               color = const Color(0xFF34D399);
                             else
-                              color = _deep;
+                              color = _kDeep;
                           }
                           return Expanded(
                             child: Container(
@@ -307,11 +491,11 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                         }),
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Confirm password
                     _buildInput(
-                      controller: _confirmController,
+                      controller: _confirmCtrl,
                       label: AppStrings.confirmPassword,
                       icon: Icons.lock_outline,
                       obscure: _obscure2,
@@ -323,25 +507,54 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                       const SizedBox(height: 6),
                       Text(
                         AppStrings.validationPasswordsMismatch,
-                        style: GoogleFonts.inter(fontSize: 11, color: _deep),
+                        style: GoogleFonts.dmSans(fontSize: 11, color: _kDeep),
                       ),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
-                    // CTA
+                    // Create account CTA
                     _buildCta(label: 'Create Account', onTap: _createAccount),
 
+                    const SizedBox(height: 20),
+
+                    // Mixed-color accent strip
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _pill(_kPrimary),
+                          const SizedBox(width: 4),
+                          _pill(_kRestAccent),
+                          const SizedBox(width: 4),
+                          _pill(_kHotelAccent),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
+                    // Already have account
                     Center(
-                      child: TextButton(
-                        onPressed: () => context.go(AppRoutes.customerLogin),
-                        child: Text(
-                          AppStrings.alreadyHaveAccount,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _primary,
+                      child: GestureDetector(
+                        onTap: () => context.go(AppRoutes.customerLogin),
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.dmSans(
+                              fontSize: 13,
+                              color: _kMuted,
+                            ),
+                            children: [
+                              const TextSpan(
+                                text: 'Already have an account?  ',
+                              ),
+                              TextSpan(
+                                text: 'Sign in',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kPrimary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -355,6 +568,15 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
       ),
     );
   }
+
+  Widget _pill(Color c) => Container(
+    width: 20,
+    height: 4,
+    decoration: BoxDecoration(
+      color: c.withOpacity(0.50),
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
 
   Widget _buildInput({
     required TextEditingController controller,
@@ -373,21 +595,20 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
       obscureText: obscure ?? false,
       focusNode: focusNode,
       onChanged: onChanged,
-      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      style: GoogleFonts.dmSans(fontSize: 14, color: _kTitle),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
-        hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        labelStyle: GoogleFonts.dmSans(fontSize: 14, color: _kMuted),
         errorText: errorText,
         filled: true,
-        fillColor: _softBg,
-        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        fillColor: _kSoftBg,
+        prefixIcon: Icon(icon, color: _kMuted, size: 20),
         suffixIcon: onToggleObscure != null
             ? IconButton(
                 onPressed: onToggleObscure,
                 icon: Icon(
                   obscure! ? Icons.visibility : Icons.visibility_off,
-                  color: _textMuted,
+                  color: _kMuted,
                   size: 20,
                 ),
               )
@@ -402,7 +623,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.input),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: const BorderSide(color: _kPrimary, width: 1.5),
         ),
       ),
     );
@@ -428,15 +649,15 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadii.pill),
             gradient: const LinearGradient(
-              colors: [_primary, _deep],
+              colors: [_kPrimary, _kDeep],
               begin: Alignment.centerLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: _primary.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: _kPrimary.withOpacity(0.32),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
@@ -452,10 +673,11 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                 )
               : Text(
                   label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
         ),
@@ -464,52 +686,189 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   }
 }
 
-class _BlobPainter extends CustomPainter {
+// ── Hero blobs (inside gradient header) ───────────────────────────────────────
+class _HeroBlobPainter extends CustomPainter {
   final double t;
-  final Color primary;
-  _BlobPainter(this.t, this.primary);
+  _HeroBlobPainter(this.t);
 
   @override
   void paint(Canvas canvas, Size size) {
     final angle = t * 2 * math.pi;
-    final c1 = Offset(
+    void blob(double cx, double cy, double r, double op) {
+      final c = Offset(cx, cy);
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [Colors.white.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
+    }
+
+    blob(
       size.width * 0.15 + math.cos(angle) * 20,
       size.height * 0.35 + math.sin(angle) * 15,
-    );
-    canvas.drawCircle(
-      c1,
       size.width * 0.5,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)),
+      0.07,
     );
-    final c2 = Offset(
+    blob(
       size.width * 0.85 + math.sin(angle * 0.7) * 18,
       size.height * 0.6 + math.cos(angle * 0.7) * 22,
-    );
-    canvas.drawCircle(
-      c2,
       size.width * 0.4,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)),
+      0.05,
     );
-    final c3 = Offset(
+    blob(
       size.width * 0.5 + math.cos(angle * 1.4) * 14,
       size.height * 0.2 + math.sin(angle * 1.4) * 10,
-    );
-    canvas.drawCircle(
-      c3,
       size.width * 0.3,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)),
+      0.06,
     );
   }
 
   @override
-  bool shouldRepaint(_BlobPainter old) => old.t != t;
+  bool shouldRepaint(_HeroBlobPainter old) => old.t != t;
+}
+
+// ── Full-page background blobs ─────────────────────────────────────────────────
+class _BlobBgPainter extends CustomPainter {
+  final double t;
+  _BlobBgPainter(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    void blob(double cx, double cy, double r, Color c, double op) {
+      final center = Offset(cx, cy);
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [c.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: center, radius: r)),
+      );
+    }
+
+    blob(
+      size.width * 0.85 + math.sin(angle * 0.6) * 20,
+      size.height * 0.75 + math.cos(angle * 0.6) * 24,
+      size.width * 0.40,
+      _kPrimary,
+      0.07,
+    );
+    blob(
+      size.width * 0.10 + math.cos(angle * 0.8) * 16,
+      size.height * 0.82 + math.sin(angle * 0.8) * 18,
+      size.width * 0.30,
+      const Color(0xFF8FA84A),
+      0.05,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BlobBgPainter old) => old.t != t;
+}
+
+// ── Salad bowl illustration ────────────────────────────────────────────────────
+class _SaladIllustration extends StatelessWidget {
+  final double size;
+  const _SaladIllustration({required this.size});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _SaladPainter()),
+  );
+}
+
+class _SaladPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size s) {
+    final w = s.width, h = s.height;
+
+    final bowlPath = Path()
+      ..moveTo(w * 0.10, h * 0.48)
+      ..quadraticBezierTo(w * 0.10, h * 0.90, w * 0.50, h * 0.95)
+      ..quadraticBezierTo(w * 0.90, h * 0.90, w * 0.90, h * 0.48)
+      ..close();
+    canvas.drawPath(bowlPath, Paint()..color = const Color(0xFFF5E6C8));
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.48),
+        width: w * 0.80,
+        height: h * 0.16,
+      ),
+      Paint()..color = const Color(0xFFEDD9A3),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.35, h * 0.42),
+        width: w * 0.30,
+        height: h * 0.18,
+      ),
+      Paint()..color = const Color(0xFF66BB6A),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.58, h * 0.40),
+        width: w * 0.28,
+        height: h * 0.17,
+      ),
+      Paint()..color = const Color(0xFF81C784),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.36),
+        width: w * 0.26,
+        height: h * 0.15,
+      ),
+      Paint()..color = const Color(0xFF43A047),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.28, h * 0.37),
+      w * 0.07,
+      Paint()..color = const Color(0xFFEF5350),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.67, h * 0.38),
+      w * 0.065,
+      Paint()..color = const Color(0xFFEF5350),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.26, h * 0.35),
+      w * 0.025,
+      Paint()..color = Colors.white.withOpacity(0.45),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.65, h * 0.36),
+      w * 0.022,
+      Paint()..color = Colors.white.withOpacity(0.45),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.43),
+        width: w * 0.18,
+        height: h * 0.10,
+      ),
+      Paint()..color = const Color(0xFFFDD835),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.72, h * 0.44),
+      w * 0.055,
+      Paint()..color = const Color(0xFFD9899F),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.93),
+        width: w * 0.60,
+        height: h * 0.07,
+      ),
+      Paint()..color = Colors.black.withOpacity(0.08),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SaladPainter old) => false;
 }

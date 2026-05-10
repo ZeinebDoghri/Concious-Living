@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -101,10 +102,24 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
       final jsonString = prefs.getString('expiry_scan_results') ?? '[]';
       final results = jsonDecode(jsonString) as List<dynamic>;
 
+      String? imageUrl;
+      try {
+        final ref = FirebaseStorage.instance.ref(
+          'scans/expiry/${DateTime.now().millisecondsSinceEpoch}_${_imageName ?? 'image.jpg'}',
+        );
+        await ref.putData(
+          _imageBytes!,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        imageUrl = await ref.getDownloadURL();
+      } catch (e) {
+        debugPrint('Error uploading expiry image: $e');
+      }
+
       results.add({
         'expiry_date': _expiryDate,
         'status': _status,
-        'image': base64Encode(_imageBytes!),
+        'imageUrl': imageUrl,
         'timestamp': DateTime.now().toIso8601String(),
       });
 
@@ -143,7 +158,11 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              if (Navigator.of(ctx).canPop()) {
+                Navigator.of(ctx).pop();
+              }
+            },
             child: Text('OK', style: GoogleFonts.inter(color: colors.deep)),
           ),
         ],
@@ -470,23 +489,23 @@ class _ExpiryColors {
 
   static const restaurant = _ExpiryColors(
     isHotel: false,
-    primary: Color(0xFFF2A7A7),
-    deep: Color(0xFFE47878),
-    surface: Color(0xFFFFF5F5),
-    softBg: Color(0xFFFFE4E4),
-    textTitle: Color(0xFF3D1515),
-    textBody: Color(0xFF7A4040),
-    textMuted: Color(0xFFB08080),
+    primary: Color(0xFF8FA84A),
+    deep: Color(0xFF5A7030),
+    surface: Color(0xFFF5F8EE),
+    softBg: Color(0xFFE3E8D1),
+    textTitle: Color(0xFF26201B),
+    textBody: Color(0xFF5C4F48),
+    textMuted: Color(0xFF8C7E78),
   );
 
   static const hotel = _ExpiryColors(
     isHotel: true,
-    primary: Color(0xFF7DC5A0),
-    deep: Color(0xFF4A8A6A),
-    surface: Color(0xFFF4FAF7),
-    softBg: Color(0xFFDFF2E9),
-    textTitle: Color(0xFF0D2E1E),
-    textBody: Color(0xFF3A6A52),
-    textMuted: Color(0xFF7AAA90),
+    primary: Color(0xFF5A9FC9),
+    deep: Color(0xFF35658F),
+    surface: Color(0xFFF0F5F8),
+    softBg: Color(0xFFD9E9F5),
+    textTitle: Color(0xFF26201B),
+    textBody: Color(0xFF5C4F48),
+    textMuted: Color(0xFF8C7E78),
   );
 }

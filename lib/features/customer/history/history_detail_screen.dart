@@ -13,13 +13,13 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/nutrient_card.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary = Color(0xFFA78BFA);
-const _kDeep = Color(0xFF7C3AED);
-const _kSurface = Color(0xFFF5F3FF);
-const _kSoftBg = Color(0xFFEDE9FE);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
 
 class HistoryDetailScreen extends StatefulWidget {
   final String id;
@@ -180,7 +180,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                    colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -192,7 +192,9 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.canPop()
+                          ? context.pop()
+                          : context.go(AppRoutes.customerHistory),
                       icon: const Icon(
                         Icons.arrow_back_ios_rounded,
                         color: Colors.white,
@@ -245,7 +247,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -257,7 +259,9 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.customerHistory),
                     icon: const Icon(
                       Icons.arrow_back_ios_rounded,
                       color: Colors.white,
@@ -313,7 +317,9 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
                         );
                       }
 
-                      ctx.pop();
+                      ctx.canPop()
+                          ? ctx.pop()
+                          : ctx.go(AppRoutes.customerHistory);
                     },
                     icon: const Icon(Icons.delete_outline),
                     color: Colors.white.withValues(alpha: 0.85),
@@ -444,7 +450,7 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
                         height: 52,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                            colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),

@@ -9,20 +9,21 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/firebase_service.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary   = Color(0xFFA78BFA);
-const _kDeep      = Color(0xFF7C3AED);
-const _kSurface   = Color(0xFFF5F3FF);
-const _kSoftBg    = Color(0xFFEDE9FE);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody  = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
-const _kDanger    = Color(0xFFFF7070);
-const _kFresh     = Color(0xFF52C98A);
-const _kWarning   = Color(0xFFFFAB5B);
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
+const _kDanger = Color(0xFFFF7070);
+const _kFresh = Color(0xFF52C98A);
+const _kWarning = Color(0xFFFFAB5B);
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -49,7 +50,10 @@ class ProfileScreen extends StatelessWidget {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return '?';
 
-    final parts = trimmed.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
 
     String firstChar(String s) {
@@ -74,7 +78,7 @@ class ProfileScreen extends StatelessWidget {
 
   Color _barColor(double pct) {
     if (pct > 100) return _kDanger;
-    if (pct >= 80)  return _kWarning;
+    if (pct >= 80) return _kWarning;
     return _kFresh;
   }
 
@@ -155,7 +159,9 @@ class ProfileScreen extends StatelessWidget {
     final scans = context.watch<ScanHistoryProvider>().items;
 
     final scansTotal = scans.length;
-    final scansThisWeek = scans.where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7).length;
+    final scansThisWeek = scans
+        .where((e) => DateTime.now().difference(e.scannedAt).inDays <= 7)
+        .length;
 
     final intakePct = userProvider.mockDailyIntakePct;
     final goalsMet = intakePct.values.where((v) => v <= 100).length;
@@ -176,7 +182,11 @@ class ProfileScreen extends StatelessWidget {
       }
 
       final recent = scans.take(12).toList(growable: false);
-      final avg = recent.map((e) => score(e.result.overallRisk)).reduce((a, b) => a + b) / recent.length;
+      final avg =
+          recent
+              .map((e) => score(e.result.overallRisk))
+              .reduce((a, b) => a + b) /
+          recent.length;
       if (avg >= 2.4) return 'High';
       if (avg >= 1.7) return 'Moderate';
       return 'Low';
@@ -194,7 +204,11 @@ class ProfileScreen extends StatelessWidget {
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA), Color(0xFFC4B5FD)],
+                colors: [
+                  Color(0xFFB27589),
+                  Color(0xFFD9899F),
+                  Color(0xFFEFCCE0),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -234,8 +248,13 @@ class ProfileScreen extends StatelessWidget {
                             boxShadow: AppShadows.sm(_kPrimary),
                           ),
                           child: InkWell(
-                            onTap: () => context.push(AppRoutes.customerEditProfile),
-                            child: Icon(Icons.edit_outlined, size: 16, color: _kDeep),
+                            onTap: () =>
+                                context.push(AppRoutes.customerEditProfile),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: _kDeep,
+                            ),
                           ),
                         ),
                       ],
@@ -243,7 +262,10 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     // Role badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
@@ -330,9 +352,13 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               const Spacer(),
                               InkWell(
-                                onTap: () => context.go('/customer/nutrition-goals'),
+                                onTap: () =>
+                                    context.go('/customer/nutrition-goals'),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 6,
+                                  ),
                                   child: Text(
                                     'Edit goals',
                                     style: GoogleFonts.inter(
@@ -424,7 +450,8 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push(AppRoutes.customerEditProfile),
+                              onPressed: () =>
+                                  context.push(AppRoutes.customerEditProfile),
                               icon: const Icon(Icons.edit_outlined),
                               color: _kPrimary,
                               iconSize: 18,
@@ -432,13 +459,22 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        _InfoRow(label: AppStrings.fullName, value: _fmtText(user?.name)),
+                        _InfoRow(
+                          label: AppStrings.fullName,
+                          value: _fmtText(user?.name),
+                        ),
                         Divider(color: _kSoftBg, height: 1),
-                        _InfoRow(label: 'Date of birth', value: _fmtDob(user?.dateOfBirth)),
+                        _InfoRow(
+                          label: 'Date of birth',
+                          value: _fmtDob(user?.dateOfBirth),
+                        ),
                         Divider(color: _kSoftBg, height: 1),
                         _InfoRow(label: 'Phone', value: _fmtText(user?.phone)),
                         Divider(color: _kSoftBg, height: 1),
-                        _InfoRow(label: 'Gender', value: _fmtText(user?.gender)),
+                        _InfoRow(
+                          label: 'Gender',
+                          value: _fmtText(user?.gender),
+                        ),
                       ],
                     ),
                   ),
@@ -461,7 +497,9 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const Spacer(),
                             IconButton(
-                              onPressed: () => context.push('${AppRoutes.customerEditProfile}?step=2'),
+                              onPressed: () => context.push(
+                                '${AppRoutes.customerEditProfile}?step=2',
+                              ),
                               icon: const Icon(Icons.edit_outlined),
                               color: _kPrimary,
                               iconSize: 18,
@@ -538,7 +576,9 @@ class ProfileScreen extends StatelessWidget {
                         FutureBuilder<List<String>>(
                           future: _loadAllergens(),
                           builder: (context, snap) {
-                            final allergens = (snap.data ?? const <String>[]).toList()..sort();
+                            final allergens =
+                                (snap.data ?? const <String>[]).toList()
+                                  ..sort();
                             if (allergens.isEmpty) {
                               return Text(
                                 'No allergens flagged',
@@ -556,12 +596,17 @@ class ProfileScreen extends StatelessWidget {
                               children: allergens
                                   .map(
                                     (a) => Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: _kDanger.withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: _kDanger.withValues(alpha: 0.3),
+                                          color: _kDanger.withValues(
+                                            alpha: 0.3,
+                                          ),
                                           width: 0.5,
                                         ),
                                       ),
@@ -611,11 +656,26 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            Expanded(child: _MetricTile(number: '$scansTotal', label: 'Total scans')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: '$scansTotal',
+                                label: 'Total scans',
+                              ),
+                            ),
                             const SizedBox(width: 10),
-                            Expanded(child: _MetricTile(number: '$scansThisWeek', label: 'This week')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: '$scansThisWeek',
+                                label: 'This week',
+                              ),
+                            ),
                             const SizedBox(width: 10),
-                            Expanded(child: _MetricTile(number: avgRiskLabel(), label: 'Avg risk')),
+                            Expanded(
+                              child: _MetricTile(
+                                number: avgRiskLabel(),
+                                label: 'Avg risk',
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -653,7 +713,9 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyDailyIntake: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyDailyIntake: v),
+                            );
                           },
                         ),
                         SwitchListTile(
@@ -672,7 +734,9 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyAllergens: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyAllergens: v),
+                            );
                           },
                         ),
                         SwitchListTile(
@@ -691,7 +755,9 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (v) {
                             final existing = user;
                             if (existing == null) return;
-                            userProvider.saveProfile(existing.copyWith(notifyWeeklyReport: v));
+                            userProvider.saveProfile(
+                              existing.copyWith(notifyWeeklyReport: v),
+                            );
                           },
                         ),
                         Divider(color: _kSoftBg, height: 1),
@@ -707,7 +773,10 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                           onTap: () => context.go('/customer/nutrition-goals'),
-                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: _kTextMuted,
+                          ),
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -721,7 +790,10 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                           onTap: () => context.go(AppRoutes.customerHistory),
-                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: _kTextMuted,
+                          ),
                         ),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -734,7 +806,10 @@ class ProfileScreen extends StatelessWidget {
                               color: _kTextTitle,
                             ),
                           ),
-                          trailing: Icon(Icons.chevron_right, color: _kTextMuted),
+                          trailing: Icon(
+                            Icons.chevron_right,
+                            color: _kTextMuted,
+                          ),
                           onTap: () {
                             showDialog<void>(
                               context: context,
@@ -742,7 +817,9 @@ class ProfileScreen extends StatelessWidget {
                                 return AlertDialog(
                                   backgroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppRadii.xl),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadii.xl,
+                                    ),
                                   ),
                                   title: Text(
                                     'About the project',
@@ -762,7 +839,8 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
                                       child: Text(
                                         AppStrings.ok,
                                         style: GoogleFonts.inter(
@@ -793,11 +871,14 @@ class ProfileScreen extends StatelessWidget {
                             final ok = await _confirmDialog(
                               context,
                               title: 'Clear history',
-                              body: 'This will clear your scan history on this device.',
+                              body:
+                                  'This will clear your scan history on this device.',
                               isDanger: true,
                             );
                             if (!context.mounted || !ok) return;
-                            await context.read<ScanHistoryProvider>().clearAll();
+                            await context
+                                .read<ScanHistoryProvider>()
+                                .clearAll();
                           },
                         ),
                         ListTile(
@@ -819,9 +900,9 @@ class ProfileScreen extends StatelessWidget {
                               isDanger: true,
                             );
                             if (!context.mounted || !ok) return;
-                            await userProvider.logout();
+                            await FirebaseService.signOut();
                             if (!context.mounted) return;
-                            context.go(AppRoutes.roleSelector);
+                            context.go('/');
                           },
                         ),
                       ],

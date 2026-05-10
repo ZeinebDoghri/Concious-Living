@@ -14,13 +14,13 @@ import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody  = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
 
 class StaffScanResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -67,9 +67,9 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _save() async {
@@ -120,22 +120,25 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                   colors: [_rSoftBg, _rSurface],
                 ),
                 border: Border(
-                  bottom: BorderSide(
-                      color: _rPrimary.withValues(alpha: 0.2)),
+                  bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.restaurantScan),
                     child: Container(
-                      width: 38, height: 38,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: _rPrimary.withValues(alpha: 0.3)),
+                          color: _rPrimary.withValues(alpha: 0.3),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: _rPrimary.withValues(alpha: 0.1),
@@ -143,8 +146,11 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                           ),
                         ],
                       ),
-                      child: Icon(Icons.arrow_back_ios_new,
-                          color: _rDeep, size: 16),
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        color: _rDeep,
+                        size: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -180,9 +186,7 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
@@ -209,29 +213,40 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                       TextField(
                         controller: _dishNameController,
                         style: GoogleFonts.inter(
-                            fontSize: 14, color: _rTextTitle),
+                          fontSize: 14,
+                          color: _rTextTitle,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Dish / item name',
                           labelStyle: GoogleFonts.inter(
-                              fontSize: 13, color: _rTextMuted),
-                          prefixIcon: Icon(Icons.restaurant_menu,
-                              color: _rDeep, size: 20),
+                            fontSize: 13,
+                            color: _rTextMuted,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.restaurant_menu,
+                            color: _rDeep,
+                            size: 20,
+                          ),
                           filled: true,
                           fillColor: _rSurface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: _rPrimary.withValues(alpha: 0.3)),
+                              color: _rPrimary.withValues(alpha: 0.3),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: _rPrimary.withValues(alpha: 0.3)),
+                              color: _rPrimary.withValues(alpha: 0.3),
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
-                            borderSide:
-                                const BorderSide(color: _rPrimary, width: 1.5),
+                            borderSide: const BorderSide(
+                              color: _rPrimary,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
@@ -243,8 +258,9 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                           color: riskBg,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: riskColor.withValues(alpha: 0.25),
-                              width: 0.8),
+                            color: riskColor.withValues(alpha: 0.25),
+                            width: 0.8,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -360,8 +376,7 @@ class _StaffScanResultScreenState extends State<StaffScanResultScreen>
                       _OutlinedPastelButton(
                         icon: Icons.inventory_2_outlined,
                         label: 'Go to Inventory & Expiry',
-                        onTap: () =>
-                            context.go(AppRoutes.restaurantInventory),
+                        onTap: () => context.go(AppRoutes.restaurantInventory),
                       ),
                       const SizedBox(height: 10),
                       _OutlinedPastelButton(

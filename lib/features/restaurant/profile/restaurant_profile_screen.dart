@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
-import '../../../core/firebase_service.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../providers/user_provider.dart';
@@ -21,7 +20,7 @@ class RestaurantProfileScreen extends StatefulWidget {
 }
 
 class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
-  static const _restaurantMutedText = Color(0xFFFFE4E4);
+  static const _restaurantMutedText = Color(0xFFE3E8D1);
   static const _prefsExpiryWarningsKey = 'restaurant_expiry_warnings';
   static const _prefsWasteThresholdAlertsKey =
       'restaurant_waste_threshold_alerts';
@@ -92,7 +91,11 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                }
+              },
               child: Text(
                 AppStrings.ok,
                 style: GoogleFonts.inter(
@@ -108,7 +111,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   }
 
   Future<void> _signOut(BuildContext context) async {
-    await FirebaseService.signOut();
+    await context.read<UserProvider>().logout();
     if (!context.mounted) return;
     context.go(AppRoutes.roleSelector);
   }

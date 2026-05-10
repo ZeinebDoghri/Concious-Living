@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,9 @@ import '../../../core/constants.dart';
 import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
 import '../../../providers/scan_history_provider.dart';
+import '../../../providers/user_provider.dart';
+import '../../../services/cloudinary_service.dart';
+import '../../../services/nutrient_tracking_service.dart';
 import '../../../shared/widgets/nutrient_card.dart';
 import '../../../shared/widgets/risk_badge.dart';
 import '../allergens/allergen_utils.dart';
@@ -18,12 +20,12 @@ import '../allergens/allergy_service.dart';
 import '../nutrition/calorie_inference_service.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary = Color(0xFFA78BFA);
-const _kSurface = Color(0xFFF5F3FF);
-const _kSoftBg = Color(0xFFEDE9FE);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
+const _kPrimary = Color(0xFFD9899F);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
 
 class ResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -94,39 +96,72 @@ class _ResultScreenState extends State<ResultScreen>
     return null;
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _save() async {
     if (_saved) return;
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     final dish = _dishNameController.text.trim().isEmpty
         ? 'Dish'
         : _dishNameController.text.trim();
 
     final imagePath = (widget.args['imagePath'] as String?)?.trim();
+    final rawImageBytes = widget.args['imageBytes'];
+    final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
     final result = _parseResult();
+    final calorieResult = _parseCalorieResult();
+    String? imageUrl;
+
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      imageUrl = await CloudinaryService.uploadScanImage(
+        imageBytes,
+        folder: 'freshguard/customer',
+      );
+    } else if (imagePath != null && imagePath.isNotEmpty && !kIsWeb) {
+      final fileBytes = await File(imagePath).readAsBytes();
+      imageUrl = await CloudinaryService.uploadScanImage(
+        fileBytes,
+        folder: 'freshguard/customer',
+      );
+    }
 
     final item = ScanHistoryItem(
       dishName: dish,
       scannedAt: DateTime.now(),
       result: result,
       imagePath: imagePath,
+      imageUrl: imageUrl,
     );
 
+    final uid = context.read<UserProvider>().currentUser?.id ?? '';
+
     await context.read<ScanHistoryProvider>().addScan(item);
+    if (uid.isNotEmpty) {
+      await NutrientTrackingService.onScanSaved(uid, {
+        'scanId': item.id,
+        'cholesterol_mg': result.cholesterol.value,
+        'saturated_fat_g': result.saturatedFat.value,
+        'sodium_mg': result.sodium.value,
+        'sugar_g': result.sugar.value,
+        'calories': calorieResult?.calories ?? 0.0,
+      });
+    }
 
     if (!mounted) return;
 
     setState(() => _saved = true);
-    _snack(AppStrings.ok);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Scan saved - Nutrition tracker updated'),
+        backgroundColor: Color(0xFF45C4B0),
+      ),
+    );
+    router.go(AppRoutes.customerHome);
   }
 
   @override
   Widget build(BuildContext context) {
+    final readOnly = widget.args['readOnly'] == true;
     final imagePath = (widget.args['imagePath'] as String?)?.trim();
     final rawImageBytes = widget.args['imageBytes'];
     final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
@@ -151,7 +186,7 @@ class _ResultScreenState extends State<ResultScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -163,7 +198,9 @@ class _ResultScreenState extends State<ResultScreen>
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.customerHome),
                     icon: const Icon(
                       Icons.arrow_back_ios_rounded,
                       color: Colors.white,
@@ -232,6 +269,7 @@ class _ResultScreenState extends State<ResultScreen>
                     // ── Dish name field ───────────────────────────────────
                     TextField(
                       controller: _dishNameController,
+                      enabled: !readOnly,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: _kTextTitle,
@@ -387,12 +425,14 @@ class _ResultScreenState extends State<ResultScreen>
                                 ),
                                 _MetricChip(
                                   label: 'Fat',
-                                  value: '${calorieResult.fat.toStringAsFixed(1)} g',
+                                  value:
+                                      '${calorieResult.fat.toStringAsFixed(1)} g',
                                   color: const Color(0xFFF59E0B),
                                 ),
                                 _MetricChip(
                                   label: 'Carbs',
-                                  value: '${calorieResult.carb.toStringAsFixed(1)} g',
+                                  value:
+                                      '${calorieResult.carb.toStringAsFixed(1)} g',
                                   color: _kPrimary,
                                 ),
                               ],
@@ -455,58 +495,60 @@ class _ResultScreenState extends State<ResultScreen>
                     const SizedBox(height: 18),
 
                     // ── Save CTA ──────────────────────────────────────────
-                    GestureDetector(
-                      onTap: _save,
-                      child: Container(
-                        width: double.infinity,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: _saved
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xFF52C98A),
-                                    Color(0xFF3AA870),
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                )
-                              : const LinearGradient(
-                                  colors: [
-                                    Color(0xFF7C3AED),
-                                    Color(0xFFA78BFA),
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                          boxShadow: AppShadows.md(_kPrimary),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _saved
-                                    ? Icons.check_circle_outline
-                                    : Icons.bookmark_add_outlined,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                AppStrings.saveToHistory,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                    if (!readOnly) ...[
+                      GestureDetector(
+                        onTap: _save,
+                        child: Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: _saved
+                                ? const LinearGradient(
+                                    colors: [
+                                      Color(0xFF52C98A),
+                                      Color(0xFF3AA870),
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  )
+                                : const LinearGradient(
+                                    colors: [
+                                      Color(0xFFB27589),
+                                      Color(0xFFD9899F),
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            boxShadow: AppShadows.md(_kPrimary),
+                          ),
+                          child: Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _saved
+                                      ? Icons.check_circle_outline
+                                      : Icons.bookmark_add_outlined,
                                   color: Colors.white,
+                                  size: 20,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Text(
+                                  AppStrings.saveToHistory,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
+                    ],
 
                     // ── Scan another ──────────────────────────────────────
                     GestureDetector(

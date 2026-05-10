@@ -13,12 +13,12 @@ import '../../../features/restaurant/waste/compost_inference_service.dart';
 import '../../../features/restaurant/waste/waste_pipeline_service.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary = Color(0xFFF2A7A7);
-const _rDeep = Color(0xFFE47878);
-const _rSurface = Color(0xFFFFF5F5);
-const _rSoftBg = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextMuted = Color(0xFFB08080);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextMuted = Color(0xFF8C7E78);
 const _fresh = Color(0xFF52C98A);
 const _warning = Color(0xFFFFAB5B);
 const _danger = Color(0xFFFF7070);
@@ -123,14 +123,14 @@ class _StaffScanScreenState extends State<StaffScanScreen>
 
       setState(() {
         _isAnalysing = true;
-        _step = 'Préparation de l\'image…';
+        _step = 'Preparing image...';
       });
 
       final imageBytes = await file.readAsBytes();
       _lastBytes = imageBytes;
 
       // ── Run ALL models in parallel ─────────────────────────────────────
-      setState(() => _step = '3 analyses IA en parallèle…');
+      setState(() => _step = 'Running 3 AI analyses in parallel...');
 
       final futures = await Future.wait<dynamic>([
         // Freshness API (server-side)
@@ -237,7 +237,9 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.canPop()
+                ? context.pop()
+                : context.go(AppRoutes.restaurantDashboard),
             child: Container(
               width: 38,
               height: 38,
@@ -263,7 +265,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                   ),
                 ),
                 Text(
-                  'Freshness · Gaspillage · Compost — en parallèle',
+                  'Freshness � Waste � Compost in parallel',
                   style: GoogleFonts.inter(fontSize: 11, color: _rTextMuted),
                 ),
               ],
@@ -448,17 +450,17 @@ class _StaffScanScreenState extends State<StaffScanScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             // Mode indicator chips
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _modeIndicator(Icons.thermostat_rounded, 'Freshness', _danger),
-                const SizedBox(width: 8),
                 _modeIndicator(Icons.event_available_rounded, 'Expiry', _rDeep),
-                const SizedBox(width: 8),
-                _modeIndicator(Icons.delete_rounded, 'Gaspillage', _warning),
-                const SizedBox(width: 8),
+                _modeIndicator(Icons.delete_rounded, 'Waste', _warning),
                 _modeIndicator(Icons.eco_rounded, 'Compost', _fresh),
               ],
+            ),
             ),
             const SizedBox(height: 20),
             // Capture row
@@ -663,13 +665,13 @@ class _BgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    paint.color = const Color(0xFFFFF5F5);
+    paint.color = const Color(0xFFF5F8EE);
     canvas.drawRect(Offset.zero & size, paint);
 
     // Soft pastel glow blobs
-    paint.color = const Color(0xFFF2A7A7).withValues(alpha: 0.12);
+    paint.color = const Color(0xFF8FA84A).withValues(alpha: 0.12);
     canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.15), 180, paint);
-    paint.color = const Color(0xFFFFE4E4).withValues(alpha: 0.18);
+    paint.color = const Color(0xFFE3E8D1).withValues(alpha: 0.18);
     canvas.drawCircle(Offset(size.width * 0.1, size.height * 0.7), 160, paint);
   }
 

@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/firebase_service.dart';
 import '../core/models/compost_session_model.dart';
+import '../core/models/scan_result.dart';
 import '../features/restaurant/waste/compost_inference_service.dart';
+import '../services/compost_ingestion_service.dart';
 
 enum CompostState { idle, pickingImage, analyzing, done, error, saving }
 
@@ -40,12 +43,20 @@ class CompostProvider extends ChangeNotifier {
   StreamSubscription<List<CompostSession>>? _sessionSub;
   String? _venueId;
 
-  Future<void> init(String venueId) async {
-    if (_venueId == venueId) return;
+  /// 'restaurants' or 'hotels' — resolved from the user's role at init
+  String _entityCollection = 'restaurants';
+
+  // ── Initialisation ─────────────────────────────────────────────────────────
+
+  Future<void> init(String uid) async {
+    final resolved = await _resolveVenueInfo(uid);
+    final venueId = resolved.$1;
+    if (venueId.isEmpty || _venueId == venueId) return;
     _venueId = venueId;
+    _entityCollection = resolved.$2;
     unawaited(_inferenceService.init());
     _sessionSub?.cancel();
-    _sessionSub = FirebaseService.watchCompostSessions(venueId).listen(
+    _sessionSub = FirebaseService.watchCompostSessions(venueId, _entityCollection).listen(
       (list) {
         _sessions = list;
         notifyListeners();
@@ -55,6 +66,26 @@ class CompostProvider extends ChangeNotifier {
       },
     );
   }
+
+  /// Returns (venueId, entityCollection) e.g. ('abc123', 'restaurants')
+  Future<(String, String)> _resolveVenueInfo(String uid) async {
+    if (uid.isEmpty) return ('', 'restaurants');
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final userData = userDoc.data() ?? <String, dynamic>{};
+    final role = (userData['role'] ?? 'restaurant').toString();
+    final collection = role == 'hotel' ? 'hotels' : 'restaurants';
+    final venueId = (userData['entityId'] ??
+            userData['restaurantId'] ??
+            userData['hotelId'] ??
+            uid)
+        .toString();
+    return (venueId, collection);
+  }
+
+  // ── Image picking ──────────────────────────────────────────────────────────
 
   Future<void> pickFromCamera() async {
     try {
@@ -107,6 +138,8 @@ class CompostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Classification ─────────────────────────────────────────────────────────
+
   Future<void> classify() async {
     if (!hasImage) return;
 
@@ -139,6 +172,8 @@ class CompostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Save session ───────────────────────────────────────────────────────────
+
   Future<bool> saveSession() async {
     if (_result == null || _venueId == null || _isSaved) return false;
 
@@ -147,8 +182,10 @@ class CompostProvider extends ChangeNotifier {
 
     try {
       final sessionId = const Uuid().v4();
+      final now = DateTime.now();
       String? imageUrl;
 
+      // Upload thumbnail (non-blocking if it fails)
       try {
         final Uint8List thumbBytes;
         if (_selectedImageBytes != null) {
@@ -162,20 +199,71 @@ class CompostProvider extends ChangeNotifier {
           bytes: thumbBytes,
         );
       } catch (e) {
-        debugPrint('[CompostProvider] Storage upload failed: $e');
+        debugPrint('[CompostProvider] Storage upload failed (non-fatal): $e');
       }
 
+      // 1) Save to venues/{venueId}/compost_logs — drives the local History list
       final session = CompostSession(
         id: sessionId,
         compostablePct: _result!.compostablePct,
         nonCompostablePct: _result!.nonCompostablePct,
         backgroundPct: _result!.backgroundPct,
-        timestamp: DateTime.now(),
+        timestamp: now,
         imageUrl: imageUrl,
         inferenceTimeMs: _result!.inferenceTimeMs,
       );
+      await FirebaseService.saveCompostSession(_venueId!, session, _entityCollection);
 
-      await FirebaseService.saveCompostSession(_venueId!, session);
+      // 2) Update compost_totals + waste_logs — drives dashboard KPI cards
+      final compostableRatio = _result!.compostablePct / 100.0;
+      // Use a fixed 0.5 kg estimate per scan (a scale reading would be ideal,
+      // but compost-screen scans don't capture weight directly).
+      const estimatedWasteKg = 0.5;
+      final scanForIngestion = ScanResult(
+        id: sessionId,
+        entityId: _venueId!,
+        timestamp: now,
+        nutrition: const ScanNutrition(
+          cholesterol_mg: 0,
+          saturated_fat_g: 0,
+          sodium_mg: 0,
+          sugar_g: 0,
+        ),
+        waste: ScanWaste(
+          estimatedWasteKg: estimatedWasteKg,
+          compostableRatio: compostableRatio.clamp(0.0, 1.0),
+        ),
+      );
+      try {
+        await CompostIngestionService.onScanComplete(scanForIngestion);
+      } catch (e) {
+        debugPrint('[CompostProvider] CompostIngestionService error (non-fatal): $e');
+      }
+
+      // 3) Write to {restaurants|hotels}/{venueId}/scans — drives scans queries
+      try {
+        await FirebaseFirestore.instance
+            .collection(_entityCollection)
+            .doc(_venueId!)
+            .collection('scans')
+            .doc(sessionId)
+            .set({
+          'timestamp': FieldValue.serverTimestamp(),
+          'type': 'compost',
+          'zone': 'Kitchen',
+          'compostable_pct': _result!.compostablePct,
+          'non_compostable_pct': _result!.nonCompostablePct,
+          'background_pct': _result!.backgroundPct,
+          'compostable_kg': estimatedWasteKg * compostableRatio,
+          'waste_kg': estimatedWasteKg,
+          'riskLevel': 'safe',
+          'imageUrl': imageUrl ?? '',
+          'inferenceTimeMs': _result!.inferenceTimeMs,
+        });
+      } catch (e) {
+        debugPrint('[CompostProvider] scans write error (non-fatal): $e');
+      }
+
       _isSaved = true;
       _state = CompostState.done;
       notifyListeners();
@@ -188,6 +276,8 @@ class CompostProvider extends ChangeNotifier {
     }
   }
 
+  // ── Reset ──────────────────────────────────────────────────────────────────
+
   void reset() {
     _state = CompostState.idle;
     _selectedImageFile = null;
@@ -198,7 +288,7 @@ class CompostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Analytics helpers ────────────────────────────────────────────────────
+  // ── Analytics helpers ──────────────────────────────────────────────────────
 
   double get todayCompostablePct {
     final today = _todaySessions;

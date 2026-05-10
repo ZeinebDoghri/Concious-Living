@@ -3,20 +3,27 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/models/scan_result.dart';
+import '../../../providers/user_provider.dart';
+import '../../../services/cloudinary_service.dart';
+import '../../../services/compost_ingestion_service.dart';
 import '../../restaurant/scan/annotated_contamination_image.dart';
 import '../../restaurant/scan/food_contamination_service.dart';
 
 // Hotel brand colors
-const _kCherry = Color(0xFF7DC5A0);
+const _kCherry = Color(0xFF5A9FC9);
 const _kEmerald = Color(0xFF52C98A);
 const _kRose = Color(0xFFFF7070);
 const _kAmber = Color(0xFFFFAB5B);
-const _kSlate = Color(0xFF7AAA90);
-const _kSurface = Color(0xFFF4FAF7);
+const _kSlate = Color(0xFF8C7E78);
+const _kSurface = Color(0xFFF0F5F8);
 const _kCard = Color(0xFFFFFFFF);
-const _kBorder = Color(0xFFDFF2E9);
+const _kBorder = Color(0xFFD9E9F5);
 
 class HotelResultScreen extends StatefulWidget {
   final Map<String, dynamic> args;
@@ -29,6 +36,7 @@ class HotelResultScreen extends StatefulWidget {
 class _HotelResultScreenState extends State<HotelResultScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _enterCtrl;
+  bool _compostIngested = false;
 
   @override
   void initState() {
@@ -72,6 +80,175 @@ class _HotelResultScreenState extends State<HotelResultScreen>
       (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
   Map<String, dynamic> get _contaminationResult =>
       (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
+
+  Future<String> _hotelId() async {
+    final user = context.read<UserProvider>().currentUser;
+    final uid = user?.id ?? '';
+    if (uid.isEmpty) return '';
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final userData = userDoc.data() ?? <String, dynamic>{};
+    return (userData['entityId'] ??
+            userData['restaurantId'] ??
+            userData['hotelId'] ??
+            user?.entityId ??
+            user?.hotelId ??
+            uid)
+        .toString();
+  }
+
+  Future<void> _ingestCompostScan() async {
+    if (_compostIngested) return;
+    final entityId = await _hotelId();
+    if (entityId.isEmpty || _wasteResult.isEmpty) return;
+    _compostIngested = true;
+
+    final deptId = (widget.args['departmentId'] as String?)?.trim();
+    final scan = ScanResult.fromVenueScan(
+      id: 'hotel-${DateTime.now().millisecondsSinceEpoch}',
+      entityId: entityId,
+      departmentId: deptId == null || deptId.isEmpty ? null : deptId,
+      timestamp: DateTime.now(),
+      wasteResult: _wasteResult,
+      compostResult: _compostResult,
+    );
+    await _saveHotelScan(scan);
+
+    // Wrap secondary writes in try/catch — scan already saved successfully
+    try {
+      await CompostIngestionService.onScanComplete(scan);
+    } catch (e) {
+      // Log but don't show error — scan already saved to history
+      debugPrint('CompostIngestion error (non-critical): $e');
+    }
+
+    // Show SUCCESS snackbar
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Scan saved to history'),
+          backgroundColor: Color(0xFF5C7A3E),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveHotelScan(ScanResult scan) async {
+    final user = context.read<UserProvider>().currentUser;
+    final hotelId = await _hotelId();
+    String? imageUrl;
+    if (_imageBytes != null && _imageBytes!.isNotEmpty) {
+      imageUrl = await CloudinaryService.uploadScanImage(
+        _imageBytes!,
+        folder: 'freshguard/hotel/$hotelId',
+      );
+    }
+    await FirebaseFirestore.instance
+        .collection('hotels')
+        .doc(hotelId)
+        .collection('scans')
+        .doc(scan.id)
+        .set({
+          'id': scan.id,
+          'scanId': scan.id,
+          'timestamp': FieldValue.serverTimestamp(),
+          'departmentId': scan.departmentId ?? 'kitchen',
+          'imageUrl': imageUrl ?? '',
+          'scanType': 'Smart scan',
+          'zone': widget.args['zone'] ?? 'F&B',
+          'entityId': hotelId,
+          'staffName': user?.name ?? 'Staff',
+          'dishName':
+              _freshnessResult['itemName'] ??
+              _wasteResult['itemName'] ??
+              'Unknown dish',
+          'contamination_confidence': _contaminationConfidence,
+          'contamination_label': _contaminationLabel,
+          'contamination_pct': _contaminationPct,
+          'clean_pct': _cleanPct,
+          'detection_count': _detectionCount,
+          'freshness_status': _freshnessStatus,
+          'freshness_confidence': _freshnessConfidence,
+          'freshness_label': _freshnessLabel,
+          'waste_kg': _wasteKg,
+          'compostable_pct': _compostablePct,
+          'non_compostable_pct': _nonCompostablePct,
+          'background_pct': _backgroundPct,
+          'compostable_kg': _compostableKg,
+          'riskLevel': _venueRiskLevel,
+        }, SetOptions(merge: true));
+  }
+
+  double get _contaminationConfidence =>
+      (_contaminationResult['confidence'] as num?)?.toDouble() ?? 0.0;
+
+  String get _contaminationLabel =>
+      (_contaminationResult['label'] as String?) ?? 'clean';
+
+  double get _contaminationPct {
+    final value =
+        _contaminationResult['contaminated_pct'] ??
+        _contaminationResult['contaminatedPct'] ??
+        _contaminationResult['riskPct'];
+    return (value as num?)?.toDouble() ?? 0.0;
+  }
+
+  double get _cleanPct {
+    final value =
+        _contaminationResult['clean_pct'] ?? _contaminationResult['cleanPct'];
+    return (value as num?)?.toDouble() ?? 0.0;
+  }
+
+  int get _detectionCount {
+    final value = _contaminationResult['detection_count'];
+    if (value is num) return value.toInt();
+    final detections = _contaminationResult['detections'];
+    return detections is List ? detections.length : 0;
+  }
+
+  String get _freshnessStatus =>
+      (_freshnessResult['status'] as String?) ?? 'unknown';
+
+  double get _freshnessConfidence =>
+      (_freshnessResult['confidence'] as num?)?.toDouble() ?? 0.0;
+
+  String get _freshnessLabel =>
+      (_freshnessResult['label'] as String?) ?? 'Unknown';
+
+  double get _wasteKg {
+    final items = _wasteResult['detectedItems'];
+    if (items is! List) return 0.0;
+    return items.fold<double>(0.0, (sum, item) {
+      if (item is Map) {
+        return sum + ((item['quantityKg'] as num?)?.toDouble() ?? 0.0);
+      }
+      return sum;
+    });
+  }
+
+  double get _compostablePct =>
+      (_compostResult['compostablePct'] as num?)?.toDouble() ?? 0.0;
+
+  double get _nonCompostablePct =>
+      (_compostResult['nonCompostablePct'] as num?)?.toDouble() ?? 0.0;
+
+  double get _backgroundPct =>
+      (_compostResult['backgroundPct'] as num?)?.toDouble() ?? 0.0;
+
+  double get _compostableKg => _wasteKg * _compostablePct / 100.0;
+
+  String get _venueRiskLevel {
+    final contaminated =
+        (_contaminationResult['contaminatedPct'] as num?)?.toDouble() ?? 0;
+    final status = ((_freshnessResult['status'] as String?) ?? '')
+        .toLowerCase();
+    if (contaminated >= 50 || status == 'spoiled') return 'danger';
+    if (contaminated > 0 || status == 'expiring') return 'warning';
+    return 'safe';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +393,63 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                       imageBytes: _imageBytes,
                     ),
                   const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () async {
+                      if (!_compostIngested) {
+                        await _ingestCompostScan();
+                        if (mounted) setState(() {});
+                      }
+                    },
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _compostIngested ? Colors.grey : _kCherry,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _kCherry.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          _compostIngested ? 'Session sauvegardée' : 'Sauvegarder la session',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => context.pop(),
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _kCherry.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Nouveau scan',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _kSlate,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -234,7 +468,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     return Column(
       children: [
         _SectionCard(
-          title: '🔍 Insectes & Contamination',
+          title: 'Insects & contamination',
           subtitle: 'YOLO detection',
           color: Colors.red.shade600,
           delay: 300,

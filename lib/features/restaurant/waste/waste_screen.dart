@@ -7,16 +7,16 @@ import '../../../core/constants.dart';
 import '../../../shared/widgets/animated_button.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody  = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
-const _fresh      = Color(0xFF52C98A);
-const _warning    = Color(0xFFFFAB5B);
-const _danger     = Color(0xFFFF7070);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
+const _fresh = Color(0xFF52C98A);
+const _warning = Color(0xFFFFAB5B);
+const _danger = Color(0xFFFF7070);
 
 class WasteScreen extends StatelessWidget {
   const WasteScreen({super.key});
@@ -24,10 +24,10 @@ class WasteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_WasteItem>[
-      _WasteItem(AppStrings.wasteItemLettuce,  12.5, _fresh),
-      _WasteItem(AppStrings.wasteItemTomatoes,  9.1, _danger),
-      _WasteItem(AppStrings.wasteItemBread,     6.4, _warning),
-      _WasteItem(AppStrings.wasteItemChicken,   4.2, _rDeep),
+      _WasteItem(AppStrings.wasteItemLettuce, 12.5, _fresh),
+      _WasteItem(AppStrings.wasteItemTomatoes, 9.1, _danger),
+      _WasteItem(AppStrings.wasteItemBread, 6.4, _warning),
+      _WasteItem(AppStrings.wasteItemChicken, 4.2, _rDeep),
     ];
 
     final total = items.fold<double>(0, (sum, it) => sum + it.kg);
@@ -47,8 +47,7 @@ class WasteScreen extends StatelessWidget {
                   colors: [_rSoftBg, _rSurface],
                 ),
                 border: Border(
-                  bottom: BorderSide(
-                      color: _rPrimary.withValues(alpha: 0.2)),
+                  bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Column(
@@ -65,10 +64,7 @@ class WasteScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     AppStrings.topWastedItems,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: _rTextMuted,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 13, color: _rTextMuted),
                   ),
                 ],
               ),
@@ -78,9 +74,7 @@ class WasteScreen extends StatelessWidget {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
@@ -94,8 +88,9 @@ class WasteScreen extends StatelessWidget {
                           color: _rSurface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: _rPrimary.withValues(alpha: 0.2),
-                              width: 0.8),
+                            color: _rPrimary.withValues(alpha: 0.2),
+                            width: 0.8,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: _rPrimary.withValues(alpha: 0.07),
@@ -224,13 +219,17 @@ class WasteScreen extends StatelessWidget {
                           child: Row(
                             children: [
                               Container(
-                                width: 40, height: 40,
+                                width: 40,
+                                height: 40,
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(Icons.eco_rounded,
-                                    color: Colors.white, size: 22),
+                                child: const Icon(
+                                  Icons.eco_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
@@ -252,15 +251,18 @@ class WasteScreen extends StatelessWidget {
                                       style: GoogleFonts.inter(
                                         fontSize: 12,
                                         color: Colors.white.withValues(
-                                            alpha: 0.85),
+                                          alpha: 0.85,
+                                        ),
                                         height: 1.3,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.chevron_right,
-                                  color: Colors.white),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Colors.white,
+                              ),
                             ],
                           ),
                         ),
@@ -274,8 +276,7 @@ class WasteScreen extends StatelessWidget {
                         textColor: Colors.white,
                         onTap: () async {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(AppStrings.genericError)),
+                            SnackBar(content: Text(AppStrings.genericError)),
                           );
                         },
                         height: 52,

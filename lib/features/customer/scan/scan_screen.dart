@@ -111,7 +111,8 @@ class _ScanScreenState extends State<ScanScreen> {
       imagePath: _selected?.path,
       imageBytes: _selectedBytes,
       isLoading: _isAnalysing,
-      onBack: () => context.pop(),
+      onBack: () =>
+          context.canPop() ? context.pop() : context.go(AppRoutes.customerHome),
       onCameraTap: () => _pick(ImageSource.camera),
       onGalleryTap: () => _pick(ImageSource.gallery),
       onInfoTap: () => _snack('Scan a clear food label or meal photo.'),

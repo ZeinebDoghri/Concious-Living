@@ -6,6 +6,7 @@ import 'features/auth/customer/customer_forgot_password_screen.dart';
 import 'features/auth/customer/customer_login_screen.dart';
 import 'features/auth/customer/customer_profile_setup_screen.dart';
 import 'features/auth/customer/customer_register_screen.dart';
+import 'features/auth/role_selector_screen.dart';
 import 'features/auth/hotel/hotel_forgot_password_screen.dart';
 import 'features/auth/hotel/hotel_login_screen.dart';
 import 'features/auth/hotel/hotel_register_screen.dart';
@@ -19,12 +20,16 @@ import 'features/customer/customer_shell.dart';
 import 'features/customer/history/history_detail_screen.dart';
 import 'features/customer/history/history_screen.dart';
 import 'features/customer/home/home_screen.dart';
+import 'features/customer/nutrition/nutrients_screen.dart';
+import 'features/customer/nutritionist/nora_chat_page.dart';
 import 'features/customer/profile/health_goals_screen.dart';
 import 'features/customer/profile/edit_profile_screen.dart';
 import 'features/customer/profile/profile_screen.dart';
 import 'features/customer/scan/result_screen.dart';
 import 'features/customer/scan/scan_screen.dart';
 import 'features/hotel/dashboard/hotel_dashboard_screen.dart';
+import 'features/hotel/chatbot/sage_chat_page.dart';
+import 'features/hotel/history/hotel_history_screen.dart';
 import 'features/hotel/hotel_shell.dart';
 import 'features/hotel/profile/edit_hotel_profile_screen.dart';
 import 'features/hotel/profile/hotel_profile_screen.dart';
@@ -36,7 +41,9 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/restaurant/alerts/alert_detail_screen.dart';
 import 'features/restaurant/alerts/alerts_screen.dart';
 import 'features/restaurant/dashboard/dashboard_screen.dart';
+import 'features/restaurant/chatbot/chef_ai_page.dart';
 import 'features/restaurant/expiry_date.dart';
+import 'features/restaurant/history/restaurant_history_screen.dart';
 import 'features/restaurant/inventory/inventory_item_screen.dart';
 import 'features/restaurant/inventory/inventory_screen.dart';
 import 'features/restaurant/profile/edit_restaurant_profile_screen.dart';
@@ -45,9 +52,10 @@ import 'features/restaurant/restaurant_shell.dart';
 import 'features/restaurant/scan/contamination_result_screen.dart';
 import 'features/restaurant/scan/contamination_scan_screen.dart';
 import 'features/restaurant/scan/food_contamination_service.dart';
-import 'features/restaurant/scan/staff_result_screen.dart';
-import 'features/restaurant/scan/staff_scan_screen.dart';
+import 'features/restaurant/scan/staff_result_screen_route.dart';
+import 'features/restaurant/scan/staff_scan_screen_route.dart';
 import 'features/restaurant/waste/compost_screen.dart';
+import 'features/restaurant/waste/compost_history_screen.dart';
 import 'features/restaurant/waste/waste_screen.dart';
 import 'features/role_selector/role_selector_screen.dart';
 import 'features/splash/splash_screen.dart';
@@ -74,6 +82,11 @@ GoRouter createAppRouter() {
     initialLocation: AppRoutes.splash,
     routes: [
       GoRoute(
+        path: '/',
+        pageBuilder: (context, state) =>
+            slidePage(child: const RoleSelectorScreen()),
+      ),
+      GoRoute(
         path: AppRoutes.splash,
         pageBuilder: (context, state) => slidePage(child: const SplashScreen()),
       ),
@@ -86,6 +99,11 @@ GoRouter createAppRouter() {
         path: AppRoutes.roleSelector,
         pageBuilder: (context, state) =>
             slidePage(child: const RoleSelectorScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.selectRole,
+        pageBuilder: (context, state) =>
+            slidePage(child: const AuthRoleSelectorScreen()),
       ),
 
       GoRoute(
@@ -112,6 +130,20 @@ GoRouter createAppRouter() {
               : <String, dynamic>{};
           return slidePage(child: CustomerProfileSetupScreen(args: args));
         },
+      ),
+
+      GoRoute(
+        path: '/customer/nutritionist',
+        pageBuilder: (context, state) => slidePage(child: const NoraChatPage()),
+      ),
+      GoRoute(
+        path: '/restaurant/chatbot',
+        pageBuilder: (context, state) =>
+            slidePage(child: const ChefAIChatPage()),
+      ),
+      GoRoute(
+        path: '/hotel/chatbot',
+        pageBuilder: (context, state) => slidePage(child: const SageChatPage()),
       ),
 
       GoRoute(
@@ -250,7 +282,12 @@ GoRouter createAppRouter() {
               GoRoute(
                 path: AppRoutes.nutritionProgress,
                 pageBuilder: (context, state) =>
-                    slidePage(child: const HealthGoalsScreen()),
+                    slidePage(child: const NutrientsScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.customerNutrients,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const NutrientsScreen()),
               ),
               GoRoute(
                 path: AppRoutes.healthGoals,
@@ -314,6 +351,26 @@ GoRouter createAppRouter() {
                 path: AppRoutes.hotelExpiryDate,
                 pageBuilder: (context, state) =>
                     slidePage(child: const ExpiryDatePage()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelCompost,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const CompostScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelCompostHistory,
+                pageBuilder: (context, state) => slidePage(
+                  child: const CompostHistoryScreen(hotelMode: true),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.hotelHistory,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HotelHistoryScreen()),
               ),
             ],
           ),
@@ -412,6 +469,11 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) =>
                     slidePage(child: const WasteScreen()),
               ),
+              GoRoute(
+                path: AppRoutes.restaurantHistory,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const RestaurantHistoryScreen()),
+              ),
             ],
           ),
           // ⭐ Compost AI — own branch so it appears in the bottom nav
@@ -421,6 +483,11 @@ GoRouter createAppRouter() {
                 path: AppRoutes.restaurantCompost,
                 pageBuilder: (context, state) =>
                     slidePage(child: const CompostScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.restaurantCompostHistory,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const CompostHistoryScreen()),
               ),
             ],
           ),

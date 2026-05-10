@@ -13,17 +13,18 @@ import '../../../core/models/scan_history_item.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../widgets/animated_chat_fab.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary = Color(0xFFA78BFA);
-const _kDeep = Color(0xFF7C3AED);
-const _kSurface = Color(0xFFF5F3FF);
-const _kSoftBg = Color(0xFFEDE9FE);
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
 const _kLilac = Color(0xFFF3F0FF);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
-const _kBlob1 = Color(0xFFC4B5FD);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
+const _kBlob1 = Color(0xFFEFCCE0);
 const _kBlob2 = Color(0xFFDDD6FE);
 const _kFresh = Color(0xFF52C98A);
 const _kWarning = Color(0xFFFFAB5B);
@@ -289,6 +290,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: _kSurface,
+      floatingActionButton: AnimatedChatFab(
+        color: const Color(0xFF45C4B0),
+        label: 'Ask Nora',
+        icon: Icons.psychology_rounded,
+        onTap: () => context.go('/customer/nutritionist'),
+      ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -302,9 +309,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Color(0xFF7C3AED),
-                        Color(0xFFA78BFA),
-                        Color(0xFFC4B5FD),
+                        Color(0xFFB27589),
+                        Color(0xFFD9899F),
+                        Color(0xFFEFCCE0),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -624,6 +631,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       onTap: () => context.go(AppRoutes.customerHistory),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.psychology_rounded,
+                      label: 'Ask Nora',
+                      color: const Color(0xFF45C4B0),
+                      backgroundColor: const Color(0xFFE0F7F2),
+                      onTap: () => context.go('/customer/nutritionist'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -690,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 64,
+                    height: 58,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: List.generate(7, (index) {
@@ -725,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       milliseconds: 260 + index * 45,
                                     ),
                                     curve: Curves.easeOutCubic,
-                                    height: (barH + wave * 5).clamp(6.0, 50.0),
+                                    height: (barH + wave * 5).clamp(6.0, 42.0),
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 4,
                                     ),
@@ -744,13 +761,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                labels[index],
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: _kTextMuted,
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    labels[index],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      color: _kTextMuted,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1058,7 +1079,7 @@ class _ScanBannerState extends State<_ScanBanner>
             padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1207,11 +1228,15 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? color;
+  final Color? backgroundColor;
 
   const _QuickAction({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.color,
+    this.backgroundColor,
   });
 
   @override
@@ -1232,10 +1257,10 @@ class _QuickAction extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: _kSoftBg,
+                color: backgroundColor ?? _kSoftBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: _kPrimary, size: 22),
+              child: Icon(icon, color: color ?? _kPrimary, size: 22),
             ),
             const SizedBox(height: 8),
             Text(

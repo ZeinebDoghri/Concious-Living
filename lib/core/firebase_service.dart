@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'models/alert_model.dart';
 import 'models/compost_session_model.dart';
@@ -31,10 +32,14 @@ class FirebaseService {
       final cred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password)
           .timeout(_networkTimeout);
-      _debug('[FirebaseService.registerWithEmail] ok uid=${cred.user?.uid ?? ""}');
+      _debug(
+        '[FirebaseService.registerWithEmail] ok uid=${cred.user?.uid ?? ""}',
+      );
       return cred;
     } on TimeoutException {
-      _debug('[FirebaseService.registerWithEmail] TIMEOUT after $_networkTimeout');
+      _debug(
+        '[FirebaseService.registerWithEmail] TIMEOUT after $_networkTimeout',
+      );
       rethrow;
     } catch (e) {
       _debug('[FirebaseService.registerWithEmail] error: $e');
@@ -69,10 +74,36 @@ class FirebaseService {
   }
 
   static Future<void> signOut() async {
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
     await FirebaseAuth.instance.signOut();
   }
 
   static User? get currentUser => FirebaseAuth.instance.currentUser;
+
+  static Future<UserCredential> signInWithGoogle() async {
+    if (kIsWeb) {
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..addScope('profile');
+      return FirebaseAuth.instance.signInWithPopup(provider);
+    }
+
+    final googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) {
+      throw FirebaseAuthException(
+        code: 'google-sign-in-cancelled',
+        message: 'Google sign-in was cancelled.',
+      );
+    }
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    return FirebaseAuth.instance.signInWithCredential(credential);
+  }
 
   // FIRESTORE COLLECTIONS
   static final _db = FirebaseFirestore.instance;
@@ -88,12 +119,35 @@ class FirebaseService {
           .timeout(_networkTimeout);
       _debug('[FirebaseService.saveUser] ok uid=${user.id}');
     } on TimeoutException {
-      _debug('[FirebaseService.saveUser] TIMEOUT after $_networkTimeout uid=${user.id}');
+      _debug(
+        '[FirebaseService.saveUser] TIMEOUT after $_networkTimeout uid=${user.id}',
+      );
       rethrow;
     } catch (e) {
       _debug('[FirebaseService.saveUser] error uid=${user.id}: $e');
       rethrow;
     }
+  }
+
+  static Future<void> saveNutrientLimits({
+    required String uid,
+    required double cholesterol_mg,
+    required double saturated_fat_g,
+    required double sodium_mg,
+    required double sugar_g,
+  }) async {
+    await _db
+        .collection('users')
+        .doc(uid)
+        .set({
+          'nutrientLimits': {
+            'cholesterol_mg': cholesterol_mg,
+            'saturated_fat_g': saturated_fat_g,
+            'sodium_mg': sodium_mg,
+            'sugar_g': sugar_g,
+          },
+        }, SetOptions(merge: true))
+        .timeout(_networkTimeout);
   }
 
   static Future<UserModel?> getUser(String uid) async {
@@ -122,12 +176,11 @@ class FirebaseService {
         .collection('users')
         .doc(userId)
         .collection('scans')
-        .orderBy('scannedAt', descending: true)
+        .orderBy('timestamp', descending: true)
+        .limit(30)
         .snapshots()
         .map(
-          (s) => s.docs
-              .map((d) => ScanHistoryItem.fromJson(d.data()))
-              .toList(),
+          (s) => s.docs.map((d) => ScanHistoryItem.fromJson(d.data())).toList(),
         );
   }
 
@@ -151,9 +204,7 @@ class FirebaseService {
         .where('venueId', isEqualTo: venueId)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map(
-          (s) => s.docs.map((d) => AlertModel.fromJson(d.data())).toList(),
-        );
+        .map((s) => s.docs.map((d) => AlertModel.fromJson(d.data())).toList());
   }
 
   static Future<void> resolveAlert(String alertId) async {
@@ -180,7 +231,8 @@ class FirebaseService {
         .collection('inventory')
         .snapshots()
         .map(
-          (s) => s.docs.map((d) => InventoryItemModel.fromJson(d.data())).toList(),
+          (s) =>
+              s.docs.map((d) => InventoryItemModel.fromJson(d.data())).toList(),
         );
   }
 
@@ -228,10 +280,7 @@ class FirebaseService {
     if (file != null) {
       await ref.putFile(file);
     } else {
-      await ref.putData(
-        bytes!,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
+      await ref.putData(bytes!, SettableMetadata(contentType: 'image/jpeg'));
     }
     return await ref.getDownloadURL();
   }
@@ -241,25 +290,28 @@ class FirebaseService {
   static Future<void> saveCompostSession(
     String venueId,
     CompostSession session,
+    String entityCollection,
   ) async {
     await _db
-        .collection('venues')
+        .collection(entityCollection)
         .doc(venueId)
         .collection('compost_logs')
         .doc(session.id)
         .set(session.toJson());
   }
 
-  static Stream<List<CompostSession>> watchCompostSessions(String venueId) {
+  static Stream<List<CompostSession>> watchCompostSessions(
+    String venueId,
+    String entityCollection,
+  ) {
     return _db
-        .collection('venues')
+        .collection(entityCollection)
         .doc(venueId)
         .collection('compost_logs')
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map(
-          (s) =>
-              s.docs.map((d) => CompostSession.fromJson(d.data())).toList(),
+          (s) => s.docs.map((d) => CompostSession.fromJson(d.data())).toList(),
         );
   }
 

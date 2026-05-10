@@ -9,15 +9,15 @@ import '../../../providers/inventory_provider.dart';
 import '../../../shared/widgets/freshness_badge.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody  = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
-const _warning    = Color(0xFFFFAB5B);
-const _warningBg  = Color(0xFFFFF4E8);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
+const _warning = Color(0xFFFFAB5B);
+const _warningBg = Color(0xFFFFF4E8);
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -56,8 +56,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   colors: [_rSoftBg, _rSurface],
                 ),
                 border: Border(
-                  bottom: BorderSide(
-                      color: _rPrimary.withValues(alpha: 0.2)),
+                  bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Column(
@@ -75,14 +74,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   if (provider.needsAttentionCount > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _warningBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         AppStrings.itemsNeedAttentionCount(
-                            provider.needsAttentionCount),
+                          provider.needsAttentionCount,
+                        ),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -94,7 +96,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     Text(
                       AppStrings.itemsNeedAttentionCount(0),
                       style: GoogleFonts.inter(
-                          fontSize: 13, color: _rTextMuted),
+                        fontSize: 13,
+                        color: _rTextMuted,
+                      ),
                     ),
                 ],
               ),
@@ -104,9 +108,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Column(
                   children: [
@@ -118,29 +120,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         controller: _search,
                         onChanged: (_) => setState(() {}),
                         style: GoogleFonts.inter(
-                            fontSize: 14, color: _rTextTitle),
+                          fontSize: 14,
+                          color: _rTextTitle,
+                        ),
                         decoration: InputDecoration(
                           hintText: AppStrings.searchInventory,
                           hintStyle: GoogleFonts.inter(
-                              fontSize: 13, color: _rTextMuted),
-                          prefixIcon:
-                              Icon(Icons.search, color: _rTextMuted, size: 20),
+                            fontSize: 13,
+                            color: _rTextMuted,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: _rTextMuted,
+                            size: 20,
+                          ),
                           filled: true,
                           fillColor: _rSurface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: _rPrimary.withValues(alpha: 0.3)),
+                              color: _rPrimary.withValues(alpha: 0.3),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(
-                                color: _rPrimary.withValues(alpha: 0.3)),
+                              color: _rPrimary.withValues(alpha: 0.3),
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: const BorderSide(
-                                color: _rPrimary, width: 1.5),
+                              color: _rPrimary,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
@@ -167,8 +180,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           _FilterTab(
                             label: AppStrings.expiringSoon,
                             selected: _filter == 'expiring',
-                            onTap: () =>
-                                setState(() => _filter = 'expiring'),
+                            onTap: () => setState(() => _filter = 'expiring'),
                           ),
                           const SizedBox(width: 8),
                           _FilterTab(
@@ -186,10 +198,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.inventory_2_outlined,
-                                      size: 48,
-                                      color: _rPrimary
-                                          .withValues(alpha: 0.4)),
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 48,
+                                    color: _rPrimary.withValues(alpha: 0.4),
+                                  ),
                                   const SizedBox(height: 12),
                                   Text(
                                     'Aucun article trouvé',
@@ -203,49 +216,50 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(
-                                  20, 4, 20, 24),
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                               itemCount: items.length,
                               itemBuilder: (context, index) {
                                 final it = items[index];
-                                final date = DateFormat('MMM d')
-                                    .format(it.expiryDate);
+                                final date = DateFormat(
+                                  'MMM d',
+                                ).format(it.expiryDate);
 
                                 return TweenAnimationBuilder<double>(
                                   tween: Tween(begin: 0, end: 1),
                                   duration: Duration(
-                                      milliseconds: 240 + (index * 35)),
+                                    milliseconds: 240 + (index * 35),
+                                  ),
                                   curve: Curves.easeOutCubic,
                                   builder: (context, v, child) {
                                     return Opacity(
                                       opacity: v,
                                       child: Transform.translate(
-                                        offset:
-                                            Offset(0, (1 - v) * 10),
+                                        offset: Offset(0, (1 - v) * 10),
                                         child: child,
                                       ),
                                     );
                                   },
                                   child: GestureDetector(
-                                    onTap: () => context.go(AppRoutes
-                                        .restaurantInventoryItem(it.id)),
+                                    onTap: () => context.go(
+                                      AppRoutes.restaurantInventoryItem(it.id),
+                                    ),
                                     child: Container(
-                                      margin: const EdgeInsets.only(
-                                          bottom: 12),
+                                      margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
-                                          color: _rPrimary
-                                              .withValues(alpha: 0.2),
+                                          color: _rPrimary.withValues(
+                                            alpha: 0.2,
+                                          ),
                                           width: 0.8,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: _rPrimary
-                                                .withValues(alpha: 0.06),
+                                            color: _rPrimary.withValues(
+                                              alpha: 0.06,
+                                            ),
                                             blurRadius: 10,
                                             offset: const Offset(0, 3),
                                           ),
@@ -262,8 +276,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                                   it.name,
                                                   style: GoogleFonts.inter(
                                                     fontSize: 13,
-                                                    fontWeight:
-                                                        FontWeight.w800,
+                                                    fontWeight: FontWeight.w800,
                                                     color: _rTextTitle,
                                                     height: 1.2,
                                                   ),
@@ -283,8 +296,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                           const SizedBox(width: 10),
                                           FreshnessBadge(it.status),
                                           const SizedBox(width: 8),
-                                          Icon(Icons.chevron_right,
-                                              color: _rTextMuted),
+                                          Icon(
+                                            Icons.chevron_right,
+                                            color: _rTextMuted,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -321,8 +336,7 @@ class _FilterTab extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? _rSoftBg : Colors.transparent,
           borderRadius: BorderRadius.circular(20),

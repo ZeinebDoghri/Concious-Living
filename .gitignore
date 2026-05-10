@@ -91,6 +91,7 @@ assets/models/mask2former_compost_int8.onnx
 .env.*
 secrets.json
 api_keys.dart
+lib/config/api_keys.dart
 **/assets/config/secrets.json
 
 # ─── macOS ───────────────────────────────────────────────

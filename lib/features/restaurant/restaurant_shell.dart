@@ -9,16 +9,15 @@ import '../../providers/venue_type_provider.dart';
 import '../../shared/animations/role_animated_background.dart';
 
 // ── Restaurant FreshGuard pastel theme tokens ──────────────────────────────────
-const _rPrimary = Color(0xFFF2A7A7);
-const _rDeep = Color(0xFFE47878);
-const _rSurface = Color(0xFFFFF5F5);
-const _rSoftBg = Color(0xFFFFE4E4);
-const _rTextMuted = Color(0xFFB08080);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextMuted = Color(0xFF8C7E78);
 
 // Branch mapping: visual index → StatefulShellRoute branch index
-// Router branches: 0=Dashboard 1=Scan 2=Alerts 3=Waste 4=Compost 5=Inventory 6=Profile
-// Nav shows: Dashboard(0), Scan(1), Alerts(2), Compost(4), Profile(6)
-const _branchMap = [0, 1, 2, 4, 6];
+// Router branches: 0=Dashboard 1=Scan 2=Alerts 3=Waste/History 4=Compost 5=Inventory 6=Profile
+const _branchMap = [0, 1, 2, 3, 4, 6];
 
 class _NavItem {
   final IconData icon;
@@ -30,8 +29,9 @@ const _navItems = [
   _NavItem(Icons.dashboard_rounded, 'Dashboard'),
   _NavItem(Icons.document_scanner_rounded, 'Scan'),
   _NavItem(Icons.notifications_rounded, 'Alerts'),
-  _NavItem(Icons.recycling_rounded, 'Compost'),
-  _NavItem(Icons.person_rounded, 'Profil'),
+  _NavItem(Icons.history_rounded, 'History'),
+  _NavItem(Icons.eco_rounded, 'Compost'),
+  _NavItem(Icons.person_rounded, 'Profile'),
 ];
 
 class RestaurantShell extends StatefulWidget {
@@ -70,6 +70,11 @@ class _RestaurantShellState extends State<RestaurantShell>
   void _onTap(int visualIndex) {
     HapticFeedback.selectionClick();
     final branchIndex = _branchMap[visualIndex];
+    if (branchIndex == 3) {
+      context.go(AppRoutes.restaurantHistory);
+      _pageAnim.forward(from: 0);
+      return;
+    }
     if (branchIndex == 6) {
       final vt = context.read<VenueTypeProvider>().venueType;
       context.go(

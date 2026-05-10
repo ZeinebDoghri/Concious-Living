@@ -15,18 +15,18 @@ import '../../restaurant/scan/food_contamination_service.dart';
 import '../../restaurant/waste/compost_inference_service.dart';
 import '../../restaurant/waste/waste_pipeline_service.dart';
 
-const kOat = Color(0xFFF4FAF7);
+const kOat = Color(0xFFF0F5F8);
 const kParchment = Color(0xFFFFFFFF);
-const kSand = Color(0xFFDFF2E9);
-const kCherry = Color(0xFF7DC5A0);
-const kCherryMid = Color(0xFF4A8A6A);
-const kCherryB = Color(0xFFDFF2E9);
+const kSand = Color(0xFFD9E9F5);
+const kCherry = Color(0xFF5A9FC9);
+const kCherryMid = Color(0xFF35658F);
+const kCherryB = Color(0xFFD9E9F5);
 const kButterD = Color(0xFFFFAB5B);
 const kOlive = Color(0xFF52C98A);
-const kEspresso = Color(0xFF0D2E1E);
-const kCocoa = Color(0xFF3A6A52);
-const kFog = Color(0xFF7AAA90);
-const kViewfinderHotel = Color(0xFFDFF2E9);
+const kEspresso = Color(0xFF26201B);
+const kCocoa = Color(0xFF5C4F48);
+const kFog = Color(0xFF8C7E78);
+const kViewfinderHotel = Color(0xFFD9E9F5);
 
 class HotelScanScreen extends StatefulWidget {
   const HotelScanScreen({super.key});
@@ -238,7 +238,9 @@ class _HotelScanScreenState extends State<HotelScanScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.canPop()
+                ? context.pop()
+                : context.go(AppRoutes.hotelDashboard),
             child: Container(
               width: 38,
               height: 38,
@@ -481,23 +483,22 @@ class _HotelScanScreenState extends State<HotelScanScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _hotelModeChip(
                   Icons.thermostat_rounded,
                   'Freshness',
                   active: true,
                 ),
-                const SizedBox(width: 8),
                 _hotelModeChip(
                   Icons.event_available_rounded,
                   'Expiry',
                   active: false,
                 ),
-                const SizedBox(width: 8),
                 _hotelModeChip(Icons.delete_rounded, 'Waste', active: false),
-                const SizedBox(width: 8),
                 _hotelModeChip(Icons.eco_rounded, 'Compost', active: false),
               ],
             ),

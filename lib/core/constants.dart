@@ -4,49 +4,49 @@ import 'package:flutter/material.dart';
 
 class FreshGuardTheme {
   // Restaurant — Rose Corail & Creme
-  static const restaurantPrimary = Color(0xFFF2A7A7);
-  static const restaurantDeep = Color(0xFFE47878);
-  static const restaurantSurface = Color(0xFFFFF5F5);
+  static const restaurantPrimary = Color(0xFF8FA84A);
+  static const restaurantDeep = Color(0xFF5A7030);
+  static const restaurantSurface = Color(0xFFF5F8EE);
   static const restaurantCardBg = Color(0xFFFFFFFF);
-  static const restaurantSoftPink = Color(0xFFFFE4E4);
-  static const restaurantCream = Color(0xFFFFF8F0);
-  static const restaurantTextTitle = Color(0xFF3D1515);
-  static const restaurantTextBody = Color(0xFF7A4040);
-  static const restaurantTextMuted = Color(0xFFB08080);
-  static const restaurantAiDark = Color(0xFF3D1515);
-  static const restaurantAiLight = Color(0xFFFFD6D6);
-  static const restaurantHeroBlob1 = Color(0xFFFFB8B8);
-  static const restaurantHeroBlob2 = Color(0xFFFFD6D6);
+  static const restaurantSoftPink = Color(0xFFE3E8D1);
+  static const restaurantCream = Color(0xFFFCFEF1);
+  static const restaurantTextTitle = Color(0xFF26201B);
+  static const restaurantTextBody = Color(0xFF5C4F48);
+  static const restaurantTextMuted = Color(0xFF8C7E78);
+  static const restaurantAiDark = Color(0xFF26201B);
+  static const restaurantAiLight = Color(0xFFC0D089);
+  static const restaurantHeroBlob1 = Color(0xFFC0D089);
+  static const restaurantHeroBlob2 = Color(0xFFE3E8D1);
 
   // Hotel — Vert Sauge & Ivoire
-  static const hotelPrimary = Color(0xFF7DC5A0);
-  static const hotelDeep = Color(0xFF4A8A6A);
-  static const hotelSurface = Color(0xFFF4FAF7);
+  static const hotelPrimary = Color(0xFF5A9FC9);
+  static const hotelDeep = Color(0xFF35658F);
+  static const hotelSurface = Color(0xFFF0F5F8);
   static const hotelCardBg = Color(0xFFFFFFFF);
-  static const hotelSoftGreen = Color(0xFFDFF2E9);
-  static const hotelMint = Color(0xFFEDF7F3);
-  static const hotelTextTitle = Color(0xFF0D2E1E);
-  static const hotelTextBody = Color(0xFF3A6A52);
-  static const hotelTextMuted = Color(0xFF7AAA90);
-  static const hotelAiDark = Color(0xFF0D2E1E);
-  static const hotelAiLight = Color(0xFFC8EDD9);
-  static const hotelHeroBlob1 = Color(0xFFA8DCBE);
-  static const hotelHeroBlob2 = Color(0xFFC8EDD9);
+  static const hotelSoftGreen = Color(0xFFD9E9F5);
+  static const hotelMint = Color(0xFFEAF3F8);
+  static const hotelTextTitle = Color(0xFF26201B);
+  static const hotelTextBody = Color(0xFF5C4F48);
+  static const hotelTextMuted = Color(0xFF8C7E78);
+  static const hotelAiDark = Color(0xFF26201B);
+  static const hotelAiLight = Color(0xFFA8C8E1);
+  static const hotelHeroBlob1 = Color(0xFFA8C8E1);
+  static const hotelHeroBlob2 = Color(0xFFD9E9F5);
 
   // Customer — Violet Lavande & Blanc
-  static const customerPrimary = Color(0xFFA78BFA);
-  static const customerDeep = Color(0xFF7C3AED);
-  static const customerSurface = Color(0xFFF5F3FF);
+  static const customerPrimary = Color(0xFFD9899F);
+  static const customerDeep = Color(0xFFB27589);
+  static const customerSurface = Color(0xFFFEFAFC);
   static const customerCardBg = Color(0xFFFFFFFF);
-  static const customerSoftLavender = Color(0xFFEDE9FE);
-  static const customerLilac = Color(0xFFF3F0FF);
-  static const customerTextTitle = Color(0xFF2D1B69);
-  static const customerTextBody = Color(0xFF4B3B8C);
-  static const customerTextMuted = Color(0xFF8B7BC0);
-  static const customerAiDark = Color(0xFF2D1B69);
-  static const customerAiLight = Color(0xFFDDD6FE);
-  static const customerHeroBlob1 = Color(0xFFC4B5FD);
-  static const customerHeroBlob2 = Color(0xFFDDD6FE);
+  static const customerSoftLavender = Color(0xFFF9E9F2);
+  static const customerLilac = Color(0xFFFDF5F4);
+  static const customerTextTitle = Color(0xFF26201B);
+  static const customerTextBody = Color(0xFF5C4F48);
+  static const customerTextMuted = Color(0xFF8C7E78);
+  static const customerAiDark = Color(0xFF26201B);
+  static const customerAiLight = Color(0xFFEFCCE0);
+  static const customerHeroBlob1 = Color(0xFFEFCCE0);
+  static const customerHeroBlob2 = Color(0xFFF9E9F2);
 
   // Semantic colors (shared)
   static const fresh = Color(0xFF52C98A);
@@ -183,6 +183,7 @@ class AppRoutes {
   static const splash = '/splash';
   static const onboarding = '/onboarding';
   static const roleSelector = '/role-selector';
+  static const selectRole = '/auth/select-role';
 
   static const customerLogin = '/auth/customer/login';
   static const customerRegister = '/auth/customer/register';
@@ -209,6 +210,7 @@ class AppRoutes {
   static const healthGoals = '/customer/health-goals';
   static const nutritionProgress = '/customer/nutrition-progress';
   static const nutritionGoals = '/customer/nutrition-goals';
+  static const customerNutrients = '/customer/nutrients';
 
   static const restaurantDashboard = '/restaurant/dashboard';
   static const restaurantScan = '/restaurant/scan';
@@ -220,7 +222,9 @@ class AppRoutes {
   static const restaurantExpiryDate = '/restaurant/expiry-date';
   static const restaurantAlerts = '/restaurant/alerts';
   static const restaurantWaste = '/restaurant/waste';
+  static const restaurantHistory = '/restaurant/history';
   static const restaurantCompost = '/restaurant/compost';
+  static const restaurantCompostHistory = '/restaurant/compost/history';
   static const restaurantInventory = '/restaurant/inventory';
   static const restaurantProfile = '/restaurant/profile';
   static const restaurantProfileEdit = '/restaurant/profile/edit';
@@ -231,6 +235,9 @@ class AppRoutes {
   static const hotelContaminationScan = '/hotel/scan/contamination';
   static const hotelContaminationResult = '/hotel/scan/contamination/result';
   static const hotelExpiryDate = '/hotel/expiry-date';
+  static const hotelCompost = '/hotel/compost';
+  static const hotelHistory = '/hotel/history';
+  static const hotelCompostHistory = '/hotel/compost/history';
   static const hotelProfile = '/hotel/profile';
   static const hotelProfileEdit = '/hotel/profile/edit';
 

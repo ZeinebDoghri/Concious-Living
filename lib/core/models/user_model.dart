@@ -15,6 +15,9 @@ class UserModel {
   final bool notifyAllergens;
   final bool notifyWeeklyReport;
   final String? avatarPath;
+  final String? entityId;
+  final String? restaurantId;
+  final String? hotelId;
 
   // Restaurant-only fields
   final String? restaurantName;
@@ -48,6 +51,9 @@ class UserModel {
     this.dateOfBirth,
     this.gender,
     this.avatarPath,
+    this.entityId,
+    this.restaurantId,
+    this.hotelId,
     this.restaurantName,
     this.cuisineType,
     this.covers,
@@ -78,6 +84,9 @@ class UserModel {
     bool? notifyAllergens,
     bool? notifyWeeklyReport,
     String? avatarPath,
+    String? entityId,
+    String? restaurantId,
+    String? hotelId,
     String? restaurantName,
     String? cuisineType,
     int? covers,
@@ -107,6 +116,9 @@ class UserModel {
       notifyAllergens: notifyAllergens ?? this.notifyAllergens,
       notifyWeeklyReport: notifyWeeklyReport ?? this.notifyWeeklyReport,
       avatarPath: avatarPath ?? this.avatarPath,
+      entityId: entityId ?? this.entityId,
+      restaurantId: restaurantId ?? this.restaurantId,
+      hotelId: hotelId ?? this.hotelId,
       restaurantName: restaurantName ?? this.restaurantName,
       cuisineType: cuisineType ?? this.cuisineType,
       covers: covers ?? this.covers,
@@ -139,6 +151,9 @@ class UserModel {
       'notifyAllergens': notifyAllergens,
       'notifyWeeklyReport': notifyWeeklyReport,
       'avatarPath': avatarPath,
+      'entityId': entityId,
+      'restaurantId': restaurantId,
+      'hotelId': hotelId,
       'restaurantName': restaurantName,
       'cuisineType': cuisineType,
       'covers': covers,
@@ -177,6 +192,9 @@ class UserModel {
       notifyAllergens: (json['notifyAllergens'] ?? true) as bool,
       notifyWeeklyReport: (json['notifyWeeklyReport'] ?? true) as bool,
       avatarPath: json['avatarPath'] as String?,
+      entityId: json['entityId'] as String?,
+      restaurantId: json['restaurantId'] as String?,
+      hotelId: json['hotelId'] as String?,
       restaurantName: json['restaurantName'] as String?,
       cuisineType: json['cuisineType'] as String?,
       covers: (json['covers'] as num?)?.toInt(),

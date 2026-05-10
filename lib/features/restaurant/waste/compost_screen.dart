@@ -13,14 +13,15 @@ import 'package:provider/provider.dart';
 import '../../../core/models/compost_session_model.dart';
 import '../../../providers/compost_provider.dart';
 import '../../../providers/user_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary = Color(0xFFF2A7A7);
-const _rDeep = Color(0xFFE47878);
-const _rSurface = Color(0xFFFFF5F5);
-const _rSoftBg = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextMuted = Color(0xFFB08080);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextMuted = Color(0xFF8C7E78);
 const _fresh = Color(0xFF52C98A);
 const _freshLight = Color(0xFFE8F9F1);
 const _freshDark = Color(0xFF2E8B5A);
@@ -133,7 +134,7 @@ class _CompostHeader extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Classification intelligente des déchets',
+                        'Smart waste classification',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: _rTextMuted,
@@ -218,8 +219,8 @@ class _CompostHeader extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               tabs: const [
-                Tab(text: '🔬  Classifier'),
-                Tab(text: '📊  Historique'),
+                Tab(text: '🔬  Classify'),
+                Tab(text: '📊  History'),
               ],
             ),
           ),
@@ -364,7 +365,7 @@ class _TodayOverviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Aujourd'hui",
+                      'Today',
                       style: GoogleFonts.playfairDisplay(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -373,8 +374,8 @@ class _TodayOverviewCard extends StatelessWidget {
                     ),
                     Text(
                       count == 0
-                          ? 'Aucune analyse'
-                          : '$count analyse${count > 1 ? 's' : ''}',
+                          ? 'No analyses'
+                          : ' scan',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: _rTextMuted,
@@ -553,7 +554,7 @@ class _PhotoCard extends StatelessWidget {
           _PulsingIcon(),
           const SizedBox(height: 14),
           Text(
-            'Analyser vos déchets',
+            'Analyze your waste',
             style: GoogleFonts.playfairDisplay(
               fontSize: 17,
               fontWeight: FontWeight.w700,
@@ -562,7 +563,8 @@ class _PhotoCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            "L'IA segmente automatiquellement\ncompostable vs non-compostable",
+            'AI automatically segments\ncompostable vs non-compostable',
+
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12,
@@ -693,21 +695,23 @@ class _EducationCards extends StatelessWidget {
   const _EducationCards();
 
   static const _composable = [
-    ('🥦', 'Légumes & fruits'),
-    ('☕', 'Marc de café'),
-    ('🥚', "Coquilles d'œufs"),
-    ('🌿', 'Herbes fraîches'),
-    ('🍞', 'Pain rassis'),
-    ('🍂', 'Feuilles mortes'),
+    ('🥦', 'Vegetables & fruit'),
+    ('🥚', 'Eggshells'),
+    ('🌿', 'Fresh herbs'),
+    ('🍞', 'Stale bread'),
+    ('☕', 'Coffee grounds'),
+    ('🍵', 'Tea bags'),
+    ('🍊', 'Fruit peels'),
+    ('🍚', 'Cooked rice'),
   ];
 
   static const _nonComposable = [
-    ('🥩', 'Viandes cuites'),
-    ('🧴', 'Emballages plastique'),
-    ('🪟', 'Verre'),
-    ('🥫', 'Métal / canettes'),
-    ('🛢️', 'Huile de cuisson'),
-    ('🧻', 'Papier gras'),
+    ('🍖', 'Cooked meat'),
+    ('🛍️', 'Plastic packaging'),
+    ('🍾', 'Glass'),
+    ('🥫', 'Metal / cans'),
+    ('🧀', 'Dairy products'),
+    ('🧴', 'Oils & fats'),
   ];
 
   @override
@@ -756,20 +760,24 @@ class _EducationCards extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(items[i].$1, style: const TextStyle(fontSize: 22)),
+                Text(items[i].$1, style: const TextStyle(fontSize: 18)),
                 const SizedBox(height: 4),
-                Text(
-                  items[i].$2,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                    height: 1.2,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    items[i].$2,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                      height: 1.2,
+                    ),
                   ),
                 ),
               ],
@@ -1569,7 +1577,12 @@ class _HistoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<CompostProvider>();
-    final sessions = prov.sessions;
+    final userProv = context.watch<UserProvider>();
+    final currentUser = userProv.currentUser;
+    final entityId = currentUser?.entityId ?? 
+        currentUser?.restaurantId ?? 
+        currentUser?.hotelId ?? 
+        currentUser?.id ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -1580,28 +1593,105 @@ class _HistoryTab extends StatelessWidget {
             weekly: prov.weeklyCompostPct,
           ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
           const SizedBox(height: 20),
-          if (sessions.isEmpty)
-            _EmptyHistory().animate().fadeIn(duration: 400.ms, delay: 100.ms)
-          else ...[
-            Text(
-              'Sessions récentes',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _rTextTitle,
-              ),
+          Text(
+            'Sessions récentes',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: _rTextTitle,
             ),
-            const SizedBox(height: 12),
-            ...sessions.asMap().entries.map((e) {
-              return _SessionCard(session: e.value)
-                  .animate()
-                  .fadeIn(
-                    duration: 350.ms,
-                    delay: Duration(milliseconds: 60 * e.key),
-                  )
-                  .slideX(begin: 0.05, end: 0);
-            }),
-          ],
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: entityId.isEmpty
+                ? const Stream.empty()
+                : FirebaseFirestore.instance
+                    .collection('restaurants')
+                    .doc(entityId)
+                    .collection('scans')
+                    .where('type', isEqualTo: 'compost')
+                    .orderBy('timestamp', descending: true)
+                    .limit(20)
+                    .snapshots(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: CircularProgressIndicator(),
+                ));
+              }
+              final docs = snap.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return _EmptyHistory().animate().fadeIn(duration: 400.ms, delay: 100.ms);
+              }
+              
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: docs.length,
+                itemBuilder: (context, i) {
+                  final data = docs[i].data();
+                  final compostPct = (data['compostable_pct'] ?? 0.0).toDouble();
+                  final wasteKg = (data['waste_kg'] ?? 0.0).toDouble();
+                  final compostKg = (data['compostable_kg'] ?? 0.0).toDouble();
+                  final ts = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+                  final timeStr = DateFormat('MMM d, HH:mm').format(ts);
+                  final co2 = (compostKg * 0.5).toStringAsFixed(2);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFF8FD14F).withValues(alpha: 0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(children: [
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8FD14F).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text('♻️', style: TextStyle(fontSize: 22))),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${compostPct.toStringAsFixed(1)}% compostable',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14,
+                              color: Color(0xFF5C7A3E)),
+                          ),
+                          Text(
+                            '${wasteKg.toStringAsFixed(2)} kg waste · '
+                            '${compostKg.toStringAsFixed(2)} kg composted',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
+                          ),
+                          Text(
+                            '🌍 $co2 kg CO₂ saved · $timeStr',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[500]),
+                          ),
+                        ],
+                      )),
+                    ]),
+                  ).animate().fadeIn(duration: 350.ms, delay: Duration(milliseconds: 60 * i)).slideX(begin: 0.05, end: 0);
+                },
+              );
+            },
+          ),
         ],
       ),
     );
@@ -1652,7 +1742,7 @@ class _WeeklyChart extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Tendance hebdomadaire',
+                'Weekly trend',
                 style: GoogleFonts.playfairDisplay(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -1755,7 +1845,7 @@ class _EmptyHistory extends StatelessWidget {
           const Text('🌱', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 16),
           Text(
-            'Aucune session enregistrée',
+            'No sessions recorded',
             style: GoogleFonts.playfairDisplay(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -1764,7 +1854,7 @@ class _EmptyHistory extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Analysez vos déchets dans l\'onglet\n"Classifier" pour voir votre historique',
+            'Analyze waste in the\n"Classify" tab to see your history',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,

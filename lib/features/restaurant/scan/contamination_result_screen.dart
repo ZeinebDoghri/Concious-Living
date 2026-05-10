@@ -33,7 +33,9 @@ class ContaminationResultScreen extends StatelessWidget {
       detections: result.detections.map((d) => d.label).toList(growable: false),
       onPrimary: () => context.go(AppRoutes.restaurantDashboard),
       onScanAgain: () => context.go(AppRoutes.restaurantContaminationScan),
-      onBack: () => context.pop(),
+      onBack: () => context.canPop()
+          ? context.pop()
+          : context.go(AppRoutes.restaurantDashboard),
     );
   }
 }
