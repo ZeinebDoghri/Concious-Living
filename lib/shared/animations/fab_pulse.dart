@@ -27,7 +27,7 @@ class _FabWithPulseState extends State<FabWithPulse>
   Widget _ring(double delay) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) {
+      builder: (_, _) {
         final d = ((_ctrl.value - delay) % 1.0).clamp(0.0, 1.0);
         final scale = 1.0 + d * 0.7;
         final opacity = (1.0 - d).clamp(0.0, 1.0);

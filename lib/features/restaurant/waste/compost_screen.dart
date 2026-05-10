@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -746,7 +745,7 @@ class _EducationCards extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
           return Container(
             width: 90,
@@ -1327,7 +1326,7 @@ class _ImageComparisonSliderState extends State<_ImageComparisonSlider>
                           child: Image.memory(
                             widget.maskBytes,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               color: _fresh.withValues(alpha: 0.35),
                               child: const Center(
                                 child: Column(
@@ -1507,7 +1506,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
           const SizedBox(height: 6),
           AnimatedBuilder(
             animation: _val,
-            builder: (_, __) => Text(
+            builder: (_, _) => Text(
               '${_val.value.toStringAsFixed(1)}%',
               style: GoogleFonts.inter(
                 fontSize: 16,
@@ -1816,7 +1815,7 @@ class _SessionCard extends StatelessWidget {
                     child: Image.network(
                       session.imageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
+                      errorBuilder: (_, _, _) =>
                           Icon(Icons.eco_rounded, color: _freshDark, size: 26),
                     ),
                   )

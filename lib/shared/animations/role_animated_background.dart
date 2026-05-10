@@ -63,22 +63,7 @@ class _RoleAnimatedBackgroundState extends State<RoleAnimatedBackground>
           ),
         ),
         widget.child,
-        IgnorePointer(
-          child: RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (_, _) => CustomPaint(
-                painter: _AmbientPainter(
-                  role: widget.role,
-                  activeIndex: widget.activeIndex,
-                  intensity: widget.intensity,
-                  t: _controller.value,
-                  layer: _AmbientLayer.front,
-                ),
-              ),
-            ),
-          ),
-        ),
+        // front layer removed — no more particles drawn over the white card
       ],
     );
   }

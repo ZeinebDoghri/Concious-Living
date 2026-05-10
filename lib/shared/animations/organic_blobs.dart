@@ -75,7 +75,7 @@ class _AnimatedBlobsState extends State<AnimatedBlobs>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) {
+      builder: (_, _) {
         final t = _ctrl.value * 2 * pi;
         return CustomPaint(
           painter: _MultiBlobPainter(

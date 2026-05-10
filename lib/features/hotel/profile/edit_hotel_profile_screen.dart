@@ -434,7 +434,7 @@ class _HotelDetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
-          value: hotelType,
+          initialValue: hotelType,
           decoration: InputDecoration(
             labelText: 'Hotel type',
             prefixIcon: const Icon(Icons.apartment_outlined, color: _kMuted),
@@ -536,7 +536,7 @@ class _TeamSetupStep extends StatelessWidget {
           child: SwitchListTile(
             value: allergyHandling,
             onChanged: onAllergyHandling,
-            activeColor: _kPrimary,
+            activeThumbColor: _kPrimary,
             title: Text('Allergy handling', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
           ),
         ),
@@ -574,17 +574,17 @@ class _AlertPreferencesStep extends StatelessWidget {
           child: Column(
             children: [
               SwitchListTile(
-                value: notifySpoilage, onChanged: onNotifySpoilage, activeColor: _kPrimary,
+                value: notifySpoilage, onChanged: onNotifySpoilage, activeThumbColor: _kPrimary,
                 title: Text('Spoilage alerts', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
               ),
               Divider(color: _kPrimary.withValues(alpha: 0.1), height: 1),
               SwitchListTile(
-                value: notifyLowInventory, onChanged: onNotifyLowInventory, activeColor: _kPrimary,
+                value: notifyLowInventory, onChanged: onNotifyLowInventory, activeThumbColor: _kPrimary,
                 title: Text('Low inventory alerts', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
               ),
               Divider(color: _kPrimary.withValues(alpha: 0.1), height: 1),
               SwitchListTile(
-                value: notifyWasteTips, onChanged: onNotifyWasteTips, activeColor: _kPrimary,
+                value: notifyWasteTips, onChanged: onNotifyWasteTips, activeThumbColor: _kPrimary,
                 title: Text('Waste reduction tips', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kTitle)),
               ),
             ],

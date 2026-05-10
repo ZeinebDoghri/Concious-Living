@@ -1606,8 +1606,9 @@ class _HotelLiveCustomerAlertsState extends State<_HotelLiveCustomerAlerts> {
     return StreamBuilder(
       stream: VenueAlertService.alertsStream(widget.venueId),
       builder: (context, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty)
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
           return const SizedBox.shrink();
+        }
 
         final docs = snap.data!.docs;
         return Container(

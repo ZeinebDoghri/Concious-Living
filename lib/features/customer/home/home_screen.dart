@@ -457,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: IgnorePointer(
                       child: AnimatedBuilder(
                         animation: _motionController,
-                        builder: (_, __) => CustomPaint(
+                        builder: (_, _) => CustomPaint(
                           painter: _BlobPainter(
                             _motionController.value,
                             _kBlob1,
@@ -561,7 +561,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: alertCards.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
                   itemBuilder: (context, index) =>
                       _AlertCard(data: alertCards[index]),
                 ),
@@ -700,7 +700,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               AnimatedBuilder(
                                 animation: _motionController,
-                                builder: (_, __) {
+                                builder: (_, _) {
                                   final wave = math.sin(
                                     _motionController.value * 2 * math.pi +
                                         index * 0.8,

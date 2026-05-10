@@ -131,7 +131,7 @@ class HotelProfileScreen extends StatelessWidget {
                       clipBehavior: Clip.antiAlias,
                       child: hasLogo
                           ? Image.network(logoUrl, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
+                              errorBuilder: (_, _, _) =>
                                   const Icon(Icons.hotel, size: 40, color: _kDeep))
                           : const Icon(Icons.hotel, size: 40, color: _kDeep),
                     ),

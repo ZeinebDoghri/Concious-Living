@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -12,33 +13,40 @@ import '../../../providers/venue_type_provider.dart';
 
 // ── Customer — Twilight Lupine (rosy terracotta) ───────────────────────────────
 const _kBg       = Color(0xFFFDF5F4); // lightest tint of customer rose
-const _kPrimary  = Color(0xFFD9899F);
-const _kDeep     = Color(0xFFB27589);
-const _kSoftBg   = Color(0xFFF9E9F2);
-const _kBorder   = Color(0xFFEFCCE0);
+const _kPrimary  = Color(0xFFC4736C);
+const _kDeep     = Color(0xFF82403B);
+const _kSoftBg   = Color(0xFFFAEEED);
+const _kBorder   = Color(0xFFE2C4C2);
 const _kTitle    = Color(0xFF26201B);
 const _kMuted    = Color(0xFF8C7E78);
 const _kBody     = Color(0xFF5C4F48);
 
 // accent dots from other roles
-const _kRestAccent  = Color(0xFF8FA84A);
-const _kHotelAccent = Color(0xFF5A9FC9);
+const _kRestAccent  = Color(0xFF7A8B42);
+const _kHotelAccent = Color(0xFF6A8494);
 
-class CustomerLoginScreen extends StatefulWidget {
-  const CustomerLoginScreen({super.key});
+class CustomerRegisterScreen extends StatefulWidget {
+  const CustomerRegisterScreen({super.key});
 
   @override
-  State<CustomerLoginScreen> createState() => _CustomerLoginScreenState();
+  State<CustomerRegisterScreen> createState() => _CustomerRegisterScreenState();
 }
 
-class _CustomerLoginScreenState extends State<CustomerLoginScreen>
+class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _emailCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _nameCtrl      = TextEditingController();
+  final _emailCtrl     = TextEditingController();
+  final _passwordCtrl  = TextEditingController();
+  final _confirmCtrl   = TextEditingController();
+
+  final _passwordFocus = FocusNode();
 
   bool _obscure   = true;
+  bool _obscure2  = true;
   bool _isLoading = false;
   bool _pressed   = false;
+
+  String? _emailError;
 
   late final AnimationController _blobCtrl;
 
@@ -49,14 +57,42 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
       vsync: this,
       duration: const Duration(seconds: 20),
     )..repeat();
+
+    _emailCtrl.addListener(_validateEmailRealtime);
   }
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    _passwordFocus.dispose();
     _blobCtrl.dispose();
     super.dispose();
+  }
+
+  void _validateEmailRealtime() {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty) {
+      if (_emailError != null) setState(() => _emailError = null);
+      return;
+    }
+    final ok = EmailValidator.validate(email);
+    final nextError = ok ? null : AppStrings.validationInvalidEmail;
+    if (nextError != _emailError) setState(() => _emailError = nextError);
+  }
+
+  int _passwordStrength(String v) {
+    if (v.isEmpty) return 0;
+    int score = 0;
+    if (v.length >= 6)  score++;
+    if (v.length >= 10) score++;
+    if (RegExp(r'[A-Z]').hasMatch(v)) score++;
+    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
+      score++;
+    }
+    return score.clamp(0, 4);
   }
 
   void _snack(String msg) =>
@@ -69,25 +105,39 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
     return s;
   }
 
-  Future<void> _signIn() async {
+  Future<void> _createAccount() async {
     if (_isLoading) return;
     HapticFeedback.selectionClick();
+    
+    final name     = _nameCtrl.text.trim();
     final email    = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
+    final confirm  = _confirmCtrl.text;
+
+    if (name.isEmpty) {
+      _snack(AppStrings.validationRequiredField); return;
+    }
     if (email.isEmpty || !email.contains('@')) {
       _snack(AppStrings.validationInvalidEmail); return;
     }
     if (password.length < 6) {
       _snack(AppStrings.validationPasswordMin); return;
     }
+    if (password != confirm) {
+      _snack(AppStrings.validationPasswordsMismatch); return;
+    }
+
     setState(() => _isLoading = true);
     try {
       await context.read<VenueTypeProvider>().clear();
       if (!mounted) return;
-      await context.read<UserProvider>().login(
-        email: email, password: password, role: 'customer');
+      await context.read<UserProvider>().registerCustomer(
+        name: name,
+        email: email,
+        password: password,
+      );
       if (!mounted) return;
-      context.go(AppRoutes.customerHome);
+      context.go(AppRoutes.customerProfileSetup);
     } catch (e) {
       _snack(_readable(e));
     } finally {
@@ -100,6 +150,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
     final screenH = MediaQuery.of(context).size.height;
     final heroH   = screenH * 0.46;
 
+    final password = _passwordCtrl.text;
+    final strength = _passwordStrength(password);
+    final showStrength = _passwordFocus.hasFocus && password.isNotEmpty;
+    final mismatch =
+        _confirmCtrl.text.isNotEmpty &&
+        _passwordCtrl.text != _confirmCtrl.text;
+
     return Scaffold(
       backgroundColor: _kBg,
       resizeToAvoidBottomInset: true,
@@ -108,7 +165,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
           // ── Full background blobs ────────────────────────────────────
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, _) => CustomPaint(
+            builder: (_, __) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
               size: Size(double.infinity,
                   MediaQuery.of(context).size.height),
@@ -135,7 +192,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                   // hero blobs
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, _) => CustomPaint(
+                    builder: (_, __) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),
@@ -180,7 +237,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                           // Back button
                           IconButton(
                             onPressed: () =>
-                                context.go(AppRoutes.roleSelector),
+                                context.go(AppRoutes.customerLogin),
                             icon: const Icon(Icons.arrow_back_ios_new,
                                 size: 20),
                             color: Colors.white,
@@ -283,7 +340,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                                 CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Welcome back',
+                                'Join us',
                                 style: GoogleFonts.cormorantGaramond(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
@@ -292,7 +349,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'Your health journey continues',
+                                'Start your health journey',
                                 style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   color: _kMuted,
@@ -338,12 +395,21 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
 
                     const SizedBox(height: 26),
 
+                    // Full name
+                    _buildInput(
+                      controller: _nameCtrl,
+                      label: AppStrings.fullName,
+                      icon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: 14),
+
                     // Email
                     _buildInput(
                       controller: _emailCtrl,
                       label: AppStrings.emailAddress,
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
+                      errorText: _emailError,
                     ),
                     const SizedBox(height: 14),
 
@@ -353,31 +419,68 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                       label: AppStrings.password,
                       icon: Icons.lock_outline,
                       obscure: _obscure,
+                      focusNode: _passwordFocus,
+                      onChanged: (_) => setState(() {}),
                       onToggleObscure: () =>
                           setState(() => _obscure = !_obscure),
                     ),
-                    const SizedBox(height: 6),
 
-                    // Forgot password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () =>
-                            context.go(AppRoutes.customerForgot),
-                        child: Text(
-                          AppStrings.forgotPassword,
-                          style: GoogleFonts.dmSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _kPrimary,
-                          ),
-                        ),
+                    // Strength bar
+                    if (showStrength) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: List.generate(4, (i) {
+                          final filled = strength >= (i + 1);
+                          final Color color;
+                          if (!filled) {
+                            color = const Color(0xFFE2E8F0);
+                          } else {
+                            if (i == 0) {
+                              color = const Color(0xFFF87171);
+                            } else if (i == 1)
+                              color = const Color(0xFFFBBF24);
+                            else if (i == 2)
+                              color = const Color(0xFF34D399);
+                            else
+                              color = _kDeep;
+                          }
+                          return Expanded(
+                            child: Container(
+                              height: 6,
+                              margin: EdgeInsets.only(right: i == 3 ? 0 : 6),
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
-                    ),
-                    const SizedBox(height: 10),
+                    ],
+                    const SizedBox(height: 14),
 
-                    // Sign in CTA
-                    _buildCta(label: 'Sign In', onTap: _signIn),
+                    // Confirm password
+                    _buildInput(
+                      controller: _confirmCtrl,
+                      label: AppStrings.confirmPassword,
+                      icon: Icons.lock_outline,
+                      obscure: _obscure2,
+                      onChanged: (_) => setState(() {}),
+                      onToggleObscure: () =>
+                          setState(() => _obscure2 = !_obscure2),
+                    ),
+                    if (mismatch) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        AppStrings.validationPasswordsMismatch,
+                        style: GoogleFonts.dmSans(
+                            fontSize: 11, color: _kDeep),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+
+                    // Create account CTA
+                    _buildCta(label: 'Create Account', onTap: _createAccount),
 
                     const SizedBox(height: 20),
 
@@ -396,20 +499,20 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // Create account
+                    // Already have account
                     Center(
-                      child: TextButton(
-                        onPressed: () =>
-                            context.go(AppRoutes.customerRegister),
+                      child: GestureDetector(
+                        onTap: () =>
+                            context.go(AppRoutes.customerLogin),
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.dmSans(
-                              fontSize: 13, color: _kMuted),
+                                fontSize: 13, color: _kMuted),
                             children: [
                               const TextSpan(
-                                  text: "Don't have an account?  "),
+                                  text: 'Already have an account?  '),
                               TextSpan(
-                                text: 'Create account',
+                                text: 'Sign in',
                                 style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -445,16 +548,22 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     bool? obscure,
+    FocusNode? focusNode,
+    String? errorText,
+    ValueChanged<String>? onChanged,
     VoidCallback? onToggleObscure,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscure ?? false,
+      focusNode: focusNode,
+      onChanged: onChanged,
       style: GoogleFonts.dmSans(fontSize: 14, color: _kTitle),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.dmSans(fontSize: 14, color: _kMuted),
+        errorText: errorText,
         filled: true,
         fillColor: _kSoftBg,
         prefixIcon: Icon(icon, color: _kMuted, size: 20),

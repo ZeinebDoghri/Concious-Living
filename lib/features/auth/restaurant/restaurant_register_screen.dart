@@ -2,21 +2,26 @@ import 'dart:math' as math;
 
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
-import '../../../shared/widgets/animated_button.dart';
 
-// Restaurant (rose) role colors
-const _primary   = Color(0xFFF2A7A7);
-const _deep      = Color(0xFFE47878);
-const _softBg    = Color(0xFFFFE4E4);
-const _textTitle = Color(0xFF3D1515);
-const _textBody  = Color(0xFF7A4040);
-const _textMuted = Color(0xFFB08080);
+// ── Restaurant — Spring Meadows (olive green) ─────────────────────────────────
+const _kBg       = Color(0xFFF5F8EE); // lightest tint of restaurant green
+const _kPrimary  = Color(0xFF8FA84A);
+const _kDeep     = Color(0xFF5A7030);
+const _kSoftBg   = Color(0xFFE3E8D1);
+const _kBorder   = Color(0xFFC0D089);
+const _kTitle    = Color(0xFF26201B);
+const _kMuted    = Color(0xFF8C7E78);
+const _kBody     = Color(0xFF5C4F48);
+
+const _kCustAccent  = Color(0xFFD84C3E);
+const _kHotelAccent = Color(0xFF5A9FC9);
 
 class RestaurantRegisterScreen extends StatefulWidget {
   const RestaurantRegisterScreen({super.key});
@@ -28,25 +33,26 @@ class RestaurantRegisterScreen extends StatefulWidget {
 
 class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _restaurantController = TextEditingController();
-  final _managerController    = TextEditingController();
-  final _emailController      = TextEditingController();
-  final _phoneController      = TextEditingController();
-  final _passwordController   = TextEditingController();
-  final _confirmController    = TextEditingController();
+  final _restaurantCtrl = TextEditingController();
+  final _managerCtrl    = TextEditingController();
+  final _emailCtrl      = TextEditingController();
+  final _phoneCtrl      = TextEditingController();
+  final _passwordCtrl   = TextEditingController();
+  final _confirmCtrl    = TextEditingController();
 
   final _passwordFocus = FocusNode();
 
   bool _obscure   = true;
   bool _obscure2  = true;
   bool _isLoading = false;
+  bool _pressed   = false;
 
   String? _emailError;
 
   double _covers  = 80;
   String _cuisine = 'Tunisian';
 
-  late final AnimationController _blobController;
+  late final AnimationController _blobCtrl;
 
   static const _cuisineOptions = <String>[
     'Tunisian', 'Mediterranean', 'Italian', 'Fast food', 'Buffet', 'Fine dining', 'Other',
@@ -55,29 +61,29 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
   @override
   void initState() {
     super.initState();
-    _blobController = AnimationController(
+    _blobCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
+      duration: const Duration(seconds: 20),
     )..repeat();
 
-    _emailController.addListener(_validateEmailRealtime);
+    _emailCtrl.addListener(_validateEmailRealtime);
   }
 
   @override
   void dispose() {
-    _restaurantController.dispose();
-    _managerController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmController.dispose();
+    _restaurantCtrl.dispose();
+    _managerCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
     _passwordFocus.dispose();
-    _blobController.dispose();
+    _blobCtrl.dispose();
     super.dispose();
   }
 
   void _validateEmailRealtime() {
-    final email = _emailController.text.trim();
+    final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
       if (_emailError != null) setState(() => _emailError = null);
       return;
@@ -97,32 +103,32 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
     return score.clamp(0, 4);
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  String _readableError(Object e) {
-    final message = e.toString();
-    if (message.startsWith('Exception: ')) return message.substring('Exception: '.length);
-    if (message.startsWith('StateError: ')) return message.substring('StateError: '.length);
-    return message;
+  String _readable(Object e) {
+    final s = e.toString();
+    if (s.startsWith('Exception: ')) return s.substring(11);
+    if (s.startsWith('StateError: ')) return s.substring(12);
+    return s;
   }
 
   Future<void> _createRestaurantAccount() async {
     if (_isLoading) return;
+    HapticFeedback.selectionClick();
 
-    final restaurant = _restaurantController.text.trim();
-    final manager    = _managerController.text.trim();
-    final email      = _emailController.text.trim();
-    final phone      = _phoneController.text.trim();
-    final password   = _passwordController.text;
-    final confirm    = _confirmController.text;
+    final restaurant = _restaurantCtrl.text.trim();
+    final manager    = _managerCtrl.text.trim();
+    final email      = _emailCtrl.text.trim();
+    final phone      = _phoneCtrl.text.trim();
+    final password   = _passwordCtrl.text;
+    final confirm    = _confirmCtrl.text;
 
     if (restaurant.isEmpty || manager.isEmpty || phone.isEmpty) {
       _snack(AppStrings.validationRequiredField);
       return;
     }
-    if (!EmailValidator.validate(email)) {
+    if (email.isEmpty || !email.contains('@')) {
       _snack(AppStrings.validationInvalidEmail);
       return;
     }
@@ -155,7 +161,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
         },
       );
     } catch (e) {
-      _snack(_readableError(e));
+      _snack(_readable(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -164,80 +170,149 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final heroH   = screenH * 0.42;
+    final heroH   = screenH * 0.44;
 
-    final password     = _passwordController.text;
+    final password     = _passwordCtrl.text;
     final strength     = _passwordStrength(password);
     final showStrength = _passwordFocus.hasFocus && password.isNotEmpty;
-    final mismatch     = _confirmController.text.isNotEmpty &&
-        _passwordController.text != _confirmController.text;
+    final mismatch     = _confirmCtrl.text.isNotEmpty &&
+        _passwordCtrl.text != _confirmCtrl.text;
 
     return Scaffold(
-      backgroundColor: _primary,
+      backgroundColor: _kBg,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
+          // ── Full background blobs ────────────────────────────────────
+          AnimatedBuilder(
+            animation: _blobCtrl,
+            builder: (_, _) => CustomPaint(
+              painter: _BlobBgPainter(_blobCtrl.value),
+              size: Size(double.infinity,
+                  MediaQuery.of(context).size.height),
+            ),
+          ),
+
           // ── Hero zone ────────────────────────────────────────────────
           Positioned(
             top: 0, left: 0, right: 0,
             height: heroH,
-            child: Stack(
-              children: [
-                Container(color: _primary),
-                AnimatedBuilder(
-                  animation: _blobController,
-                  builder: (_, __) => CustomPaint(
-                    painter: _BlobPainter(_blobController.value, _primary),
-                    size: Size(double.infinity, heroH),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _kPrimary.withOpacity(0.90),
+                    _kDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          onPressed: () => context.go(AppRoutes.restaurantLogin),
-                          icon: const Icon(Icons.arrow_back_ios_new),
-                          color: Colors.white,
-                        ),
-                        const Spacer(),
-                        Center(
-                          child: Column(
-                            children: [
-                              Text(
-                                'Create account',
-                                style: GoogleFonts.playfairDisplay(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Join FreshGuard today',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+              ),
+              child: Stack(
+                children: [
+                  AnimatedBuilder(
+                    animation: _blobCtrl,
+                    builder: (_, _) => CustomPaint(
+                      painter: _HeroBlobPainter(_blobCtrl.value),
+                      size: Size(double.infinity, heroH),
                     ),
                   ),
-                ),
-              ],
+
+                  Positioned(
+                    right: -heroH * 0.16,
+                    bottom: -heroH * 0.12,
+                    child: Container(
+                      width: heroH * 0.65,
+                      height: heroH * 0.65,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              context.go(AppRoutes.restaurantLogin);
+                            },
+                            icon: const Icon(
+                                Icons.arrow_back_ios_new, size: 20),
+                            color: Colors.white,
+                          ),
+                          const Spacer(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24),
+                            child: Row(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Restaurant',
+                                        style: GoogleFonts
+                                            .cormorantGaramond(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Portal',
+                                        style: GoogleFonts
+                                            .cormorantGaramond(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'KITCHEN OPERATIONS',
+                                        style: GoogleFonts.dmSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white
+                                              .withOpacity(0.70),
+                                          letterSpacing: 2.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const _KitchenIllustration(size: 108),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
           // ── Floating card ────────────────────────────────────────────
           Positioned(
-            top: heroH - 24,
+            top: heroH - 26,
             left: 0, right: 0, bottom: 0,
             child: Container(
               decoration: BoxDecoration(
@@ -246,35 +321,102 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                   topLeft:  Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
-                boxShadow: AppShadows.lg(_primary),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kPrimary.withOpacity(0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.fromLTRB(28, 30, 28, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Card header row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Join our team',
+                                style: GoogleFonts.cormorantGaramond(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kTitle,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Start managing operations',
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 13, color: _kMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _kSoftBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: _kBorder, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7, height: 7,
+                                decoration: const BoxDecoration(
+                                  color: _kPrimary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Restaurant',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kDeep,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 26),
+
                     _buildInput(
-                      controller: _restaurantController,
+                      controller: _restaurantCtrl,
                       label: 'Restaurant name',
                       icon: Icons.restaurant,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildInput(
-                      controller: _managerController,
+                      controller: _managerCtrl,
                       label: 'Manager full name',
                       icon: Icons.person_outline,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildInput(
-                      controller: _emailController,
+                      controller: _emailCtrl,
                       label: 'Professional email',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       errorText: _emailError,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _buildInput(
-                      controller: _phoneController,
+                      controller: _phoneCtrl,
                       label: 'Phone number',
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
@@ -282,19 +424,19 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                     const SizedBox(height: 18),
                     Text(
                       'Number of covers: ${_covers.round()}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: _textBody,
+                        color: _kBody,
                       ),
                     ),
                     const SizedBox(height: 8),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: _primary,
-                        inactiveTrackColor: _softBg,
-                        thumbColor: _deep,
-                        overlayColor: _primary.withValues(alpha: 0.12),
+                        activeTrackColor: _kPrimary,
+                        inactiveTrackColor: _kSoftBg,
+                        thumbColor: _kDeep,
+                        overlayColor: _kPrimary.withOpacity(0.12),
                         trackHeight: 4,
                       ),
                       child: Slider(
@@ -310,10 +452,10 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                       initialValue: _cuisine,
                       decoration: InputDecoration(
                         labelText: 'Cuisine type',
-                        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
-                        prefixIcon: const Icon(Icons.local_dining, color: _textMuted, size: 20),
+                        labelStyle: GoogleFonts.dmSans(fontSize: 14, color: _kMuted),
+                        prefixIcon: const Icon(Icons.local_dining, color: _kMuted, size: 20),
                         filled: true,
-                        fillColor: _softBg,
+                        fillColor: _kSoftBg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadii.input),
                           borderSide: BorderSide.none,
@@ -324,7 +466,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadii.input),
-                          borderSide: const BorderSide(color: _primary, width: 1.5),
+                          borderSide: const BorderSide(color: _kPrimary, width: 1.5),
                         ),
                       ),
                       items: _cuisineOptions
@@ -337,7 +479,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                     ),
                     const SizedBox(height: 16),
                     _buildInput(
-                      controller: _passwordController,
+                      controller: _passwordCtrl,
                       label: AppStrings.password,
                       icon: Icons.lock_outline,
                       obscure: _obscure,
@@ -354,10 +496,11 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                           if (!filled) {
                             color = const Color(0xFFE2E8F0);
                           } else {
-                            if (i == 0)      color = const Color(0xFFF87171);
-                            else if (i == 1) color = const Color(0xFFFBBF24);
+                            if (i == 0) {
+                              color = const Color(0xFFF87171);
+                            } else if (i == 1) color = const Color(0xFFFBBF24);
                             else if (i == 2) color = const Color(0xFF34D399);
-                            else             color = _deep;
+                            else             color = _kDeep;
                           }
                           return Expanded(
                             child: Container(
@@ -374,7 +517,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                     ],
                     const SizedBox(height: 16),
                     _buildInput(
-                      controller: _confirmController,
+                      controller: _confirmCtrl,
                       label: AppStrings.confirmPassword,
                       icon: Icons.lock_outline,
                       obscure: _obscure2,
@@ -385,28 +528,51 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                       const SizedBox(height: 6),
                       Text(
                         AppStrings.validationPasswordsMismatch,
-                        style: GoogleFonts.inter(fontSize: 11, color: _deep),
+                        style: GoogleFonts.dmSans(fontSize: 11, color: _kDeep),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    AnimatedButton(
-                      label: 'Create restaurant account',
-                      color: _primary,
-                      textColor: Colors.white,
-                      onTap: _createRestaurantAccount,
-                      isLoading: _isLoading,
-                      height: 52,
+                    const SizedBox(height: 20),
+
+                    _buildCta(label: 'Create restaurant account', onTap: _createRestaurantAccount),
+
+                    const SizedBox(height: 20),
+
+                    // Mixed-color accent strip
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _pill(_kPrimary),
+                          const SizedBox(width: 4),
+                          _pill(_kCustAccent),
+                          const SizedBox(width: 4),
+                          _pill(_kHotelAccent),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Already have account
                     Center(
-                      child: TextButton(
-                        onPressed: () => context.go(AppRoutes.restaurantLogin),
-                        child: Text(
-                          AppStrings.alreadyHaveAccount,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _primary,
+                      child: GestureDetector(
+                        onTap: () =>
+                            context.go(AppRoutes.restaurantLogin),
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.dmSans(
+                                fontSize: 13, color: _kMuted),
+                            children: [
+                              const TextSpan(
+                                  text: 'Already have an account?  '),
+                              TextSpan(
+                                text: 'Sign in',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kPrimary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -420,6 +586,14 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
       ),
     );
   }
+
+  Widget _pill(Color c) => Container(
+    width: 20, height: 4,
+    decoration: BoxDecoration(
+      color: c.withOpacity(0.50),
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
 
   Widget _buildInput({
     required TextEditingController controller,
@@ -438,22 +612,20 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
       obscureText: obscure ?? false,
       focusNode: focusNode,
       onChanged: onChanged,
-      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      style: GoogleFonts.dmSans(fontSize: 14, color: _kTitle),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
-        hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        labelStyle: GoogleFonts.dmSans(fontSize: 14, color: _kMuted),
         errorText: errorText,
         filled: true,
-        fillColor: _softBg,
-        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        fillColor: _kSoftBg,
+        prefixIcon: Icon(icon, color: _kMuted, size: 20),
         suffixIcon: onToggleObscure != null
             ? IconButton(
                 onPressed: onToggleObscure,
                 icon: Icon(
                   obscure! ? Icons.visibility : Icons.visibility_off,
-                  color: _textMuted,
-                  size: 20,
+                  color: _kMuted, size: 20,
                 ),
               )
             : null,
@@ -467,35 +639,166 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.input),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: const BorderSide(color: _kPrimary, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCta({
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) { setState(() => _pressed = false); onTap(); },
+      onTapCancel: ()  => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          height: 54,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            gradient: const LinearGradient(
+              colors: [_kPrimary, _kDeep],
+              begin: Alignment.centerLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _kPrimary.withOpacity(0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 22, height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : Text(
+                  label,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
         ),
       ),
     );
   }
 }
 
-class _BlobPainter extends CustomPainter {
+// ── Hero blobs (inside gradient header) ───────────────────────────────────────
+class _HeroBlobPainter extends CustomPainter {
   final double t;
-  final Color primary;
-  _BlobPainter(this.t, this.primary);
-
+  _HeroBlobPainter(this.t);
   @override
   void paint(Canvas canvas, Size size) {
     final angle = t * 2 * math.pi;
-    final c1 = Offset(size.width * 0.15 + math.cos(angle) * 20, size.height * 0.35 + math.sin(angle) * 15);
-    canvas.drawCircle(c1, size.width * 0.5, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)));
-    final c2 = Offset(size.width * 0.85 + math.sin(angle * 0.7) * 18, size.height * 0.6 + math.cos(angle * 0.7) * 22);
-    canvas.drawCircle(c2, size.width * 0.4, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)));
-    final c3 = Offset(size.width * 0.5 + math.cos(angle * 1.4) * 14, size.height * 0.2 + math.sin(angle * 1.4) * 10);
-    canvas.drawCircle(c3, size.width * 0.3, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)));
+    void blob(double cx, double cy, double r, double op) {
+      final c = Offset(cx, cy);
+      canvas.drawCircle(c, r, Paint()..shader = RadialGradient(
+        colors: [Colors.white.withOpacity(op), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: c, radius: r)));
+    }
+    blob(size.width * 0.15 + math.cos(angle) * 20,
+         size.height * 0.35 + math.sin(angle) * 15, size.width * 0.5, 0.07);
+    blob(size.width * 0.85 + math.sin(angle * 0.7) * 18,
+         size.height * 0.6  + math.cos(angle * 0.7) * 22, size.width * 0.4, 0.05);
+    blob(size.width * 0.5  + math.cos(angle * 1.4) * 14,
+         size.height * 0.2 + math.sin(angle * 1.4) * 10, size.width * 0.3, 0.06);
   }
-
   @override
-  bool shouldRepaint(_BlobPainter old) => old.t != t;
+  bool shouldRepaint(_HeroBlobPainter old) => old.t != t;
+}
+
+// ── Full-page background blobs ─────────────────────────────────────────────────
+class _BlobBgPainter extends CustomPainter {
+  final double t;
+  _BlobBgPainter(this.t);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    void blob(double cx, double cy, double r, Color c, double op) {
+      final center = Offset(cx, cy);
+      canvas.drawCircle(center, r, Paint()..shader = RadialGradient(
+        colors: [c.withOpacity(op), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: center, radius: r)));
+    }
+    blob(size.width * 0.85 + math.sin(angle * 0.6) * 20,
+         size.height * 0.75 + math.cos(angle * 0.6) * 24,
+         size.width * 0.40, _kPrimary, 0.07);
+    blob(size.width * 0.10 + math.cos(angle * 0.8) * 16,
+         size.height * 0.82 + math.sin(angle * 0.8) * 18,
+         size.width * 0.30, const Color(0xFFC4736C), 0.05);
+  }
+  @override
+  bool shouldRepaint(_BlobBgPainter old) => old.t != t;
+}
+
+// ── Kitchen illustration ───────────────────────────────────────────────────────
+class _KitchenIllustration extends StatelessWidget {
+  final double size;
+  const _KitchenIllustration({required this.size});
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(width: size, height: size,
+          child: CustomPaint(painter: _KitchenPainter()));
+}
+
+class _KitchenPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size s) {
+    final w = s.width, h = s.height;
+    // Pan body
+    final panPath = Path()
+      ..addOval(Rect.fromCenter(
+          center: Offset(w * 0.50, h * 0.58),
+          width: w * 0.64, height: h * 0.28));
+    canvas.drawPath(panPath, Paint()..color = const Color(0xFF4A5528));
+    // Pan rim highlight
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w * 0.50, h * 0.54),
+          width: w * 0.60, height: h * 0.12),
+      Paint()..color = const Color(0xFF7A8B42),
+    );
+    // Pan handle
+    final handle = Path()
+      ..moveTo(w * 0.82, h * 0.56)
+      ..lineTo(w * 0.96, h * 0.50)
+      ..lineTo(w * 0.96, h * 0.56)
+      ..lineTo(w * 0.82, h * 0.62)
+      ..close();
+    canvas.drawPath(handle, Paint()..color = const Color(0xFF4A5528));
+    // Veggie items in pan
+    canvas.drawCircle(Offset(w * 0.38, h * 0.56), w * 0.08,
+        Paint()..color = const Color(0xFF66BB6A));
+    canvas.drawCircle(Offset(w * 0.55, h * 0.54), w * 0.07,
+        Paint()..color = const Color(0xFFEF5350));
+    canvas.drawCircle(Offset(w * 0.44, h * 0.64), w * 0.065,
+        Paint()..color = const Color(0xFFFDD835));
+    canvas.drawCircle(Offset(w * 0.62, h * 0.62), w * 0.06,
+        Paint()..color = const Color(0xFFC4736C));
+    // Steam lines
+    final steamPaint = Paint()
+      ..color = Colors.white.withOpacity(0.55)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(w * 0.38, h * 0.44),
+        Offset(w * 0.35, h * 0.28), steamPaint);
+    canvas.drawLine(Offset(w * 0.50, h * 0.42),
+        Offset(w * 0.50, h * 0.24), steamPaint);
+    canvas.drawLine(Offset(w * 0.62, h * 0.44),
+        Offset(w * 0.65, h * 0.28), steamPaint);
+  }
+  @override
+  bool shouldRepaint(_KitchenPainter old) => false;
 }

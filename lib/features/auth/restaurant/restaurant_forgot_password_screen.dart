@@ -113,7 +113,7 @@ class _RestaurantForgotPasswordScreenState
                 Container(color: _primary),
                 AnimatedBuilder(
                   animation: _blobController,
-                  builder: (_, __) => CustomPaint(
+                  builder: (_, _) => CustomPaint(
                     painter: _BlobPainter(_blobController.value, _primary),
                     size: Size(double.infinity, heroH),
                   ),

@@ -121,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _pulseRing(double delay, double opacity) {
     return AnimatedBuilder(
       animation: _pulseCtrl,
-      builder: (_, __) {
+      builder: (_, _) {
         final d = ((_pulseCtrl.value - delay) % 1.0).clamp(0.0, 1.0);
         final scale = 1.0 + d * 1.2;
         final o = ((1.0 - d) * opacity).clamp(0.0, 1.0);

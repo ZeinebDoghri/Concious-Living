@@ -25,7 +25,7 @@ class CountUp extends StatelessWidget {
       duration: duration,
       tween: Tween(begin: 0, end: target),
       curve: Curves.easeOutCubic,
-      builder: (_, val, __) => Text(
+      builder: (_, val, _) => Text(
         '$prefix${val.toInt()}$suffix',
         style: style ??
             GoogleFonts.lora(

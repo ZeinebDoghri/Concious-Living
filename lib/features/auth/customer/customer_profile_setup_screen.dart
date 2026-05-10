@@ -267,7 +267,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                     Container(color: _primary),
                     AnimatedBuilder(
                       animation: _blobController,
-                      builder: (_, __) => CustomPaint(
+                      builder: (_, _) => CustomPaint(
                         painter: _BlobPainter(_blobController.value, _primary),
                         size: Size(double.infinity, heroH),
                       ),
@@ -730,7 +730,7 @@ class _StepPreferences extends StatelessWidget {
               SwitchListTile(
                 value: notifyDaily,
                 onChanged: onNotifyDaily,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(AppStrings.dailyIntakeSummary,
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
@@ -739,7 +739,7 @@ class _StepPreferences extends StatelessWidget {
               SwitchListTile(
                 value: notifyAllergens,
                 onChanged: onNotifyAllergens,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(AppStrings.allergenAlerts,
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
@@ -748,7 +748,7 @@ class _StepPreferences extends StatelessWidget {
               SwitchListTile(
                 value: notifyWeekly,
                 onChanged: onNotifyWeekly,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(AppStrings.weeklyHealthReport,
                     style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),

@@ -9,12 +9,18 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
 
-// Restaurant (rose) role colors
-const _primary   = Color(0xFFF2A7A7);
-const _deep      = Color(0xFFE47878);
-const _softBg    = Color(0xFFFFE4E4);
-const _textTitle = Color(0xFF3D1515);
-const _textMuted = Color(0xFFB08080);
+// ── Restaurant — Spring Meadows (olive green) ─────────────────────────────────
+const _kBg       = Color(0xFFF5F8EE); // lightest tint of restaurant green
+const _kPrimary  = Color(0xFF8FA84A);
+const _kDeep     = Color(0xFF5A7030);
+const _kSoftBg   = Color(0xFFE3E8D1);
+const _kBorder   = Color(0xFFC0D089);
+const _kTitle    = Color(0xFF26201B);
+const _kMuted    = Color(0xFF8C7E78);
+const _kBody     = Color(0xFF5C4F48);
+
+const _kCustAccent  = Color(0xFFD84C3E);
+const _kHotelAccent = Color(0xFF5A9FC9);
 
 class RestaurantLoginScreen extends StatefulWidget {
   const RestaurantLoginScreen({super.key});
@@ -25,37 +31,36 @@ class RestaurantLoginScreen extends StatefulWidget {
 
 class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
     with SingleTickerProviderStateMixin {
-  final _emailController    = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
 
   bool _obscure   = true;
   bool _isLoading = false;
   bool _pressed   = false;
 
-  late final AnimationController _blobController;
+  late final AnimationController _blobCtrl;
 
   @override
   void initState() {
     super.initState();
-    _blobController = AnimationController(
+    _blobCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
+      duration: const Duration(seconds: 20),
     )..repeat();
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _blobController.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _blobCtrl.dispose();
     super.dispose();
   }
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  String _readableError(Object e) {
+  String _readable(Object e) {
     final s = e.toString();
     if (s.startsWith('Exception: ')) return s.substring(11);
     if (s.startsWith('StateError: ')) return s.substring(12);
@@ -65,30 +70,22 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
   Future<void> _signIn() async {
     if (_isLoading) return;
     HapticFeedback.selectionClick();
-
-    final email    = _emailController.text.trim();
-    final password = _passwordController.text;
-
+    final email    = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
     if (email.isEmpty || !email.contains('@')) {
-      _snack(AppStrings.validationInvalidEmail);
-      return;
+      _snack(AppStrings.validationInvalidEmail); return;
     }
     if (password.length < 6) {
-      _snack(AppStrings.validationPasswordMin);
-      return;
+      _snack(AppStrings.validationPasswordMin); return;
     }
-
     setState(() => _isLoading = true);
     try {
       await context.read<UserProvider>().login(
-            email: email,
-            password: password,
-            role: 'restaurant',
-          );
+        email: email, password: password, role: 'restaurant');
       if (!mounted) return;
       context.go(AppRoutes.restaurantDashboard);
     } catch (e) {
-      _snack(_readableError(e));
+      _snack(_readable(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -97,77 +94,143 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final heroH   = screenH * 0.42;
+    final heroH   = screenH * 0.44;
 
     return Scaffold(
-      backgroundColor: _primary,
+      backgroundColor: _kBg,
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // ── Hero zone ────────────────────────────────────────────────
-          Positioned(
-            top: 0, left: 0, right: 0,
-            height: heroH,
-            child: Stack(
-              children: [
-                Container(color: _primary),
-                AnimatedBuilder(
-                  animation: _blobController,
-                  builder: (_, __) => CustomPaint(
-                    painter: _BlobPainter(_blobController.value, _primary),
-                    size: Size(double.infinity, heroH),
-                  ),
-                ),
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            context.go(AppRoutes.roleSelector);
-                          },
-                          icon: const Icon(Icons.arrow_back_ios_new),
-                          color: Colors.white,
-                        ),
-                        const Spacer(),
-                        Center(
-                          child: Column(
-                            children: [
-                              Text(
-                                'Restaurant sign in',
-                                style: GoogleFonts.playfairDisplay(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Manage your kitchen operations',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          // Background blobs
+          AnimatedBuilder(
+            animation: _blobCtrl,
+            builder: (_, _) => CustomPaint(
+              painter: _BlobBgPainter(_blobCtrl.value),
+              size: Size(double.infinity,
+                  MediaQuery.of(context).size.height),
             ),
           ),
 
-          // ── Floating card ────────────────────────────────────────────
+          // Hero
           Positioned(
-            top: heroH - 24,
+            top: 0, left: 0, right: 0,
+            height: heroH,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _kPrimary.withOpacity(0.90),
+                    _kDeep,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  AnimatedBuilder(
+                    animation: _blobCtrl,
+                    builder: (_, _) => CustomPaint(
+                      painter: _HeroBlobPainter(_blobCtrl.value),
+                      size: Size(double.infinity, heroH),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: -heroH * 0.16,
+                    bottom: -heroH * 0.12,
+                    child: Container(
+                      width: heroH * 0.65,
+                      height: heroH * 0.65,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              context.go(AppRoutes.roleSelector);
+                            },
+                            icon: const Icon(
+                                Icons.arrow_back_ios_new, size: 20),
+                            color: Colors.white,
+                          ),
+                          const Spacer(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24),
+                            child: Row(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Restaurant',
+                                        style: GoogleFonts
+                                            .cormorantGaramond(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Portal',
+                                        style: GoogleFonts
+                                            .cormorantGaramond(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.05,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'KITCHEN OPERATIONS',
+                                        style: GoogleFonts.dmSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white
+                                              .withOpacity(0.70),
+                                          letterSpacing: 2.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const _KitchenIllustration(size: 108),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Floating card
+          Positioned(
+            top: heroH - 26,
             left: 0, right: 0, bottom: 0,
             child: Container(
               decoration: BoxDecoration(
@@ -176,69 +239,148 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                   topLeft:  Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
-                boxShadow: AppShadows.lg(_primary),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kPrimary.withOpacity(0.16),
+                    blurRadius: 24,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.fromLTRB(28, 30, 28, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Email
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sign in',
+                                style: GoogleFonts.cormorantGaramond(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: _kTitle,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Manage your kitchen operations',
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 13, color: _kMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _kSoftBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: _kBorder, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7, height: 7,
+                                decoration: const BoxDecoration(
+                                  color: _kPrimary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Restaurant',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kDeep,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 26),
+
                     _buildInput(
-                      controller: _emailController,
+                      controller: _emailCtrl,
                       label: AppStrings.emailAddress,
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // Password
                     _buildInput(
-                      controller: _passwordController,
+                      controller: _passwordCtrl,
                       label: AppStrings.password,
                       icon: Icons.lock_outline,
                       obscure: _obscure,
-                      onToggleObscure: () => setState(() => _obscure = !_obscure),
+                      onToggleObscure: () =>
+                          setState(() => _obscure = !_obscure),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
-                    // Forgot password
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () => context.go(AppRoutes.restaurantForgot),
+                        onPressed: () =>
+                            context.go(AppRoutes.restaurantForgot),
                         child: Text(
                           AppStrings.forgotPassword,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: _primary,
+                            color: _kPrimary,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
 
-                    // CTA
                     _buildCta(label: AppStrings.signIn, onTap: _signIn),
 
                     const SizedBox(height: 20),
 
-                    // Register link
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _pill(_kPrimary),
+                          const SizedBox(width: 4),
+                          _pill(_kCustAccent),
+                          const SizedBox(width: 4),
+                          _pill(_kHotelAccent),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     Center(
                       child: GestureDetector(
-                        onTap: () => context.go(AppRoutes.restaurantRegister),
+                        onTap: () =>
+                            context.go(AppRoutes.restaurantRegister),
                         child: RichText(
                           text: TextSpan(
-                            text: 'New restaurant? ',
-                            style: GoogleFonts.inter(fontSize: 13, color: _textMuted),
+                            style: GoogleFonts.dmSans(
+                                fontSize: 13, color: _kMuted),
                             children: [
+                              const TextSpan(text: 'New restaurant?  '),
                               TextSpan(
                                 text: 'Create account',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: _primary,
+                                  color: _kPrimary,
                                 ),
                               ),
                             ],
@@ -256,6 +398,14 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
     );
   }
 
+  Widget _pill(Color c) => Container(
+    width: 20, height: 4,
+    decoration: BoxDecoration(
+      color: c.withOpacity(0.50),
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
+
   Widget _buildInput({
     required TextEditingController controller,
     required String label,
@@ -268,21 +418,19 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscure ?? false,
-      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      style: GoogleFonts.dmSans(fontSize: 14, color: _kTitle),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
-        hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        labelStyle: GoogleFonts.dmSans(fontSize: 14, color: _kMuted),
         filled: true,
-        fillColor: _softBg,
-        prefixIcon: Icon(icon, color: _textMuted, size: 20),
+        fillColor: _kSoftBg,
+        prefixIcon: Icon(icon, color: _kMuted, size: 20),
         suffixIcon: onToggleObscure != null
             ? IconButton(
                 onPressed: onToggleObscure,
                 icon: Icon(
                   obscure! ? Icons.visibility : Icons.visibility_off,
-                  color: _textMuted,
-                  size: 20,
+                  color: _kMuted, size: 20,
                 ),
               )
             : null,
@@ -296,20 +444,20 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.input),
-          borderSide: const BorderSide(color: _primary, width: 1.5),
+          borderSide: const BorderSide(color: _kPrimary, width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _buildCta({required String label, required Future<void> Function() onTap}) {
+  Widget _buildCta({
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) { setState(() => _pressed = false); onTap(); },
+      onTapCancel: ()  => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -319,15 +467,15 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadii.pill),
             gradient: const LinearGradient(
-              colors: [_primary, _deep],
+              colors: [_kPrimary, _kDeep],
               begin: Alignment.centerLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: _primary.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: _kPrimary.withOpacity(0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
@@ -335,14 +483,15 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
           child: _isLoading
               ? const SizedBox(
                   width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
               : Text(
                   label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
         ),
@@ -351,28 +500,114 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
   }
 }
 
-class _BlobPainter extends CustomPainter {
+class _HeroBlobPainter extends CustomPainter {
   final double t;
-  final Color primary;
-  _BlobPainter(this.t, this.primary);
-
+  _HeroBlobPainter(this.t);
   @override
   void paint(Canvas canvas, Size size) {
     final angle = t * 2 * math.pi;
-    final c1 = Offset(size.width * 0.15 + math.cos(angle) * 20, size.height * 0.35 + math.sin(angle) * 15);
-    canvas.drawCircle(c1, size.width * 0.5, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)));
-    final c2 = Offset(size.width * 0.85 + math.sin(angle * 0.7) * 18, size.height * 0.6 + math.cos(angle * 0.7) * 22);
-    canvas.drawCircle(c2, size.width * 0.4, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)));
-    final c3 = Offset(size.width * 0.5 + math.cos(angle * 1.4) * 14, size.height * 0.2 + math.sin(angle * 1.4) * 10);
-    canvas.drawCircle(c3, size.width * 0.3, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)));
+    void blob(double cx, double cy, double r, double op) {
+      final c = Offset(cx, cy);
+      canvas.drawCircle(c, r, Paint()..shader = RadialGradient(
+        colors: [Colors.white.withOpacity(op), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: c, radius: r)));
+    }
+    blob(size.width * 0.15 + math.cos(angle) * 20,
+         size.height * 0.35 + math.sin(angle) * 15, size.width * 0.5, 0.07);
+    blob(size.width * 0.85 + math.sin(angle * 0.7) * 18,
+         size.height * 0.6  + math.cos(angle * 0.7) * 22, size.width * 0.4, 0.05);
+    blob(size.width * 0.5  + math.cos(angle * 1.4) * 14,
+         size.height * 0.2 + math.sin(angle * 1.4) * 10, size.width * 0.3, 0.06);
   }
-
   @override
-  bool shouldRepaint(_BlobPainter old) => old.t != t;
+  bool shouldRepaint(_HeroBlobPainter old) => old.t != t;
+}
+
+class _BlobBgPainter extends CustomPainter {
+  final double t;
+  _BlobBgPainter(this.t);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final angle = t * 2 * math.pi;
+    void blob(double cx, double cy, double r, Color c, double op) {
+      final center = Offset(cx, cy);
+      canvas.drawCircle(center, r, Paint()..shader = RadialGradient(
+        colors: [c.withOpacity(op), Colors.transparent],
+      ).createShader(Rect.fromCircle(center: center, radius: r)));
+    }
+    blob(size.width * 0.85 + math.sin(angle * 0.6) * 20,
+         size.height * 0.75 + math.cos(angle * 0.6) * 24,
+         size.width * 0.40, _kPrimary, 0.07);
+    blob(size.width * 0.10 + math.cos(angle * 0.8) * 16,
+         size.height * 0.82 + math.sin(angle * 0.8) * 18,
+         size.width * 0.30, const Color(0xFFC4736C), 0.05);
+  }
+  @override
+  bool shouldRepaint(_BlobBgPainter old) => old.t != t;
+}
+
+// ── Kitchen illustration ───────────────────────────────────────────────────────
+class _KitchenIllustration extends StatelessWidget {
+  final double size;
+  const _KitchenIllustration({required this.size});
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(width: size, height: size,
+          child: CustomPaint(painter: _KitchenPainter()));
+}
+
+class _KitchenPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size s) {
+    final w = s.width, h = s.height;
+    // Pan body
+    final panPath = Path()
+      ..addOval(Rect.fromCenter(
+          center: Offset(w * 0.50, h * 0.58),
+          width: w * 0.64, height: h * 0.28));
+    canvas.drawPath(panPath, Paint()..color = const Color(0xFF4A5528));
+    // Pan rim highlight
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w * 0.50, h * 0.54),
+          width: w * 0.60, height: h * 0.12),
+      Paint()..color = const Color(0xFF7A8B42),
+    );
+    // Pan handle
+    final handle = Path()
+      ..moveTo(w * 0.82, h * 0.56)
+      ..lineTo(w * 0.96, h * 0.50)
+      ..lineTo(w * 0.96, h * 0.56)
+      ..lineTo(w * 0.82, h * 0.62)
+      ..close();
+    canvas.drawPath(handle, Paint()..color = const Color(0xFF4A5528));
+    // Veggie items in pan
+    canvas.drawCircle(Offset(w * 0.38, h * 0.56), w * 0.08,
+        Paint()..color = const Color(0xFF66BB6A));
+    canvas.drawCircle(Offset(w * 0.55, h * 0.54), w * 0.07,
+        Paint()..color = const Color(0xFFEF5350));
+    canvas.drawCircle(Offset(w * 0.44, h * 0.64), w * 0.065,
+        Paint()..color = const Color(0xFFFDD835));
+    canvas.drawCircle(Offset(w * 0.62, h * 0.62), w * 0.06,
+        Paint()..color = const Color(0xFFC4736C));
+    // Steam lines
+    final steamPaint = Paint()
+      ..color = Colors.white.withOpacity(0.55)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(w * 0.38, h * 0.44),
+        Offset(w * 0.35, h * 0.28), steamPaint);
+    canvas.drawLine(Offset(w * 0.50, h * 0.42),
+        Offset(w * 0.50, h * 0.26), steamPaint);
+    canvas.drawLine(Offset(w * 0.62, h * 0.44),
+        Offset(w * 0.65, h * 0.28), steamPaint);
+    // Shadow
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(w * 0.50, h * 0.88),
+          width: w * 0.55, height: h * 0.07),
+      Paint()..color = Colors.black.withOpacity(0.08),
+    );
+  }
+  @override
+  bool shouldRepaint(_KitchenPainter old) => false;
 }

@@ -258,7 +258,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                     Image.memory(
                       _imageBytes!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _imageFallback(),
+                      errorBuilder: (_, _, _) => _imageFallback(),
                     )
                   else if (!kIsWeb && _imageFile != null)
                     Image.file(_imageFile!, fit: BoxFit.cover)
@@ -538,7 +538,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                           child: Image.memory(
                             _imageBytes!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _imageFallback(),
+                            errorBuilder: (_, _, _) => _imageFallback(),
                           ),
                         ),
                       )
@@ -793,7 +793,7 @@ class _CompostCard extends StatelessWidget {
                 ? Image.memory(
                     maskPng!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _MaskFallback(
+                    errorBuilder: (_, _, _) => _MaskFallback(
                       compostPct: compostPct,
                       nonCompostPct: nonCompostPct,
                       bgPct: bgPct,
@@ -1030,7 +1030,7 @@ class _StatBoxState extends State<_StatBox>
           children: [
             AnimatedBuilder(
               animation: _val,
-              builder: (_, __) => Text(
+              builder: (_, _) => Text(
                 '${_val.value.toStringAsFixed(1)}%',
                 style: GoogleFonts.inter(
                   fontSize: 17,
