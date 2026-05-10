@@ -79,7 +79,9 @@ class _ContaminationScanScreenState extends State<ContaminationScanScreen> {
             : 'Kitchen analysis is running',
         imagePath: _lastFile?.path,
         isLoading: provider.isLoading,
-        onBack: () => context.pop(),
+        onBack: () => context.canPop()
+            ? context.pop()
+            : context.go(AppRoutes.restaurantDashboard),
         onCameraTap: () => _pick(ImageSource.camera),
         onGalleryTap: () => _pick(ImageSource.gallery),
         onInfoTap: () {

@@ -9,9 +9,9 @@ import '../../providers/venue_type_provider.dart';
 import '../../shared/animations/role_animated_background.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary = Color(0xFFA78BFA);
-const _kTextMuted = Color(0xFF8B7BC0);
-const _kSoftBg = Color(0xFFEDE9FE);
+const _kPrimary = Color(0xFFD9899F);
+const _kTextMuted = Color(0xFF8C7E78);
+const _kSoftBg = Color(0xFFF9E9F2);
 
 // ── Nav item definition ────────────────────────────────────────────────────────
 class _Item {
@@ -79,7 +79,7 @@ class _CustomerShellState extends State<CustomerShell>
     final index = widget.navigationShell.currentIndex;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3FF),
+      backgroundColor: const Color(0xFFFEFAFC),
       extendBody: true,
       body: RoleAnimatedBackground(
         role: AmbientRole.customer,

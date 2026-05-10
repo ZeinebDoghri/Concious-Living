@@ -69,11 +69,7 @@ class _CherryHeaderState extends State<CherryHeader>
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
-            width: double.infinity,
-            height: widget.height,
-            color: bg,
-          ),
+          Container(width: double.infinity, height: widget.height, color: bg),
 
           // Blob 1 — large
           Positioned(
@@ -146,8 +142,15 @@ class _CherryHeaderState extends State<CherryHeader>
                       children: [
                         if (widget.showBack)
                           IconButton(
-                            onPressed: () => context.pop(),
-                            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                            onPressed: () {
+                              if (context.canPop()) {
+                                context.pop();
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 20,
+                            ),
                             color: Colors.white.withValues(alpha: 0.9),
                           )
                         else

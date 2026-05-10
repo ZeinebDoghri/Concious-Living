@@ -12,25 +12,24 @@ import '../../core/constants.dart';
 import '../../shared/animations/pressable.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kLakeMist   = Color(0xFFC8BAB4);
-const _kTextTitle  = Color(0xFF26201B);
-const _kTextBody   = Color(0xFF5C4F48);
-const _kTextMuted  = Color(0xFF8C7E78);
+const _kLakeMist = Color(0xFFC8BAB4);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
 
-const _kCustPrimary  = Color(0xFFD9899F);
-const _kCustDeep     = Color(0xFFB27589);
-const _kCustSurface  = Color(0xFFF9E9F2); // card bg
-const _kCustBg       = Color(0xFFFEFAFC); // lightest tint — page background
+const _kCustPrimary = Color(0xFFD9899F);
+const _kCustDeep = Color(0xFFB27589);
+const _kCustSurface = Color(0xFFF9E9F2); // card bg
+const _kCustBg = Color(0xFFFEFAFC); // lightest tint — page background
 
-const _kRestPrimary  = Color(0xFF8FA84A);
-const _kRestDeep     = Color(0xFF5A6A2F);
-const _kRestSurface  = Color(0xFFE1E9D1); // card bg
-const _kRestBg       = Color(0xFFF8FAED); // lightest tint — page background
+const _kRestPrimary = Color(0xFF8FA84A);
+const _kRestDeep = Color(0xFF5A6A2F);
+const _kRestSurface = Color(0xFFE1E9D1); // card bg
+const _kRestBg = Color(0xFFF8FAED); // lightest tint — page background
 
 const _kHotelPrimary = Color(0xFF5A9FC9);
-const _kHotelDeep    = Color(0xFF35658F);
+const _kHotelDeep = Color(0xFF35658F);
 const _kHotelSurface = Color(0xFFD9E9F5); // card bg
-const _kHotelBg      = Color(0xFFF0F5F8); // lightest tint — page background
+const _kHotelBg = Color(0xFFF0F5F8); // lightest tint — page background
 
 // ── Page data ─────────────────────────────────────────────────────────────────
 class _Page {
@@ -66,7 +65,8 @@ const _pages = [
     emoji: '🔍',
     tag: 'SCAN ANYTHING',
     title: 'Scan Anything',
-    body: 'Point your camera at any food label.\nOur AI instantly reads ingredients,\nnutrients, and allergens.',
+    body:
+        'Point your camera at any food label.\nOur AI instantly reads ingredients,\nnutrients, and allergens.',
     blobs: [_kCustPrimary, _kRestPrimary, _kHotelPrimary],
   ),
   _Page(
@@ -77,7 +77,8 @@ const _pages = [
     emoji: '🛡️',
     tag: 'KNOW YOUR ALLERGIES',
     title: 'Know Your Allergies',
-    body: 'Get instant alerts before you eat.\nYour allergen profile protects you\nat every single meal.',
+    body:
+        'Get instant alerts before you eat.\nYour allergen profile protects you\nat every single meal.',
     blobs: [_kRestPrimary, _kHotelPrimary, _kCustPrimary],
   ),
   _Page(
@@ -88,7 +89,8 @@ const _pages = [
     emoji: '📊',
     tag: 'TRACK NUTRITION',
     title: 'Track Nutrition',
-    body: 'See your full daily nutritional picture.\nCalories, macros, freshness — all in\none beautiful dashboard.',
+    body:
+        'See your full daily nutritional picture.\nCalories, macros, freshness — all in\none beautiful dashboard.',
     blobs: [_kHotelPrimary, _kCustPrimary, _kRestPrimary],
   ),
 ];
@@ -165,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             // Blobs
             AnimatedBuilder(
               animation: _blobAnim,
-              builder: (_, _) => CustomPaint(
+              builder: (_, __) => CustomPaint(
                 painter: _BlobPainter(_blobAnim.value, page.blobs),
               ),
             ),
@@ -174,10 +176,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               controller: _pageController,
               physics: const BouncingScrollPhysics(),
               itemCount: _pages.length,
-              itemBuilder: (context, i) => _PageContent(
-                page: _pages[i],
-                isCurrent: i == _index,
-              ),
+              itemBuilder: (context, i) =>
+                  _PageContent(page: _pages[i], isCurrent: i == _index),
             ),
 
             // Skip button
@@ -186,7 +186,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 alignment: Alignment.topRight,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   child: AnimatedOpacity(
                     opacity: _index < _pages.length - 1 ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 300),
@@ -194,7 +196,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       onTap: _complete,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.88),
                           borderRadius: BorderRadius.circular(999),
@@ -226,8 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Positioned(
               left: 24,
               right: 24,
-              bottom: math.max(
-                  MediaQuery.paddingOf(context).bottom + 20, 36),
+              bottom: math.max(MediaQuery.paddingOf(context).bottom + 20, 36),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -243,8 +246,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         width: active ? 24 : 6,
                         decoration: BoxDecoration(
                           color: active ? page.deep : _kLakeMist,
-                          borderRadius:
-                              BorderRadius.circular(active ? 12 : 3),
+                          borderRadius: BorderRadius.circular(active ? 12 : 3),
                         ),
                       );
                     }),
@@ -324,68 +326,72 @@ class _PageContent extends StatelessWidget {
 
             // Hero card
             Container(
-              width: double.infinity,
-              height: size.height * 0.30,
-              decoration: BoxDecoration(
-                color: page.cardBg,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: page.accent.withOpacity(0.22),
-                  width: 1.4,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: page.accent.withOpacity(0.13),
-                    blurRadius: 28,
-                    offset: const Offset(0, 8),
+                  width: double.infinity,
+                  height: size.height * 0.30,
+                  decoration: BoxDecoration(
+                    color: page.cardBg,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: page.accent.withOpacity(0.22),
+                      width: 1.4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: page.accent.withOpacity(0.13),
+                        blurRadius: 28,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    top: 16, left: 16,
-                    child: _Dot(color: page.blobs[1], size: 10),
-                  ),
-                  Positioned(
-                    top: 30, left: 34,
-                    child: _Dot(color: page.blobs[2], size: 6),
-                  ),
-                  Positioned(
-                    bottom: 20, right: 20,
-                    child: _Dot(color: page.blobs[2], size: 12),
-                  ),
-                  Positioned(
-                    bottom: 36, right: 44,
-                    child: _Dot(color: page.blobs[1], size: 7),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: page.accent.withOpacity(0.18),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: page.accent.withOpacity(0.35),
-                            width: 1.5,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: _Dot(color: page.blobs[1], size: 10),
+                      ),
+                      Positioned(
+                        top: 30,
+                        left: 34,
+                        child: _Dot(color: page.blobs[2], size: 6),
+                      ),
+                      Positioned(
+                        bottom: 20,
+                        right: 20,
+                        child: _Dot(color: page.blobs[2], size: 12),
+                      ),
+                      Positioned(
+                        bottom: 36,
+                        right: 44,
+                        child: _Dot(color: page.blobs[1], size: 7),
+                      ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                          child: Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              color: page.accent.withOpacity(0.18),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: page.accent.withOpacity(0.35),
+                                width: 1.5,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              page.emoji,
+                              style: const TextStyle(fontSize: 46),
+                            ),
                           ),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          page.emoji,
-                          style: const TextStyle(fontSize: 46),
-                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            )
+                )
                 .animate()
                 .fadeIn(duration: 500.ms)
                 .slideY(
@@ -423,15 +429,15 @@ class _PageContent extends StatelessWidget {
 
             // Title
             Text(
-              page.title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.cormorantGaramond(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: _kTextTitle,
-                height: 1.15,
-              ),
-            )
+                  page.title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.cormorantGaramond(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                    color: _kTextTitle,
+                    height: 1.15,
+                  ),
+                )
                 .animate()
                 .fadeIn(delay: 220.ms, duration: 500.ms)
                 .slideY(
@@ -504,14 +510,15 @@ class _BlobPainter extends CustomPainter {
     final angle = t * 2 * math.pi;
     for (int i = 0; i < colors.length; i++) {
       final phase = angle + (i * 2 * math.pi / colors.length);
-      final cx = size.width * (0.2 + 0.6 * i / (colors.length - 1)) +
+      final cx =
+          size.width * (0.2 + 0.6 * i / (colors.length - 1)) +
           math.cos(phase) * 28;
-      final cy = size.height * (0.15 + 0.35 * i) +
-          math.sin(phase * 0.8) * 22;
+      final cy = size.height * (0.15 + 0.35 * i) + math.sin(phase * 0.8) * 22;
       final center = Offset(cx, cy);
       final radius = size.width * 0.42;
       canvas.drawCircle(
-        center, radius,
+        center,
+        radius,
         Paint()
           ..shader = RadialGradient(
             colors: [colors[i].withOpacity(0.11), Colors.transparent],

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../constants.dart';
@@ -10,6 +11,7 @@ class ScanHistoryItem {
   final String id;
   final String dishName;
   final String? imagePath;
+  final String? imageUrl;
   final DateTime scannedAt;
   final NutrientResult result;
 
@@ -19,6 +21,7 @@ class ScanHistoryItem {
     required this.scannedAt,
     required this.result,
     this.imagePath,
+    this.imageUrl,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() {
@@ -26,8 +29,30 @@ class ScanHistoryItem {
       'id': id,
       'dishName': dishName,
       'imagePath': imagePath,
+      'imageUrl': imageUrl,
       'scannedAt': scannedAt.toIso8601String(),
+      'timestamp': Timestamp.fromDate(scannedAt),
+      'riskLevel': result.overallRisk == 'high'
+          ? 'danger'
+          : result.overallRisk == 'moderate'
+          ? 'warning'
+          : 'safe',
       'result': result.toJson(),
+      'results': {
+        'dishName': dishName,
+        'riskLevel': result.overallRisk == 'high'
+            ? 'danger'
+            : result.overallRisk == 'moderate'
+            ? 'warning'
+            : 'safe',
+        'nutrition': {
+          'cholesterol_mg': result.cholesterol.value,
+          'saturated_fat_g': result.saturatedFat.value,
+          'sodium_mg': result.sodium.value,
+          'sugar_g': result.sugar.value,
+          'calories': 0,
+        },
+      },
     };
   }
 
@@ -36,13 +61,22 @@ class ScanHistoryItem {
       id: (json['id'] ?? '') as String,
       dishName: (json['dishName'] ?? '') as String,
       imagePath: json['imagePath'] as String?,
-      scannedAt:
-          DateTime.tryParse((json['scannedAt'] ?? '') as String) ??
-          DateTime.now(),
+      imageUrl: json['imageUrl'] as String?,
+      scannedAt: _dateFromJson(json),
       result: NutrientResult.fromJson(
         (json['result'] ?? {}) as Map<String, dynamic>,
       ),
     );
+  }
+
+  static DateTime _dateFromJson(Map<String, dynamic> json) {
+    final timestamp = json['timestamp'];
+    if (timestamp is Timestamp) return timestamp.toDate();
+    final scannedAt = json['scannedAt'];
+    if (scannedAt is Timestamp) return scannedAt.toDate();
+    if (scannedAt is String)
+      return DateTime.tryParse(scannedAt) ?? DateTime.now();
+    return DateTime.now();
   }
 
   String toJsonString() => jsonEncode(toJson());

@@ -8,22 +8,26 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/firebase_service.dart';
 import '../../../core/venue_alert_service.dart';
 import '../../../providers/user_provider.dart';
+import '../../../features/shared/compost_dashboard_panel.dart';
+import '../../../shared/animations/shimmer_box.dart';
+import '../../../widgets/animated_chat_fab.dart';
 
 // ── Brand palette ──────────────────────────────────────────────────────────────
-const _kOat = Color(0xFFF4FAF7);
+const _kOat = Color(0xFFF0F5F8);
 const _kParchment = Color(0xFFFFFFFF);
-const _kSand = Color(0xFFDFF2E9);
-const _kCherry = Color(0xFF7DC5A0);
-const _kCherryB = Color(0xFFDFF2E9);
-const _kOlive = Color(0xFF4A8A6A);
+const _kSand = Color(0xFFD9E9F5);
+const _kCherry = Color(0xFF5A9FC9);
+const _kCherryB = Color(0xFFD9E9F5);
+const _kOlive = Color(0xFF35658F);
 const _kOliveM = Color(0xFFEDF7F3);
 const _kButter = Color(0xFFFFE566);
 const _kButterD = Color(0xFFFFAB5B);
-const _kCocoa = Color(0xFF3A6A52);
-const _kEspresso = Color(0xFF0D2E1E);
-const _kFog = Color(0xFF7AAA90);
+const _kCocoa = Color(0xFF5C4F48);
+const _kEspresso = Color(0xFF26201B);
+const _kFog = Color(0xFF8C7E78);
 const _kInfo = Color(0xFF185FA5);
 const _kInfoBg = Color(0xFFE6F1FB);
 
@@ -38,6 +42,7 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
     with TickerProviderStateMixin {
   late final AnimationController _enterCtrl;
   late final AnimationController _alertPulse;
+  int _dashboardTab = 0;
 
   @override
   void initState() {
@@ -66,15 +71,74 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
     return 'Good evening';
   }
 
+  Future<void> _signOut() async {
+    await FirebaseService.signOut();
+    if (!mounted) return;
+    context.go('/');
+  }
+
+  String _hotelId(UserProvider userProvider) {
+    final user = userProvider.currentUser;
+    if (user == null) return '';
+    return user.entityId ?? user.hotelId ?? user.id;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().currentUser;
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.currentUser;
+    final hotelId = _hotelId(userProvider);
     final hotelName = user?.hotelName ?? 'Your Hotel';
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, MMMM d').format(now);
+    final showCompost = _dashboardTab == 1;
 
     return Scaffold(
       backgroundColor: _kOat,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4A7FA5),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _greeting(),
+              style: GoogleFonts.inter(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              'FreshGuard',
+              style: GoogleFonts.playfairDisplay(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.support_agent_rounded, color: Colors.white),
+            tooltip: 'Sage',
+            onPressed: () => context.go('/hotel/chatbot'),
+          ),
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: _signOut,
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+          ),
+        ],
+      ),
+      floatingActionButton: AnimatedChatFab(
+        color: const Color(0xFF4A7FA5),
+        label: 'Ask Sage',
+        icon: Icons.support_agent_rounded,
+        onTap: () => context.go('/hotel/chatbot'),
+      ),
       body: RefreshIndicator(
         color: _kCherry,
         backgroundColor: _kParchment,
@@ -83,116 +147,139 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
           physics: const BouncingScrollPhysics(),
           slivers: [
             // ── App bar ────────────────────────────────────────────────────
-            SliverAppBar(
-              expandedHeight: 180,
-              pinned: true,
-              backgroundColor: _kCherry,
-              systemOverlayStyle: SystemUiOverlayStyle.light,
-              flexibleSpace: FlexibleSpaceBar(
-                background: _HotelHeader(
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _HotelDashboardTabs(
+                  showCompost: showCompost,
+                  onOverview: () => setState(() => _dashboardTab = 0),
+                  onCompost: () => setState(() => _dashboardTab = 1),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _HotelHeader(
                   hotelName: hotelName,
                   greeting: _greeting(),
                   date: dateStr,
                 ),
               ),
             ),
+            if (showCompost)
+              SliverToBoxAdapter(
+                child: CompostDashboardPanel(
+                  entityId: hotelId,
+                  entityCollection: 'hotels',
+                  title: 'Hotel Compost',
+                  showDepartmentSelector: true,
+                  accent: _kOlive,
+                  deep: _kCherry,
+                  softBg: _kOliveM,
+                  surface: _kOat,
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // ── Live KPI row ─────────────────────────────────────────
+                    _LiveKpiRow(hotelId: hotelId)
+                        .animate(controller: _enterCtrl)
+                        .fadeIn(delay: 100.ms)
+                        .slideY(begin: 0.08, delay: 100.ms),
 
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // ── Live KPI row ─────────────────────────────────────────
-                  _LiveKpiRow(hotelName: hotelName)
-                      .animate(controller: _enterCtrl)
-                      .fadeIn(delay: 100.ms)
-                      .slideY(begin: 0.08, delay: 100.ms),
+                    const SizedBox(height: 24),
 
-                  const SizedBox(height: 24),
+                    // ── 🔔 Cross-notification: customer scans at this hotel ───
+                    if (user?.id != null)
+                      _HotelLiveCustomerAlerts(
+                            venueId: user!.id,
+                            pulseCtrl: _alertPulse,
+                          )
+                          .animate(controller: _enterCtrl)
+                          .fadeIn(delay: 150.ms)
+                          .slideY(begin: 0.06, delay: 150.ms),
 
-                  // ── 🔔 Cross-notification: customer scans at this hotel ───
-                  if (user?.id != null)
-                    _HotelLiveCustomerAlerts(
-                          venueId: user!.id,
+                    const SizedBox(height: 24),
+
+                    // ── Active guest allergen alerts ──────────────────────────
+                    _SectionHeader(
+                      title: 'Guest Allergen Alerts',
+                      subtitle: 'Live — updates automatically',
+                      icon: Icons.warning_amber_rounded,
+                      iconColor: _kCherry,
+                      dot: true,
+                      pulseCtrl: _alertPulse,
+                    ).animate(controller: _enterCtrl).fadeIn(delay: 200.ms),
+
+                    const SizedBox(height: 10),
+
+                    _AllergenAlertsStream(
+                          hotelName: hotelName,
                           pulseCtrl: _alertPulse,
                         )
                         .animate(controller: _enterCtrl)
-                        .fadeIn(delay: 150.ms)
-                        .slideY(begin: 0.06, delay: 150.ms),
+                        .fadeIn(delay: 300.ms)
+                        .slideY(begin: 0.06, delay: 300.ms),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // ── Active guest allergen alerts ──────────────────────────
-                  _SectionHeader(
-                    title: 'Guest Allergen Alerts',
-                    subtitle: 'Live — updates automatically',
-                    icon: Icons.warning_amber_rounded,
-                    iconColor: _kCherry,
-                    dot: true,
-                    pulseCtrl: _alertPulse,
-                  ).animate(controller: _enterCtrl).fadeIn(delay: 200.ms),
+                    // ── Expiry alerts ─────────────────────────────────────────
+                    _SectionHeader(
+                      title: 'Expiry Alerts',
+                      subtitle: 'Items expiring within 48 h',
+                      icon: Icons.schedule_rounded,
+                      iconColor: _kButterD,
+                    ).animate(controller: _enterCtrl).fadeIn(delay: 400.ms),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  _AllergenAlertsStream(
-                        hotelName: hotelName,
-                        pulseCtrl: _alertPulse,
-                      )
-                      .animate(controller: _enterCtrl)
-                      .fadeIn(delay: 300.ms)
-                      .slideY(begin: 0.06, delay: 300.ms),
+                    _ExpiryAlertsStream(hotelName: hotelName)
+                        .animate(controller: _enterCtrl)
+                        .fadeIn(delay: 500.ms)
+                        .slideY(begin: 0.06, delay: 500.ms),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // ── Expiry alerts ─────────────────────────────────────────
-                  _SectionHeader(
-                    title: 'Expiry Alerts',
-                    subtitle: 'Items expiring within 48 h',
-                    icon: Icons.schedule_rounded,
-                    iconColor: _kButterD,
-                  ).animate(controller: _enterCtrl).fadeIn(delay: 400.ms),
+                    // ── Guest cards ───────────────────────────────────────────
+                    _SectionHeader(
+                      title: 'Current Guests',
+                      subtitle: 'Checked-in profiles',
+                      icon: Icons.people_rounded,
+                      iconColor: _kInfo,
+                    ).animate(controller: _enterCtrl).fadeIn(delay: 600.ms),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  _ExpiryAlertsStream(hotelName: hotelName)
-                      .animate(controller: _enterCtrl)
-                      .fadeIn(delay: 500.ms)
-                      .slideY(begin: 0.06, delay: 500.ms),
+                    _GuestCardsStream(hotelName: hotelName)
+                        .animate(controller: _enterCtrl)
+                        .fadeIn(delay: 700.ms)
+                        .slideY(begin: 0.06, delay: 700.ms),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // ── Guest cards ───────────────────────────────────────────
-                  _SectionHeader(
-                    title: 'Current Guests',
-                    subtitle: 'Checked-in profiles',
-                    icon: Icons.people_rounded,
-                    iconColor: _kInfo,
-                  ).animate(controller: _enterCtrl).fadeIn(delay: 600.ms),
+                    // ── Quick actions ─────────────────────────────────────────
+                    _SectionHeader(
+                      title: 'Quick Actions',
+                      icon: Icons.bolt_rounded,
+                      iconColor: _kOlive,
+                    ).animate(controller: _enterCtrl).fadeIn(delay: 800.ms),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  _GuestCardsStream(hotelName: hotelName)
-                      .animate(controller: _enterCtrl)
-                      .fadeIn(delay: 700.ms)
-                      .slideY(begin: 0.06, delay: 700.ms),
-
-                  const SizedBox(height: 24),
-
-                  // ── Quick actions ─────────────────────────────────────────
-                  _SectionHeader(
-                    title: 'Quick Actions',
-                    icon: Icons.bolt_rounded,
-                    iconColor: _kOlive,
-                  ).animate(controller: _enterCtrl).fadeIn(delay: 800.ms),
-
-                  const SizedBox(height: 10),
-
-                  _QuickActionsRow(hotelName: hotelName)
-                      .animate(controller: _enterCtrl)
-                      .fadeIn(delay: 900.ms)
-                      .slideY(begin: 0.06, delay: 900.ms),
-                ]),
+                    _QuickActionsRow(
+                      hotelName: hotelName,
+                      onOpenCompost: () => setState(() => _dashboardTab = 1),
+                    )
+                        .animate(controller: _enterCtrl)
+                        .fadeIn(delay: 900.ms)
+                        .slideY(begin: 0.06, delay: 900.ms),
+                  ]),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -215,8 +302,11 @@ class _HotelHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(color: _kCherry),
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+      decoration: BoxDecoration(
+        color: _kCherry,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
@@ -292,74 +382,176 @@ class _HotelHeader extends StatelessWidget {
 
 // ── Live KPI row ───────────────────────────────────────────────────────────────
 class _LiveKpiRow extends StatelessWidget {
-  final String hotelName;
-  const _LiveKpiRow({required this.hotelName});
+  final String hotelId;
+  const _LiveKpiRow({required this.hotelId});
+
+  String isoWeek() {
+    final now = DateTime.now();
+    final thursday = now.add(Duration(days: 3 - ((now.weekday + 6) % 7)));
+    final firstThursday = DateTime(thursday.year, 1, 4);
+    final week = 1 +
+        (thursday.difference(firstThursday).inDays / 7).floor();
+    return '${thursday.year}-W${week.toString().padLeft(2, '0')}';
+  }
+
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
+    if (hotelId.isEmpty) {
+      return const _HotelKpiCards(
+        wasteValue: '—',
+        compostValue: '—',
+        freshnessValue: '—',
+        alertsValue: '—',
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
-          .collection('hotel_guests')
-          .where('hotelName', isEqualTo: hotelName)
-          .where('checkedIn', isEqualTo: true)
+          .collection('compost_totals')
+          .doc(hotelId)
+          .collection('weekly')
+          .doc(isoWeek())
           .snapshots(),
-      builder: (context, guestSnap) {
-        final guestCount = guestSnap.data?.docs.length ?? 0;
-        final allergenCount =
-            guestSnap.data?.docs
-                .where(
-                  (d) =>
-                      ((d.data() as Map)['allergens'] as List?)?.isNotEmpty ==
-                      true,
-                )
-                .length ??
-            0;
+      builder: (context, weeklySnap) {
+        final weeklyLoading =
+            weeklySnap.connectionState == ConnectionState.waiting;
+        final weeklyExists = weeklySnap.data?.exists == true;
+        final data = weeklySnap.data?.data() ?? const <String, dynamic>{};
+        final wasteKg = _asDouble(data['waste_kg']);
+        final compostableKg = _asDouble(data['compostable_kg']);
+        final compostRate = wasteKg <= 0 ? 0.0 : compostableKg / wasteKg * 100;
 
-        return StreamBuilder<QuerySnapshot>(
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
-              .collection('hotel_expiry_alerts')
-              .where('hotelName', isEqualTo: hotelName)
-              .where('resolved', isEqualTo: false)
+              .collection('hotels')
+              .doc(hotelId)
+              .collection('scans')
+              .orderBy('timestamp', descending: true)
+              .limit(10)
               .snapshots(),
-          builder: (context, expirySnap) {
-            final expiryCount = expirySnap.data?.docs.length ?? 0;
+          builder: (context, freshnessSnap) {
+            final freshnessLoading =
+                freshnessSnap.connectionState == ConnectionState.waiting;
+            final scores =
+                freshnessSnap.data?.docs
+                    .map(
+                      (doc) => _asDouble(doc.data()['freshness_confidence']),
+                    )
+                    .where((score) => score > 0)
+                    .toList() ??
+                const <double>[];
+            final hasFreshness = scores.isNotEmpty;
+            final freshness = hasFreshness
+                ? scores.reduce((a, b) => a + b) / scores.length
+                : 0.0;
 
-            return Row(
-              children: [
-                Expanded(
-                  child: _KpiCard(
-                    value: '$guestCount',
-                    label: 'Guests In',
-                    icon: Icons.hotel_rounded,
-                    color: _kInfo,
-                    bg: _kInfoBg,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    value: '$allergenCount',
-                    label: 'Allergen Profiles',
-                    icon: Icons.warning_amber_rounded,
-                    color: _kCherry,
-                    bg: _kCherryB,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _KpiCard(
-                    value: '$expiryCount',
-                    label: 'Expiry Alerts',
-                    icon: Icons.schedule_rounded,
-                    color: _kButterD,
-                    bg: _kButter,
-                  ),
-                ),
-              ],
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('hotels')
+                  .doc(hotelId)
+                  .collection('alerts')
+                  .where('resolved', isEqualTo: false)
+                  .snapshots(),
+              builder: (context, alertsSnap) {
+                final alertsLoading =
+                    alertsSnap.connectionState == ConnectionState.waiting;
+                final alertCount = alertsSnap.data?.docs.length ?? 0;
+
+                return _HotelKpiCards(
+                  wasteValue: weeklyExists
+                      ? '${wasteKg.toStringAsFixed(1)} kg'
+                      : '—',
+                  compostValue: weeklyExists
+                      ? '${compostRate.toStringAsFixed(0)}%'
+                      : '—',
+                  freshnessValue: hasFreshness
+                      ? '${freshness.toStringAsFixed(0)}%'
+                      : '—',
+                  alertsValue: '$alertCount alerts',
+                  wasteLoading: weeklyLoading,
+                  compostLoading: weeklyLoading,
+                  freshnessLoading: freshnessLoading,
+                  alertsLoading: alertsLoading,
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+}
+
+class _HotelKpiCards extends StatelessWidget {
+  final String wasteValue;
+  final String compostValue;
+  final String freshnessValue;
+  final String alertsValue;
+  final bool wasteLoading;
+  final bool compostLoading;
+  final bool freshnessLoading;
+  final bool alertsLoading;
+
+  const _HotelKpiCards({
+    required this.wasteValue,
+    required this.compostValue,
+    required this.freshnessValue,
+    required this.alertsValue,
+    this.wasteLoading = false,
+    this.compostLoading = false,
+    this.freshnessLoading = false,
+    this.alertsLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.15,
+      children: [
+        _KpiCard(
+          value: wasteValue,
+          label: 'Waste This Week',
+          icon: Icons.delete_outline_rounded,
+          color: _kOlive,
+          bg: _kOliveM,
+          loading: wasteLoading,
+        ),
+        _KpiCard(
+          value: compostValue,
+          label: 'Compost Rate',
+          icon: Icons.recycling_rounded,
+          color: _kCherry,
+          bg: _kCherryB,
+          loading: compostLoading,
+        ),
+        _KpiCard(
+          value: freshnessValue,
+          label: 'Freshness Score',
+          icon: Icons.eco_rounded,
+          color: _kInfo,
+          bg: _kInfoBg,
+          loading: freshnessLoading,
+        ),
+        _KpiCard(
+          value: alertsValue,
+          label: 'Active Alerts',
+          icon: Icons.warning_amber_rounded,
+          color: _kButterD,
+          bg: _kButter,
+          loading: alertsLoading,
+        ),
+      ],
     );
   }
 }
@@ -370,6 +562,7 @@ class _KpiCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color bg;
+  final bool loading;
 
   const _KpiCard({
     required this.value,
@@ -377,6 +570,7 @@ class _KpiCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.bg,
+    this.loading = false,
   });
 
   @override
@@ -400,14 +594,19 @@ class _KpiCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: _kEspresso,
+          if (loading)
+            const ShimmerBox(width: 72, height: 26, radius: 8)
+          else
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: _kEspresso,
+              ),
             ),
-          ),
           Text(
             label,
             style: GoogleFonts.inter(
@@ -461,12 +660,15 @@ class _SectionHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: _kEspresso,
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _kEspresso,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (dot && pulseCtrl != null) ...[
@@ -1040,7 +1242,11 @@ class _GuestCard extends StatelessWidget {
 // ── Quick actions ──────────────────────────────────────────────────────────────
 class _QuickActionsRow extends StatelessWidget {
   final String hotelName;
-  const _QuickActionsRow({required this.hotelName});
+  final VoidCallback onOpenCompost;
+  const _QuickActionsRow({
+    required this.hotelName,
+    required this.onOpenCompost,
+  });
 
   void _checkInGuest(BuildContext context) {
     showDialog(
@@ -1051,48 +1257,53 @@ class _QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionBtn(
+    return SizedBox(
+      height: 90,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          _ActionBtn(
             icon: Icons.person_add_rounded,
-            label: 'Check-in Guest',
+            label: 'Check-in',
             color: _kOlive,
             bg: _kOliveM,
             onTap: () => _checkInGuest(context),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionBtn(
+          const SizedBox(width: 12),
+          _ActionBtn(
             icon: Icons.qr_code_scanner_rounded,
-            label: 'Scan Food',
+            label: 'Scanner',
             color: _kCherry,
             bg: _kCherryB,
             onTap: () => context.go(AppRoutes.hotelScan),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionBtn(
+          const SizedBox(width: 12),
+          _ActionBtn(
             icon: Icons.event_available_rounded,
-            label: 'Expiry AI',
+            label: 'Expiry',
             color: _kButterD,
             bg: _kButter,
             onTap: () => context.go(AppRoutes.hotelExpiryDate),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionBtn(
-            icon: Icons.add_alert_rounded,
-            label: 'Add Alert',
-            color: _kButterD,
-            bg: _kButter,
-            onTap: () => _showAddExpiryDialog(context, hotelName),
+          const SizedBox(width: 12),
+          _ActionBtn(
+            icon: Icons.recycling_rounded,
+            label: 'Compost',
+            color: const Color(0xFF45C4B0),
+            bg: const Color(0xFFE8FBF7),
+            onTap: onOpenCompost,
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          _ActionBtn(
+            icon: Icons.history_rounded,
+            label: 'History',
+            color: _kInfo,
+            bg: _kInfoBg,
+            onTap: () => context.go(AppRoutes.hotelHistory),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1133,29 +1344,100 @@ class _ActionBtnState extends State<_ActionBtn> {
         scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 100),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: widget.bg.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: widget.color.withValues(alpha: 0.3)),
-          ),
+          width: 64,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, color: widget.color, size: 24),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: widget.bg.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: widget.color.withValues(alpha: 0.3)),
+                ),
+                child: Icon(widget.icon, color: widget.color, size: 24),
+              ),
               const SizedBox(height: 6),
               Text(
                 widget.label,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: widget.color,
-                  height: 1.2,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black54,
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HotelDashboardTabs extends StatelessWidget {
+  final bool showCompost;
+  final VoidCallback onOverview;
+  final VoidCallback onCompost;
+
+  const _HotelDashboardTabs({
+    required this.showCompost,
+    required this.onOverview,
+    required this.onCompost,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onOverview,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: showCompost ? Colors.transparent : const Color(0xFF4A7FA5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Overview',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: showCompost ? Colors.black54 : Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              onTap: onCompost,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: showCompost ? const Color(0xFF4A7FA5) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Compost',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: showCompost ? Colors.white : Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

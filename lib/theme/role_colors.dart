@@ -15,6 +15,7 @@ class RoleColorScheme {
   final Color surface;
   final Color textDark;
   final Color textMuted;
+
   /// Bottom navigation selected item tint.
   final Color navSelected;
 
@@ -32,38 +33,38 @@ class RoleColorScheme {
 
   static const customer = RoleColorScheme(
     role: AppRole.customer,
-    primary: kButterD,
-    primaryDark: kButterDeep,
-    secondary: kButter,
-    accent: kButterDeep,
-    surface: kOat,
-    textDark: kEspresso,
-    textMuted: kFog,
-    navSelected: kButterD,
+    primary: kCust1,
+    primaryDark: kCust2,
+    secondary: kCust4,
+    accent: kCust2,
+    surface: kCust3,
+    textDark: kCustText,
+    textMuted: Color(0xFF8C7E78),
+    navSelected: kCust2,
   );
 
   static const restaurant = RoleColorScheme(
     role: AppRole.restaurant,
-    primary: kOlive,
-    primaryDark: kOliveMid,
-    secondary: kOliveM,
-    accent: kOlive,
-    surface: kOat,
-    textDark: kEspresso,
-    textMuted: kFog,
-    navSelected: kOlive,
+    primary: kRest1,
+    primaryDark: kRest2,
+    secondary: kRest4,
+    accent: kRest2,
+    surface: kRest3,
+    textDark: kRestText,
+    textMuted: Color(0xFF8C7E78),
+    navSelected: kRest2,
   );
 
   static const hotel = RoleColorScheme(
     role: AppRole.hotel,
-    primary: kCherry,
-    primaryDark: kCherryMid,
-    secondary: kCherryB,
-    accent: kCherryMid,
-    surface: kOat,
-    textDark: kEspresso,
-    textMuted: kFog,
-    navSelected: kCherry,
+    primary: kHotel1,
+    primaryDark: kHotel2,
+    secondary: kHotel4,
+    accent: kHotel2,
+    surface: kHotel3,
+    textDark: kHotelText,
+    textMuted: Color(0xFF8C7E78),
+    navSelected: kHotel2,
   );
 
   static RoleColorScheme of(AppRole role) {
@@ -83,31 +84,19 @@ class RoleColorScheme {
         return const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF8B6914),
-            Color(0xFFB8860B),
-            Color(0xFF5C4A1A),
-          ],
+          colors: [Color(0xFFC4748A), Color(0xFFFF8FAB), Color(0xFFFFD6E0)],
         );
       case AppRole.restaurant:
         return const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF3A5010),
-            Color(0xFF4F6815),
-            Color(0xFF2D3D0F),
-          ],
+          colors: [Color(0xFF5C7A3E), Color(0xFF8FD14F), Color(0xFFD4EBC0)],
         );
       case AppRole.hotel:
         return const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF75070C),
-            Color(0xFF9E1A21),
-            Color(0xFF5C3D3F),
-          ],
+          colors: [Color(0xFF4A7FA5), Color(0xFF56B4E9), Color(0xFFC8E3F2)],
         );
     }
   }
@@ -146,9 +135,7 @@ class RoleDecorations {
       color: color ?? kParchment,
       borderRadius: BorderRadius.circular(18),
       border: border ?? Border.all(color: kSand),
-      boxShadow: [
-        raised ? colors.raisedShadow : colors.softShadow,
-      ],
+      boxShadow: [raised ? colors.raisedShadow : colors.softShadow],
     );
   }
 
@@ -173,29 +160,29 @@ class RoleDecorations {
 }
 
 class RoleColors {
-  static const customerPrimary = Color(0xFF4A7C59);
-  static const customerPrimaryDark = Color(0xFF2F5C3A);
-  static const customerSecondary = Color(0xFFF5EFE0);
-  static const customerAccent = Color(0xFFE8A87C);
-  static const customerSurface = Color(0xFFFDFAF5);
-  static const customerTextDark = Color(0xFF2C3E2D);
-  static const customerTextMuted = Color(0xFF8A9E8B);
+  static const customerPrimary = kCust1;
+  static const customerPrimaryDark = kCust2;
+  static const customerSecondary = kCust4;
+  static const customerAccent = kCust2;
+  static const customerSurface = kCust3;
+  static const customerTextDark = kCustText;
+  static const customerTextMuted = Color(0xFF8C7E78);
 
-  static const restaurantPrimary = Color(0xFF8B1A1F);
-  static const restaurantPrimaryDark = Color(0xFF6B1215);
-  static const restaurantSecondary = Color(0xFFFDF6EC);
-  static const restaurantAccent = Color(0xFFD4956A);
-  static const restaurantSurface = Color(0xFFFFFEF9);
-  static const restaurantTextDark = Color(0xFF2C1A1B);
-  static const restaurantTextMuted = Color(0xFF9E7E7F);
+  static const restaurantPrimary = kRest1;
+  static const restaurantPrimaryDark = kRest2;
+  static const restaurantSecondary = kRest4;
+  static const restaurantAccent = kRest2;
+  static const restaurantSurface = kRest3;
+  static const restaurantTextDark = kRestText;
+  static const restaurantTextMuted = Color(0xFF8C7E78);
 
-  static const hotelPrimary = Color(0xFF5A7A18);
-  static const hotelPrimaryDark = Color(0xFF3D5510);
-  static const hotelSecondary = Color(0xFFF4F1E8);
-  static const hotelAccent = Color(0xFFB8A96A);
-  static const hotelSurface = Color(0xFFFEFDF8);
-  static const hotelTextDark = Color(0xFF2A2E1A);
-  static const hotelTextMuted = Color(0xFF8A8E6A);
+  static const hotelPrimary = kHotel1;
+  static const hotelPrimaryDark = kHotel2;
+  static const hotelSecondary = kHotel4;
+  static const hotelAccent = kHotel2;
+  static const hotelSurface = kHotel3;
+  static const hotelTextDark = kHotelText;
+  static const hotelTextMuted = Color(0xFF8C7E78);
 
   static const cardBorder = RoleDecorations.sand;
   static const divider = RoleDecorations.sand;

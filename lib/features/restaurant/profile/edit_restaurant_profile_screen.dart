@@ -15,10 +15,12 @@ class EditRestaurantProfileScreen extends StatefulWidget {
   const EditRestaurantProfileScreen({super.key});
 
   @override
-  State<EditRestaurantProfileScreen> createState() => _EditRestaurantProfileScreenState();
+  State<EditRestaurantProfileScreen> createState() =>
+      _EditRestaurantProfileScreenState();
 }
 
-class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScreen>
+class _EditRestaurantProfileScreenState
+    extends State<EditRestaurantProfileScreen>
     with TickerProviderStateMixin {
   int _step = 0;
   int _prevStep = 0;
@@ -52,12 +54,7 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
     'Other',
   ];
 
-  static const _roleOptions = <String>[
-    'Chef',
-    'Server',
-    'Cleaner',
-    'Manager',
-  ];
+  static const _roleOptions = <String>['Chef', 'Server', 'Cleaner', 'Manager'];
 
   @override
   void initState() {
@@ -142,7 +139,9 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _readableError(Object e) {
@@ -229,7 +228,9 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
 
       await userProvider.saveProfile(updated);
       if (!mounted) return;
-      context.pop();
+      context.canPop()
+          ? context.pop()
+          : context.go(AppRoutes.restaurantProfile);
     } catch (e) {
       _snack(_readableError(e));
     } finally {
@@ -297,12 +298,17 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
                     left: 0,
                     right: 0,
                     height: 56,
-                    child: Container(color: Colors.white.withValues(alpha: 0.06)),
+                    child: Container(
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
                   ),
                   SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Column(
                         children: [
                           Row(
@@ -312,13 +318,17 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
                                   if (_step > 0) {
                                     _back();
                                   } else {
-                                    context.pop();
+                                    context.canPop()
+                                        ? context.pop()
+                                        : context.go(
+                                            AppRoutes.restaurantProfile,
+                                          );
                                   }
                                 },
                                 icon: const Icon(Icons.arrow_back_ios_new),
                                 color: AppColors.oliveHeaderText,
-                                splashColor:
-                                    AppColors.oliveHeaderText.withValues(alpha: 0.15),
+                                splashColor: AppColors.oliveHeaderText
+                                    .withValues(alpha: 0.15),
                               ),
                               const Spacer(),
                             ],
@@ -372,19 +382,27 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
                         switchOutCurve: Curves.easeInOut,
                         transitionBuilder: (child, animation) {
                           final inTween = Tween<Offset>(
-                            begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
+                            begin: forward
+                                ? const Offset(1, 0)
+                                : const Offset(-1, 0),
                             end: Offset.zero,
                           );
                           final outTween = Tween<Offset>(
                             begin: Offset.zero,
-                            end: forward ? const Offset(-1, 0) : const Offset(1, 0),
+                            end: forward
+                                ? const Offset(-1, 0)
+                                : const Offset(1, 0),
                           );
 
                           final isIncoming = child.key == ValueKey(_step);
-                          final offsetAnim =
-                              isIncoming ? inTween.animate(animation) : outTween.animate(animation);
+                          final offsetAnim = isIncoming
+                              ? inTween.animate(animation)
+                              : outTween.animate(animation);
 
-                          return SlideTransition(position: offsetAnim, child: child);
+                          return SlideTransition(
+                            position: offsetAnim,
+                            child: child,
+                          );
                         },
                         child: SingleChildScrollView(
                           key: ValueKey(_step),
@@ -396,14 +414,18 @@ class _EditRestaurantProfileScreenState extends State<EditRestaurantProfileScree
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                       child: AnimatedButton(
-                        label: _step == 2 ? 'Save changes' : AppStrings.continueCta,
+                        label: _step == 2
+                            ? 'Save changes'
+                            : AppStrings.continueCta,
                         color: AppColors.olive,
                         textColor: AppColors.oliveHeaderText,
                         onTap: _step == 2
                             ? _save
                             : () async {
                                 if (_step == 0 &&
-                                    _restaurantNameController.text.trim().isEmpty) {
+                                    _restaurantNameController.text
+                                        .trim()
+                                        .isEmpty) {
                                   _snack(AppStrings.validationRequiredField);
                                   return;
                                 }
@@ -437,11 +459,17 @@ class _ThreeStepHeader extends StatelessWidget {
         children: [
           _dot(active: step == 0, complete: step > 0),
           Expanded(
-            child: Container(height: 2, color: step > 0 ? AppColors.olive : AppColors.sand),
+            child: Container(
+              height: 2,
+              color: step > 0 ? AppColors.olive : AppColors.sand,
+            ),
           ),
           _dot(active: step == 1, complete: step > 1),
           Expanded(
-            child: Container(height: 2, color: step > 1 ? AppColors.olive : AppColors.sand),
+            child: Container(
+              height: 2,
+              color: step > 1 ? AppColors.olive : AppColors.sand,
+            ),
           ),
           _dot(active: step == 2, complete: false),
         ],
@@ -528,12 +556,16 @@ class _RestaurantDetailsStep extends StatelessWidget {
     final Widget avatar = newLogoBytes != null
         ? CircleAvatar(radius: 45, backgroundImage: MemoryImage(newLogoBytes!))
         : (url.isNotEmpty
-            ? CircleAvatar(radius: 45, backgroundImage: NetworkImage(url))
-            : const CircleAvatar(
-                radius: 45,
-                backgroundColor: AppColors.olive,
-                child: Icon(Icons.restaurant, size: 42, color: AppColors.parchment),
-              ));
+              ? CircleAvatar(radius: 45, backgroundImage: NetworkImage(url))
+              : const CircleAvatar(
+                  radius: 45,
+                  backgroundColor: AppColors.olive,
+                  child: Icon(
+                    Icons.restaurant,
+                    size: 42,
+                    color: AppColors.parchment,
+                  ),
+                ));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,9 +583,16 @@ class _RestaurantDetailsStep extends StatelessWidget {
                   child: Container(
                     width: 28,
                     height: 28,
-                    decoration: const BoxDecoration(color: AppColors.cherry, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColors.cherry,
+                      shape: BoxShape.circle,
+                    ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt, size: 14, color: AppColors.parchment),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 14,
+                      color: AppColors.parchment,
+                    ),
                   ),
                 ),
               ),
@@ -711,22 +750,24 @@ class _KitchenSafetyStep extends StatelessWidget {
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: roleOptions.map((r) {
-            final selected = roles.contains(r);
-            return ChoiceChip(
-              label: Text(r),
-              selected: selected,
-              onSelected: (_) => onToggleRole(r),
-              selectedColor: AppColors.oliveMist,
-              backgroundColor: AppColors.parchment,
-              side: const BorderSide(color: AppColors.sand, width: 0.7),
-              labelStyle: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppColors.olive : AppColors.espresso,
-              ),
-            );
-          }).toList(growable: false),
+          children: roleOptions
+              .map((r) {
+                final selected = roles.contains(r);
+                return ChoiceChip(
+                  label: Text(r),
+                  selected: selected,
+                  onSelected: (_) => onToggleRole(r),
+                  selectedColor: AppColors.oliveMist,
+                  backgroundColor: AppColors.parchment,
+                  side: const BorderSide(color: AppColors.sand, width: 0.7),
+                  labelStyle: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? AppColors.olive : AppColors.espresso,
+                  ),
+                );
+              })
+              .toList(growable: false),
         ),
         const SizedBox(height: 18),
         Container(

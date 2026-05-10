@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -8,19 +9,19 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/google_sign_in_service.dart';
 
 // ── Hotel — Granite Ridge (slate blue-grey) ───────────────────────────────────
-const _kBg       = Color(0xFFF0F5F8); // lightest tint of hotel slate
-const _kPrimary  = Color(0xFF5A9FC9);
-const _kDeep     = Color(0xFF35658F);
-const _kSoftBg   = Color(0xFFD9E9F5);
-const _kBorder   = Color(0xFFB6CAD6);
-const _kTitle    = Color(0xFF26201B);
-const _kMuted    = Color(0xFF8C7E78);
-const _kBody     = Color(0xFF5C4F48);
+const _kBg = Color(0xFFF0F5F8); // lightest tint of hotel slate
+const _kPrimary = Color(0xFF5A9FC9);
+const _kDeep = Color(0xFF35658F);
+const _kSoftBg = Color(0xFFD9E9F5);
+const _kBorder = Color(0xFFB6CAD6);
+const _kTitle = Color(0xFF26201B);
+const _kMuted = Color(0xFF8C7E78);
 
-const _kCustAccent = Color(0xFFC4736C);
-const _kRestAccent = Color(0xFF7A8B42);
+const _kCustAccent = Color(0xFFD9899F);
+const _kRestAccent = Color(0xFF8FA84A);
 
 class HotelLoginScreen extends StatefulWidget {
   const HotelLoginScreen({super.key});
@@ -31,12 +32,12 @@ class HotelLoginScreen extends StatefulWidget {
 
 class _HotelLoginScreenState extends State<HotelLoginScreen>
     with SingleTickerProviderStateMixin {
-  final _emailCtrl    = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
-  bool _obscure   = true;
+  bool _obscure = true;
   bool _isLoading = false;
-  bool _pressed   = false;
+  bool _pressed = false;
 
   late final AnimationController _blobCtrl;
 
@@ -67,23 +68,69 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
     return s;
   }
 
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/');
+    }
+  }
+
   Future<void> _signIn() async {
     if (_isLoading) return;
     HapticFeedback.selectionClick();
-    final email    = _emailCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
     if (email.isEmpty || !email.contains('@')) {
-      _snack(AppStrings.validationInvalidEmail); return;
+      _snack(AppStrings.validationInvalidEmail);
+      return;
     }
     if (password.length < 6) {
-      _snack(AppStrings.validationPasswordMin); return;
+      _snack(AppStrings.validationPasswordMin);
+      return;
     }
     setState(() => _isLoading = true);
     try {
       await context.read<UserProvider>().login(
-        email: email, password: password, role: 'hotel');
+        email: email,
+        password: password,
+        role: 'hotel',
+      );
       if (!mounted) return;
       context.go(AppRoutes.hotelDashboard);
+    } catch (e) {
+      _snack(_readable(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final cred = await GoogleSignInService.signIn();
+      if (cred == null || !mounted) return;
+      final uid = cred.user!.uid;
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      final role = doc.data()?['role']?.toString();
+      if (!mounted) return;
+      if (role == null || role.isEmpty) {
+        context.go(AppRoutes.selectRole);
+        return;
+      }
+      if (role == 'customer') {
+        context.go(AppRoutes.customerHome);
+      } else if (role == 'restaurant') {
+        context.go(AppRoutes.restaurantDashboard);
+      } else if (role == 'hotel') {
+        context.go(AppRoutes.hotelDashboard);
+      } else {
+        context.go(AppRoutes.selectRole);
+      }
     } catch (e) {
       _snack(_readable(e));
     } finally {
@@ -94,7 +141,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final heroH   = screenH * 0.44;
+    final heroH = screenH * 0.44;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -104,24 +151,22 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
           // Background blobs
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, _) => CustomPaint(
+            builder: (_, __) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
-              size: Size(double.infinity,
-                  MediaQuery.of(context).size.height),
+              size: Size(double.infinity, MediaQuery.of(context).size.height),
             ),
           ),
 
           // Hero
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             height: heroH,
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    _kPrimary.withOpacity(0.90),
-                    _kDeep,
-                  ],
+                  colors: [_kPrimary.withOpacity(0.90), _kDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -130,7 +175,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                 children: [
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, _) => CustomPaint(
+                    builder: (_, __) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),
@@ -153,26 +198,22 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                     bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           IconButton(
-                            onPressed: () {
-                              HapticFeedback.selectionClick();
-                              context.go(AppRoutes.roleSelector);
-                            },
-                            icon: const Icon(
-                                Icons.arrow_back_ios_new, size: 20),
+                            onPressed: _goBack,
+                            icon: const Icon(Icons.arrow_back),
                             color: Colors.white,
                           ),
                           const Spacer(),
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Expanded(
                                   child: Column(
@@ -182,8 +223,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                                     children: [
                                       Text(
                                         'Hotel',
-                                        style: GoogleFonts
-                                            .cormorantGaramond(
+                                        style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -192,8 +232,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                                       ),
                                       Text(
                                         'Portal',
-                                        style: GoogleFonts
-                                            .cormorantGaramond(
+                                        style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -206,8 +245,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                                         style: GoogleFonts.dmSans(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white
-                                              .withOpacity(0.70),
+                                          color: Colors.white.withOpacity(0.70),
                                           letterSpacing: 2.0,
                                         ),
                                       ),
@@ -231,12 +269,14 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
           // Floating card
           Positioned(
             top: heroH - 26,
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.only(
-                  topLeft:  Radius.circular(32),
+                  topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
                 boxShadow: [
@@ -256,8 +296,7 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                       children: [
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Sign in',
@@ -271,25 +310,29 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                               Text(
                                 'Manage hotel operations',
                                 style: GoogleFonts.dmSans(
-                                    fontSize: 13, color: _kMuted),
+                                  fontSize: 13,
+                                  color: _kMuted,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: _kSoftBg,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: _kBorder, width: 1),
+                            border: Border.all(color: _kBorder, width: 1),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 7, height: 7,
+                                width: 7,
+                                height: 7,
                                 decoration: const BoxDecoration(
                                   color: _kPrimary,
                                   shape: BoxShape.circle,
@@ -351,6 +394,37 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
 
                     const SizedBox(height: 20),
 
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'or',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 12,
+                              color: _kMuted,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    OutlinedButton.icon(
+                      onPressed: _signInWithGoogle,
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+                      label: const Text('Continue with Google'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 52),
+                        side: BorderSide(color: _kBorder, width: 1.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+
                     Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -367,12 +441,13 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
 
                     Center(
                       child: TextButton(
-                        onPressed: () =>
-                            context.go(AppRoutes.hotelRegister),
+                        onPressed: () => context.go(AppRoutes.hotelRegister),
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.dmSans(
-                                fontSize: 13, color: _kMuted),
+                              fontSize: 13,
+                              color: _kMuted,
+                            ),
                             children: [
                               const TextSpan(text: 'New hotel?  '),
                               TextSpan(
@@ -399,7 +474,8 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
   }
 
   Widget _pill(Color c) => Container(
-    width: 20, height: 4,
+    width: 20,
+    height: 4,
     decoration: BoxDecoration(
       color: c.withOpacity(0.50),
       borderRadius: BorderRadius.circular(2),
@@ -430,7 +506,8 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
                 onPressed: onToggleObscure,
                 icon: Icon(
                   obscure! ? Icons.visibility : Icons.visibility_off,
-                  color: _kMuted, size: 20,
+                  color: _kMuted,
+                  size: 20,
                 ),
               )
             : null,
@@ -455,9 +532,12 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
     required Future<void> Function() onTap,
   }) {
     return GestureDetector(
-      onTapDown:   (_) => setState(() => _pressed = true),
-      onTapUp:     (_) { setState(() => _pressed = false); onTap(); },
-      onTapCancel: ()  => setState(() => _pressed = false),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -482,9 +562,13 @@ class _HotelLoginScreenState extends State<HotelLoginScreen>
           alignment: Alignment.center,
           child: _isLoading
               ? const SizedBox(
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : Text(
                   label,
                   style: GoogleFonts.dmSans(
@@ -508,17 +592,36 @@ class _HeroBlobPainter extends CustomPainter {
     final angle = t * 2 * math.pi;
     void blob(double cx, double cy, double r, double op) {
       final c = Offset(cx, cy);
-      canvas.drawCircle(c, r, Paint()..shader = RadialGradient(
-        colors: [Colors.white.withOpacity(op), Colors.transparent],
-      ).createShader(Rect.fromCircle(center: c, radius: r)));
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [Colors.white.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
     }
-    blob(size.width * 0.15 + math.cos(angle) * 20,
-         size.height * 0.35 + math.sin(angle) * 15, size.width * 0.5, 0.07);
-    blob(size.width * 0.85 + math.sin(angle * 0.7) * 18,
-         size.height * 0.6  + math.cos(angle * 0.7) * 22, size.width * 0.4, 0.05);
-    blob(size.width * 0.5  + math.cos(angle * 1.4) * 14,
-         size.height * 0.2 + math.sin(angle * 1.4) * 10, size.width * 0.3, 0.06);
+
+    blob(
+      size.width * 0.15 + math.cos(angle) * 20,
+      size.height * 0.35 + math.sin(angle) * 15,
+      size.width * 0.5,
+      0.07,
+    );
+    blob(
+      size.width * 0.85 + math.sin(angle * 0.7) * 18,
+      size.height * 0.6 + math.cos(angle * 0.7) * 22,
+      size.width * 0.4,
+      0.05,
+    );
+    blob(
+      size.width * 0.5 + math.cos(angle * 1.4) * 14,
+      size.height * 0.2 + math.sin(angle * 1.4) * 10,
+      size.width * 0.3,
+      0.06,
+    );
   }
+
   @override
   bool shouldRepaint(_HeroBlobPainter old) => old.t != t;
 }
@@ -531,17 +634,32 @@ class _BlobBgPainter extends CustomPainter {
     final angle = t * 2 * math.pi;
     void blob(double cx, double cy, double r, Color c, double op) {
       final center = Offset(cx, cy);
-      canvas.drawCircle(center, r, Paint()..shader = RadialGradient(
-        colors: [c.withOpacity(op), Colors.transparent],
-      ).createShader(Rect.fromCircle(center: center, radius: r)));
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [c.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: center, radius: r)),
+      );
     }
-    blob(size.width * 0.85 + math.sin(angle * 0.6) * 20,
-         size.height * 0.75 + math.cos(angle * 0.6) * 24,
-         size.width * 0.40, _kPrimary, 0.07);
-    blob(size.width * 0.10 + math.cos(angle * 0.8) * 16,
-         size.height * 0.82 + math.sin(angle * 0.8) * 18,
-         size.width * 0.30, const Color(0xFFC4736C), 0.05);
+
+    blob(
+      size.width * 0.85 + math.sin(angle * 0.6) * 20,
+      size.height * 0.75 + math.cos(angle * 0.6) * 24,
+      size.width * 0.40,
+      _kPrimary,
+      0.07,
+    );
+    blob(
+      size.width * 0.10 + math.cos(angle * 0.8) * 16,
+      size.height * 0.82 + math.sin(angle * 0.8) * 18,
+      size.width * 0.30,
+      const Color(0xFFD9899F),
+      0.05,
+    );
   }
+
   @override
   bool shouldRepaint(_BlobBgPainter old) => old.t != t;
 }
@@ -551,9 +669,11 @@ class _HotelIllustration extends StatelessWidget {
   final double size;
   const _HotelIllustration({required this.size});
   @override
-  Widget build(BuildContext context) =>
-      SizedBox(width: size, height: size,
-          child: CustomPaint(painter: _HotelPainter()));
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _HotelPainter()),
+  );
 }
 
 class _HotelPainter extends CustomPainter {
@@ -561,8 +681,10 @@ class _HotelPainter extends CustomPainter {
   void paint(Canvas canvas, Size s) {
     final w = s.width, h = s.height;
     final buildingPaint = Paint()..color = Colors.white.withOpacity(0.90);
-    final windowPaint   = Paint()..color = const Color(0xFF6A8494).withOpacity(0.55);
-    final accentPaint   = Paint()..color = const Color(0xFFC4736C).withOpacity(0.80);
+    final windowPaint = Paint()
+      ..color = const Color(0xFF6A8494).withOpacity(0.55);
+    final accentPaint = Paint()
+      ..color = const Color(0xFFD9899F).withOpacity(0.80);
 
     // Main building body
     canvas.drawRRect(
@@ -619,13 +741,18 @@ class _HotelPainter extends CustomPainter {
       ..lineTo(w * 0.66, h * 0.14)
       ..lineTo(w * 0.50, h * 0.18)
       ..close();
-    canvas.drawPath(flagPath,
-        Paint()..color = const Color(0xFFC4736C).withOpacity(0.85));
+    canvas.drawPath(
+      flagPath,
+      Paint()..color = const Color(0xFFD9899F).withOpacity(0.85),
+    );
 
     // Shadow
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.50, h * 0.93),
-          width: w * 0.55, height: h * 0.06),
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.93),
+        width: w * 0.55,
+        height: h * 0.06,
+      ),
       Paint()..color = Colors.black.withOpacity(0.08),
     );
   }

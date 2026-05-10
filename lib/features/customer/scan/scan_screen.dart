@@ -9,6 +9,7 @@ import '../../../core/constants.dart';
 import '../../../core/models/nutrient_result.dart';
 import '../../../shared/widgets/role_scan_experience.dart';
 import '../allergens/allergy_service.dart';
+import '../nutrition/calorie_inference_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -23,6 +24,7 @@ class _ScanScreenState extends State<ScanScreen> {
   XFile? _selected;
   Uint8List? _selectedBytes;
   bool _isAnalysing = false;
+  String? _calorieError;
 
   void _snack(String message) {
     ScaffoldMessenger.of(
@@ -44,6 +46,7 @@ class _ScanScreenState extends State<ScanScreen> {
         _selected = file;
         _selectedBytes = imageBytes;
         _isAnalysing = true;
+        _calorieError = null;
       });
 
       final allergyFuture = AllergyService()
@@ -60,10 +63,19 @@ class _ScanScreenState extends State<ScanScreen> {
       final results = await Future.wait<dynamic>([
         ApiService.predictNutrients(imageBytes),
         allergyFuture,
+        CalorieInferenceService()
+            .predict(imageBytes)
+            .then<NutritionResult?>((result) => result)
+            .catchError((e) {
+              _calorieError = e.toString();
+              debugPrint('[CustomerScan] Calorie model error: $e');
+              return null;
+            }),
       ]);
 
       final result = results[0] as NutrientResult;
       final allergyResult = results[1] as AllergyResult?;
+      final calorieResult = results[2] as NutritionResult?;
       if (!mounted) return;
 
       setState(() => _isAnalysing = false);
@@ -75,6 +87,8 @@ class _ScanScreenState extends State<ScanScreen> {
           'imagePath': file.path,
           'imageBytes': imageBytes,
           'allergyResult': allergyResult?.toJson(),
+          'calorieResult': calorieResult?.toJson(),
+          'calorieError': _calorieError,
           'result': result.toJson(),
         },
       );
@@ -97,7 +111,8 @@ class _ScanScreenState extends State<ScanScreen> {
       imagePath: _selected?.path,
       imageBytes: _selectedBytes,
       isLoading: _isAnalysing,
-      onBack: () => context.pop(),
+      onBack: () =>
+          context.canPop() ? context.pop() : context.go(AppRoutes.customerHome),
       onCameraTap: () => _pick(ImageSource.camera),
       onGalleryTap: () => _pick(ImageSource.gallery),
       onInfoTap: () => _snack('Scan a clear food label or meal photo.'),

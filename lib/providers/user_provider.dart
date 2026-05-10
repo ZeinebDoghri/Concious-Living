@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../core/firebase_service.dart';
 import '../core/models/user_model.dart';
+import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 
 class UserProvider extends ChangeNotifier {
   UserModel? currentUser;
@@ -277,6 +279,16 @@ class UserProvider extends ChangeNotifier {
       notifyListeners();
       throw StateError('Login failed: missing user id');
     }
+    try {
+      await AuthService.ensureUserDocument(cred.user!, role);
+    } catch (e, st) {
+      _logError('UserProvider.login ensureUserDocument failed', e, st);
+      if (!_isProbablyTransientFirestoreError(e)) {
+        isLoading = false;
+        notifyListeners();
+        throw Exception(_friendlyFirebaseError(e));
+      }
+    }
 
     if (kIsWeb) {
       UserModel? loaded;
@@ -313,6 +325,7 @@ class UserProvider extends ChangeNotifier {
       if (loaded == null) {
         _loadUserInBackground(uid);
       }
+      unawaited(NotificationService.saveFcmToken(uid, role: role));
       return user;
     }
 
@@ -359,6 +372,85 @@ class UserProvider extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
+    unawaited(NotificationService.saveFcmToken(uid, role: role));
+    return user;
+  }
+
+  Future<UserModel> loginWithGoogle({required String role}) async {
+    isLoading = true;
+    notifyListeners();
+
+    late final UserCredential cred;
+    try {
+      cred = await FirebaseService.signInWithGoogle();
+    } on FirebaseAuthException catch (e, st) {
+      _logError(
+        'UserProvider.loginWithGoogle auth error: ${e.code}: ${e.message ?? ''}',
+        e,
+        st,
+      );
+      isLoading = false;
+      notifyListeners();
+      throw Exception(_friendlyAuthError(e));
+    } catch (e, st) {
+      _logError('UserProvider.loginWithGoogle failed', e, st);
+      isLoading = false;
+      notifyListeners();
+      throw Exception(_friendlyFirebaseError(e));
+    }
+
+    final firebaseUser = cred.user;
+    final uid = firebaseUser?.uid;
+    if (uid == null) {
+      isLoading = false;
+      notifyListeners();
+      throw StateError('Google login failed: missing user id');
+    }
+    try {
+      await AuthService.ensureUserDocument(firebaseUser!, role);
+    } catch (e, st) {
+      _logError(
+        'UserProvider.loginWithGoogle ensureUserDocument failed',
+        e,
+        st,
+      );
+      if (!_isProbablyTransientFirestoreError(e)) {
+        isLoading = false;
+        notifyListeners();
+        throw Exception(_friendlyFirebaseError(e));
+      }
+    }
+
+    UserModel? loaded;
+    try {
+      loaded = await FirebaseService.getUser(uid);
+    } catch (e, st) {
+      _logError('UserProvider.loginWithGoogle getUser failed', e, st);
+    }
+
+    final user =
+        loaded ??
+        UserModel(
+          id: uid,
+          name: firebaseUser?.displayName ?? '',
+          email: firebaseUser?.email ?? '',
+          conditions: const <String>[],
+          allergens: const <String>[],
+          calorieGoal: 2200,
+          role: role,
+          notifyDailyIntake: true,
+          notifyAllergens: true,
+          notifyWeeklyReport: true,
+          avatarPath: firebaseUser?.photoURL,
+        );
+    currentUser = user;
+    isLoading = false;
+    notifyListeners();
+
+    if (loaded == null) {
+      _saveUserInBackground(user);
+    }
+    unawaited(NotificationService.saveFcmToken(uid, role: role));
     return user;
   }
 
@@ -393,6 +485,20 @@ class UserProvider extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
       throw StateError('Registration failed: missing user id');
+    }
+    try {
+      await AuthService.ensureUserDocument(cred.user!, 'customer');
+    } catch (e, st) {
+      _logError(
+        'UserProvider.registerCustomer ensureUserDocument failed',
+        e,
+        st,
+      );
+      if (!_isProbablyTransientFirestoreError(e)) {
+        isLoading = false;
+        notifyListeners();
+        throw Exception(_friendlyFirebaseError(e));
+      }
     }
 
     final user = UserModel(
@@ -467,6 +573,20 @@ class UserProvider extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
       throw StateError('Registration failed: missing user id');
+    }
+    try {
+      await AuthService.ensureUserDocument(cred.user!, 'restaurant');
+    } catch (e, st) {
+      _logError(
+        'UserProvider.registerRestaurant ensureUserDocument failed',
+        e,
+        st,
+      );
+      if (!_isProbablyTransientFirestoreError(e)) {
+        isLoading = false;
+        notifyListeners();
+        throw Exception(_friendlyFirebaseError(e));
+      }
     }
 
     final user = UserModel(
@@ -545,6 +665,16 @@ class UserProvider extends ChangeNotifier {
       notifyListeners();
       throw StateError('Registration failed: missing user id');
     }
+    try {
+      await AuthService.ensureUserDocument(cred.user!, 'hotel');
+    } catch (e, st) {
+      _logError('UserProvider.registerHotel ensureUserDocument failed', e, st);
+      if (!_isProbablyTransientFirestoreError(e)) {
+        isLoading = false;
+        notifyListeners();
+        throw Exception(_friendlyFirebaseError(e));
+      }
+    }
 
     final user = UserModel(
       id: uid,
@@ -609,6 +739,17 @@ class UserProvider extends ChangeNotifier {
     saturatedFatGoal = saturatedFat;
     sodiumGoal = sodium;
     sugarGoal = sugar;
+
+    final uid = currentUser?.id;
+    if (uid != null && uid.isNotEmpty) {
+      await FirebaseService.saveNutrientLimits(
+        uid: uid,
+        cholesterol_mg: cholesterol,
+        saturated_fat_g: saturatedFat,
+        sodium_mg: sodium,
+        sugar_g: sugar,
+      );
+    }
 
     notifyListeners();
   }

@@ -14,19 +14,22 @@ import '../../../core/firebase_service.dart';
 import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/animated_button.dart';
 
-// Customer (violet/lavender) role colors
-const _primary   = Color(0xFFA78BFA);
-const _deep      = Color(0xFF7C3AED);
-const _surface   = Color(0xFFF5F3FF);
-const _softBg    = Color(0xFFEDE9FE);
-const _textTitle = Color(0xFF2D1B69);
-const _textBody  = Color(0xFF4B3B8C);
-const _textMuted = Color(0xFF8B7BC0);
+// Customer role colors
+const _primary = Color(0xFFD9899F);
+const _deep = Color(0xFFB27589);
+const _surface = Color(0xFFFEFAFC);
+const _softBg = Color(0xFFF9E9F2);
+const _textTitle = Color(0xFF26201B);
+const _textBody = Color(0xFF5C4F48);
+const _textMuted = Color(0xFF8C7E78);
 
 class CustomerProfileSetupScreen extends StatefulWidget {
   final Map<String, dynamic> args;
 
-  const CustomerProfileSetupScreen({super.key, this.args = const <String, dynamic>{}});
+  const CustomerProfileSetupScreen({
+    super.key,
+    this.args = const <String, dynamic>{},
+  });
 
   @override
   State<CustomerProfileSetupScreen> createState() =>
@@ -35,41 +38,44 @@ class CustomerProfileSetupScreen extends StatefulWidget {
 
 class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     with TickerProviderStateMixin {
-  int _step     = 0;
+  int _step = 0;
   int _prevStep = 0;
 
   final _displayNameController = TextEditingController();
+  final _cholesterolController = TextEditingController(text: '300');
+  final _saturatedFatController = TextEditingController(text: '20');
+  final _sodiumController = TextEditingController(text: '2300');
+  final _sugarController = TextEditingController(text: '50');
 
   DateTime? _dob;
-  String?   _gender;
+  String? _gender;
 
   Uint8List? _avatarBytes;
-  String?    _avatarPath;
+  String? _avatarPath;
 
   final Set<String> _conditions = <String>{};
   double _calorieGoal = 2200;
 
-  bool   _notifyDaily    = true;
-  bool   _notifyAllergens = true;
-  bool   _notifyWeekly   = true;
-  String _language       = 'English';
+  bool _notifyDaily = true;
+  bool _notifyAllergens = true;
+  bool _notifyWeekly = true;
+  String _language = 'English';
 
   bool _completing = false;
 
   late final AnimationController _blobController;
   late final AnimationController _screenExitController;
-  late final Animation<double>   _screenFade;
-  late final Animation<double>   _screenScale;
+  late final Animation<double> _screenFade;
+  late final Animation<double> _screenScale;
 
   @override
   void initState() {
     super.initState();
 
     final fromProvider = context.read<UserProvider>().currentUser?.name;
-    _displayNameController.text =
-        (fromProvider?.trim().isNotEmpty ?? false)
-            ? fromProvider!.trim()
-            : (widget.args['name'] as String?)?.trim() ?? '';
+    _displayNameController.text = (fromProvider?.trim().isNotEmpty ?? false)
+        ? fromProvider!.trim()
+        : (widget.args['name'] as String?)?.trim() ?? '';
 
     _blobController = AnimationController(
       vsync: this,
@@ -81,15 +87,25 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
       duration: const Duration(milliseconds: 400),
       value: 1.0,
     );
-    _screenFade  = CurvedAnimation(parent: _screenExitController, curve: Curves.easeOutCubic);
+    _screenFade = CurvedAnimation(
+      parent: _screenExitController,
+      curve: Curves.easeOutCubic,
+    );
     _screenScale = Tween<double>(begin: 0.95, end: 1.0).animate(
-      CurvedAnimation(parent: _screenExitController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _screenExitController,
+        curve: Curves.easeOutCubic,
+      ),
     );
   }
 
   @override
   void dispose() {
     _displayNameController.dispose();
+    _cholesterolController.dispose();
+    _saturatedFatController.dispose();
+    _sodiumController.dispose();
+    _sugarController.dispose();
     _blobController.dispose();
     _screenExitController.dispose();
     super.dispose();
@@ -97,20 +113,23 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
 
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
-    final file   = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
     setState(() {
       _avatarBytes = bytes;
-      _avatarPath  = file.path;
+      _avatarPath = file.path;
     });
   }
 
   Future<void> _pickDob() async {
-    final now     = DateTime.now();
+    final now = DateTime.now();
     final initial = _dob ?? DateTime(now.year - 22, now.month, now.day);
-    final date    = await showDatePicker(
+    final date = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(1920),
@@ -118,11 +137,11 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: _primary,
-                onPrimary: Colors.white,
-                surface: _surface,
-                onSurface: _textTitle,
-              ),
+            primary: _primary,
+            onPrimary: Colors.white,
+            surface: _surface,
+            onSurface: _textTitle,
+          ),
         ),
         child: child!,
       ),
@@ -136,7 +155,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_step >= 2) return;
     setState(() {
       _prevStep = _step;
-      _step    += 1;
+      _step += 1;
     });
   }
 
@@ -144,7 +163,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_step <= 0) return;
     setState(() {
       _prevStep = _step;
-      _step    -= 1;
+      _step -= 1;
     });
   }
 
@@ -152,9 +171,9 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     if (_completing) return;
 
     final userProvider = context.read<UserProvider>();
-    final existing     = userProvider.currentUser;
-    final email        = (existing?.email ?? '').trim();
-    final name         = _displayNameController.text.trim();
+    final existing = userProvider.currentUser;
+    final email = (existing?.email ?? '').trim();
+    final name = _displayNameController.text.trim();
 
     if (existing == null || name.isEmpty || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +209,15 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
     );
 
     await userProvider.saveProfile(user);
+
+    await FirebaseService.saveNutrientLimits(
+      uid: user.id,
+      cholesterol_mg: double.tryParse(_cholesterolController.text.trim()) ?? 300.0,
+      saturated_fat_g: double.tryParse(_saturatedFatController.text.trim()) ?? 20.0,
+      sodium_mg: double.tryParse(_sodiumController.text.trim()) ?? 2300.0,
+      sugar_g: double.tryParse(_sugarController.text.trim()) ?? 50.0,
+    );
+
     await _screenExitController.forward(from: 0.0);
     if (!mounted) return;
     context.go(AppRoutes.customerHome);
@@ -217,7 +245,9 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                 _conditions.remove(c);
               } else {
                 if (c == 'None') {
-                  _conditions..clear()..add('None');
+                  _conditions
+                    ..clear()
+                    ..add('None');
                 } else {
                   _conditions.remove('None');
                   _conditions.add(c);
@@ -227,6 +257,10 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
           },
           calorieGoal: _calorieGoal,
           onCalorie: (v) => setState(() => _calorieGoal = v),
+          cholesterolCtrl: _cholesterolController,
+          saturatedFatCtrl: _saturatedFatController,
+          sodiumCtrl: _sodiumController,
+          sugarCtrl: _sugarController,
         );
       case 2:
       default:
@@ -247,7 +281,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
   Widget build(BuildContext context) {
     final forward = _step >= _prevStep;
     final screenH = MediaQuery.of(context).size.height;
-    final heroH   = screenH * 0.32;
+    final heroH = screenH * 0.32;
 
     return Scaffold(
       backgroundColor: _primary,
@@ -260,7 +294,9 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
             children: [
               // ── Hero zone ──────────────────────────────────────────
               Positioned(
-                top: 0, left: 0, right: 0,
+                top: 0,
+                left: 0,
+                right: 0,
                 height: heroH,
                 child: Stack(
                   children: [
@@ -275,7 +311,10 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                     SafeArea(
                       bottom: false,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -314,12 +353,14 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
               // ── Floating card ──────────────────────────────────────
               Positioned(
                 top: heroH - 24,
-                left: 0, right: 0, bottom: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: const BorderRadius.only(
-                      topLeft:  Radius.circular(32),
+                      topLeft: Radius.circular(32),
                       topRight: Radius.circular(32),
                     ),
                     boxShadow: AppShadows.lg(_primary),
@@ -336,18 +377,25 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                           switchOutCurve: Curves.easeInOut,
                           transitionBuilder: (child, animation) {
                             final inTween = Tween<Offset>(
-                              begin: forward ? const Offset(1, 0) : const Offset(-1, 0),
+                              begin: forward
+                                  ? const Offset(1, 0)
+                                  : const Offset(-1, 0),
                               end: Offset.zero,
                             );
                             final outTween = Tween<Offset>(
                               begin: Offset.zero,
-                              end: forward ? const Offset(-1, 0) : const Offset(1, 0),
+                              end: forward
+                                  ? const Offset(-1, 0)
+                                  : const Offset(1, 0),
                             );
                             final isIncoming = child.key == ValueKey(_step);
                             final offsetAnim = isIncoming
                                 ? inTween.animate(animation)
                                 : outTween.animate(animation);
-                            return SlideTransition(position: offsetAnim, child: child);
+                            return SlideTransition(
+                              position: offsetAnim,
+                              child: child,
+                            );
                           },
                           child: SingleChildScrollView(
                             key: ValueKey(_step),
@@ -359,7 +407,9 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                         child: AnimatedButton(
-                          label: _step == 2 ? AppStrings.completeSetup : AppStrings.continueCta,
+                          label: _step == 2
+                              ? AppStrings.completeSetup
+                              : AppStrings.continueCta,
                           color: _step == 2 ? _deep : _primary,
                           textColor: Colors.white,
                           onTap: _step == 2 ? _complete : () async => _next(),
@@ -388,7 +438,7 @@ class _StepProgressHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget dot(int index) {
-      if (index < step)  return const _FilledDot(size: 16, color: _deep);
+      if (index < step) return const _FilledDot(size: 16, color: _deep);
       if (index == step) return const _FilledDot(size: 24, color: _primary);
       return const _OutlinedDot(size: 16, color: Color(0xFFE2E8F0));
     }
@@ -417,9 +467,10 @@ class _FilledDot extends StatelessWidget {
   const _FilledDot({required this.size, required this.color});
   @override
   Widget build(BuildContext context) => Container(
-        width: size, height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 class _OutlinedDot extends StatelessWidget {
@@ -428,25 +479,26 @@ class _OutlinedDot extends StatelessWidget {
   const _OutlinedDot({required this.size, required this.color});
   @override
   Widget build(BuildContext context) => Container(
-        width: size, height: size,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(color: color, width: 2),
-        ),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: Colors.transparent,
+      shape: BoxShape.circle,
+      border: Border.all(color: color, width: 2),
+    ),
+  );
 }
 
 // ── Step 0: Personal info ────────────────────────────────────────────────────
 
 class _StepPersonalInfo extends StatelessWidget {
   final TextEditingController displayNameController;
-  final DateTime?             dob;
-  final VoidCallback          onPickDob;
-  final String?               gender;
+  final DateTime? dob;
+  final VoidCallback onPickDob;
+  final String? gender;
   final ValueChanged<String?> onGender;
-  final Uint8List?            avatarBytes;
-  final String?               avatarPath;
+  final Uint8List? avatarBytes;
+  final String? avatarPath;
   final Future<void> Function() onPickAvatar;
 
   const _StepPersonalInfo({
@@ -470,12 +522,15 @@ class _StepPersonalInfo extends StatelessWidget {
     final avatar = avatarBytes != null
         ? CircleAvatar(radius: 45, backgroundImage: MemoryImage(avatarBytes!))
         : (avatarPath != null && File(avatarPath!).existsSync())
-            ? CircleAvatar(radius: 45, backgroundImage: FileImage(File(avatarPath!)))
-            : const CircleAvatar(
-                radius: 45,
-                backgroundColor: _softBg,
-                child: Icon(Icons.person, size: 42, color: _primary),
-              );
+        ? CircleAvatar(
+            radius: 45,
+            backgroundImage: FileImage(File(avatarPath!)),
+          )
+        : const CircleAvatar(
+            radius: 45,
+            backgroundColor: _softBg,
+            child: Icon(Icons.person, size: 42, color: _primary),
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,14 +541,23 @@ class _StepPersonalInfo extends StatelessWidget {
             children: [
               avatar,
               Positioned(
-                right: 0, bottom: 0,
+                right: 0,
+                bottom: 0,
                 child: GestureDetector(
                   onTap: onPickAvatar,
                   child: Container(
-                    width: 28, height: 28,
-                    decoration: const BoxDecoration(color: _primary, shape: BoxShape.circle),
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: _primary,
+                      shape: BoxShape.circle,
+                    ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -517,7 +581,11 @@ class _StepPersonalInfo extends StatelessWidget {
                 hintText: _dobLabel(),
                 labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
                 hintStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
-                prefixIcon: const Icon(Icons.cake_outlined, color: _textMuted, size: 20),
+                prefixIcon: const Icon(
+                  Icons.cake_outlined,
+                  color: _textMuted,
+                  size: 20,
+                ),
                 filled: true,
                 fillColor: _softBg,
                 border: OutlineInputBorder(
@@ -533,7 +601,14 @@ class _StepPersonalInfo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Text('Gender', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textBody)),
+        Text(
+          'Gender',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _textBody,
+          ),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
@@ -544,11 +619,17 @@ class _StepPersonalInfo extends StatelessWidget {
               onTap: () => onGender(g),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: sel ? _primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
-                  border: Border.all(color: sel ? _primary : const Color(0xFFE2E8F0), width: 1.5),
+                  border: Border.all(
+                    color: sel ? _primary : const Color(0xFFE2E8F0),
+                    width: 1.5,
+                  ),
                 ),
                 child: Text(
                   g,
@@ -600,35 +681,66 @@ class _StepPersonalInfo extends StatelessWidget {
 // ── Step 1: Health profile ───────────────────────────────────────────────────
 
 class _StepHealthProfile extends StatelessWidget {
-  final Set<String>        conditions;
+  final Set<String> conditions;
   final ValueChanged<String> onToggleCondition;
-  final double             calorieGoal;
+  final double calorieGoal;
   final ValueChanged<double> onCalorie;
+  final TextEditingController cholesterolCtrl;
+  final TextEditingController saturatedFatCtrl;
+  final TextEditingController sodiumCtrl;
+  final TextEditingController sugarCtrl;
 
   const _StepHealthProfile({
     required this.conditions,
     required this.onToggleCondition,
     required this.calorieGoal,
     required this.onCalorie,
+    required this.cholesterolCtrl,
+    required this.saturatedFatCtrl,
+    required this.sodiumCtrl,
+    required this.sugarCtrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    const options = ['Diabetes', 'Hypertension', 'High cholesterol', 'Heart disease', 'Kidney disease', 'None'];
+    const options = [
+      'Diabetes',
+      'Hypertension',
+      'High cholesterol',
+      'Heart disease',
+      'Kidney disease',
+      'None',
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           AppStrings.yourHealthProfile,
-          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _textTitle),
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: _textTitle,
+          ),
         ),
         const SizedBox(height: 6),
-        Text(AppStrings.personaliseAlerts,
-            style: GoogleFonts.inter(fontSize: 13, color: _textMuted, height: 1.6)),
+        Text(
+          AppStrings.personaliseAlerts,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: _textMuted,
+            height: 1.6,
+          ),
+        ),
         const SizedBox(height: 16),
-        Text(AppStrings.chronicConditionsQ,
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _textBody)),
+        Text(
+          AppStrings.chronicConditionsQ,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _textBody,
+          ),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 10,
@@ -639,11 +751,17 @@ class _StepHealthProfile extends StatelessWidget {
               onTap: () => onToggleCondition(c),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: sel ? _primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
-                  border: Border.all(color: sel ? _primary : const Color(0xFFE2E8F0), width: 1.5),
+                  border: Border.all(
+                    color: sel ? _primary : const Color(0xFFE2E8F0),
+                    width: 1.5,
+                  ),
                 ),
                 child: Text(
                   c,
@@ -658,12 +776,22 @@ class _StepHealthProfile extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: 20),
-        Text(AppStrings.dailyCalorieGoal,
-            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _textBody)),
+        Text(
+          AppStrings.dailyCalorieGoal,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _textBody,
+          ),
+        ),
         const SizedBox(height: 6),
         Text(
           AppStrings.kcal(calorieGoal.toInt()),
-          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: _primary),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: _primary,
+          ),
         ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
@@ -681,7 +809,63 @@ class _StepHealthProfile extends StatelessWidget {
             onChanged: onCalorie,
           ),
         ),
+        const SizedBox(height: 24),
+        Text(
+          'Daily Nutrient Limits (for alerts)',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _textBody,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _limitField(
+          controller: cholesterolCtrl,
+          label: 'Cholesterol (mg)',
+          icon: Icons.monitor_heart_outlined,
+        ),
+        const SizedBox(height: 12),
+        _limitField(
+          controller: saturatedFatCtrl,
+          label: 'Saturated Fat (g)',
+          icon: Icons.fastfood_outlined,
+        ),
+        const SizedBox(height: 12),
+        _limitField(
+          controller: sodiumCtrl,
+          label: 'Sodium (mg)',
+          icon: Icons.water_drop_outlined,
+        ),
+        const SizedBox(height: 12),
+        _limitField(
+          controller: sugarCtrl,
+          label: 'Sugar (g)',
+          icon: Icons.cake_outlined,
+        ),
       ],
+    );
+  }
+
+  Widget _limitField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      style: GoogleFonts.inter(fontSize: 14, color: _textTitle),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: _textMuted),
+        prefixIcon: Icon(icon, color: _primary, size: 20),
+        filled: true,
+        fillColor: _softBg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          borderSide: BorderSide.none,
+        ),
+      ),
     );
   }
 }
@@ -716,7 +900,11 @@ class _StepPreferences extends StatelessWidget {
       children: [
         Text(
           AppStrings.notificationPreferences,
-          style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w600, color: _textTitle),
+          style: GoogleFonts.playfairDisplay(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: _textTitle,
+          ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -732,8 +920,14 @@ class _StepPreferences extends StatelessWidget {
                 onChanged: onNotifyDaily,
                 activeThumbColor: _primary,
                 activeTrackColor: _softBg,
-                title: Text(AppStrings.dailyIntakeSummary,
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
+                title: Text(
+                  AppStrings.dailyIntakeSummary,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _textTitle,
+                  ),
+                ),
               ),
               Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
@@ -741,8 +935,14 @@ class _StepPreferences extends StatelessWidget {
                 onChanged: onNotifyAllergens,
                 activeThumbColor: _primary,
                 activeTrackColor: _softBg,
-                title: Text(AppStrings.allergenAlerts,
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
+                title: Text(
+                  AppStrings.allergenAlerts,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _textTitle,
+                  ),
+                ),
               ),
               Divider(color: _softBg, thickness: 0.5, height: 0.5),
               SwitchListTile(
@@ -750,8 +950,14 @@ class _StepPreferences extends StatelessWidget {
                 onChanged: onNotifyWeekly,
                 activeThumbColor: _primary,
                 activeTrackColor: _softBg,
-                title: Text(AppStrings.weeklyHealthReport,
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _textTitle)),
+                title: Text(
+                  AppStrings.weeklyHealthReport,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _textTitle,
+                  ),
+                ),
               ),
             ],
           ),
@@ -799,18 +1005,42 @@ class _BlobPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final angle = t * 2 * math.pi;
-    final c1 = Offset(size.width * 0.15 + math.cos(angle) * 20, size.height * 0.35 + math.sin(angle) * 15);
-    canvas.drawCircle(c1, size.width * 0.5, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)));
-    final c2 = Offset(size.width * 0.85 + math.sin(angle * 0.7) * 18, size.height * 0.6 + math.cos(angle * 0.7) * 22);
-    canvas.drawCircle(c2, size.width * 0.4, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)));
-    final c3 = Offset(size.width * 0.5 + math.cos(angle * 1.4) * 14, size.height * 0.2 + math.sin(angle * 1.4) * 10);
-    canvas.drawCircle(c3, size.width * 0.3, Paint()
-      ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent])
-          .createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)));
+    final c1 = Offset(
+      size.width * 0.15 + math.cos(angle) * 20,
+      size.height * 0.35 + math.sin(angle) * 15,
+    );
+    canvas.drawCircle(
+      c1,
+      size.width * 0.5,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.10), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c1, radius: size.width * 0.5)),
+    );
+    final c2 = Offset(
+      size.width * 0.85 + math.sin(angle * 0.7) * 18,
+      size.height * 0.6 + math.cos(angle * 0.7) * 22,
+    );
+    canvas.drawCircle(
+      c2,
+      size.width * 0.4,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c2, radius: size.width * 0.4)),
+    );
+    final c3 = Offset(
+      size.width * 0.5 + math.cos(angle * 1.4) * 14,
+      size.height * 0.2 + math.sin(angle * 1.4) * 10,
+    );
+    canvas.drawCircle(
+      c3,
+      size.width * 0.3,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: c3, radius: size.width * 0.3)),
+    );
   }
 
   @override

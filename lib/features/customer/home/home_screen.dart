@@ -13,17 +13,19 @@ import '../../../core/models/scan_history_item.dart';
 import '../../../providers/alerts_provider.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../widgets/animated_chat_fab.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary = Color(0xFFA78BFA);
-const _kDeep = Color(0xFF7C3AED);
-const _kSurface = Color(0xFFF5F3FF);
-const _kSoftBg = Color(0xFFEDE9FE);
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
 const _kLilac = Color(0xFFF3F0FF);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
-const _kBlob1 = Color(0xFFC4B5FD);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
+const _kBlob1 = Color(0xFFEFCCE0);
+const _kBlob2 = Color(0xFFDDD6FE);
 const _kFresh = Color(0xFF52C98A);
 const _kWarning = Color(0xFFFFAB5B);
 const _kDanger = Color(0xFFFF7070);
@@ -65,12 +67,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // ── Pure logic helpers (unchanged) ────────────────────────────────────────
-
   String _greetingForHour(int hour) {
     if (hour < 12) return 'Good morning,';
     if (hour < 18) return 'Good afternoon,';
     return 'Good evening,';
+  }
+
+  String _initials(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    String firstChar(String s) {
+      final t = s.trim();
+      return t.isEmpty ? '' : t.substring(0, 1).toUpperCase();
+    }
+
+    return (firstChar(parts.first) +
+            (parts.length > 1 ? firstChar(parts[1]) : ''))
+        .trim();
   }
 
   double _overallDailyPct(Map<String, double> values) {
@@ -218,8 +236,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return 'Low';
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
@@ -274,6 +290,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: _kSurface,
+      floatingActionButton: AnimatedChatFab(
+        color: const Color(0xFF45C4B0),
+        label: 'Ask Nora',
+        icon: Icons.psychology_rounded,
+        onTap: () => context.go('/customer/nutritionist'),
+      ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -287,9 +309,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Color(0xFF7C3AED),
-                        Color(0xFFA78BFA),
-                        Color(0xFFC4B5FD),
+                        Color(0xFFB27589),
+                        Color(0xFFD9899F),
+                        Color(0xFFEFCCE0),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -457,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: IgnorePointer(
                       child: AnimatedBuilder(
                         animation: _motionController,
-                        builder: (_, _) => CustomPaint(
+                        builder: (_, __) => CustomPaint(
                           painter: _BlobPainter(
                             _motionController.value,
                             _kBlob1,
@@ -493,8 +515,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
                     childAspectRatio: 1.05,
                     children: List.generate(4, (index) {
                       final labels = const [
@@ -523,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     onTap: () => context.go(AppRoutes.customerScan),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _kSoftBg,
                         borderRadius: BorderRadius.circular(12),
@@ -533,7 +555,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       child: Center(
                         child: Text(
-                          '＋  Scan your next meal to update',
+                          '＋ Scan your next meal to update',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -547,7 +569,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
 
-            // ── Alerts ───────────────────────────────────────────────────────
+            // ── Alerts ──────────────────────────────────────────────────────
             if (alertCards.isNotEmpty) ...[
               _SectionTitle(
                 title: 'Your alerts',
@@ -561,7 +583,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: alertCards.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
                   itemBuilder: (context, index) =>
                       _AlertCard(data: alertCards[index]),
                 ),
@@ -609,11 +631,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       onTap: () => context.go(AppRoutes.customerHistory),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.psychology_rounded,
+                      label: 'Ask Nora',
+                      color: const Color(0xFF45C4B0),
+                      backgroundColor: const Color(0xFFE0F7F2),
+                      onTap: () => context.go('/customer/nutritionist'),
+                    ),
+                  ),
                 ],
               ),
             ),
 
-            // ── Today's tip ──────────────────────────────────────────────────
+            // ── Today's tip ─────────────────────────────────────────────────
             const SizedBox(height: 8),
             _SectionTitle(title: "Today's tip", actionLabel: null, onTap: null),
             _TipCard(title: tipTitle, body: tip),
@@ -675,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    height: 64,
+                    height: 58,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: List.generate(7, (index) {
@@ -700,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               AnimatedBuilder(
                                 animation: _motionController,
-                                builder: (_, _) {
+                                builder: (_, __) {
                                   final wave = math.sin(
                                     _motionController.value * 2 * math.pi +
                                         index * 0.8,
@@ -710,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       milliseconds: 260 + index * 45,
                                     ),
                                     curve: Curves.easeOutCubic,
-                                    height: (barH + wave * 5).clamp(6.0, 50.0),
+                                    height: (barH + wave * 5).clamp(6.0, 42.0),
                                     margin: const EdgeInsets.symmetric(
                                       horizontal: 4,
                                     ),
@@ -729,13 +761,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                labels[index],
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: _kTextMuted,
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    labels[index],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      color: _kTextMuted,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -747,7 +783,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
             ),
-
             const SizedBox(height: 120),
           ],
         ),
@@ -851,7 +886,7 @@ class _HealthScoreRing extends StatelessWidget {
           _label,
           style: GoogleFonts.inter(
             fontSize: 11,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: _color,
           ),
         ),
@@ -865,17 +900,19 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   final String? actionLabel;
   final VoidCallback? onTap;
+  final double topPadding;
 
   const _SectionTitle({
     required this.title,
     required this.actionLabel,
     required this.onTap,
+    this.topPadding = 20,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, topPadding, 16, 8),
       child: Row(
         children: [
           Expanded(
@@ -933,8 +970,8 @@ class _PastelCard extends StatelessWidget {
 class _ProgressTile extends StatelessWidget {
   final String label;
   final IconData icon;
-  final double   value;
-  final Color    color;
+  final double value;
+  final Color color;
 
   const _ProgressTile({
     required this.label,
@@ -1042,7 +1079,7 @@ class _ScanBannerState extends State<_ScanBanner>
             padding: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1140,7 +1177,7 @@ class _AlertCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadii.md),
@@ -1157,7 +1194,7 @@ class _AlertCard extends StatelessWidget {
               color: data.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(data.icon, color: data.color, size: 16),
+            child: Icon(data.icon, color: data.color, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1172,7 +1209,7 @@ class _AlertCard extends StatelessWidget {
                     color: _kTextTitle,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   data.subtitle,
                   style: GoogleFonts.inter(fontSize: 11, color: _kTextMuted),
@@ -1191,11 +1228,15 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? color;
+  final Color? backgroundColor;
 
   const _QuickAction({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.color,
+    this.backgroundColor,
   });
 
   @override
@@ -1204,7 +1245,7 @@ class _QuickAction extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.md),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppRadii.md),
@@ -1213,13 +1254,13 @@ class _QuickAction extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: _kSoftBg,
+                color: backgroundColor ?? _kSoftBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: _kPrimary, size: 22),
+              child: Icon(icon, color: color ?? _kPrimary, size: 22),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1248,10 +1289,9 @@ class _TipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // AI insight pill spec: darkest primary bg, ✦ star, primaryLight text
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [_kSoftBg, _kLilac],
@@ -1309,7 +1349,7 @@ class _TipCard extends StatelessWidget {
                     color: _kTextTitle,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   body,
                   maxLines: 3,
@@ -1374,18 +1414,17 @@ class _RecentScanTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icon thumb — follows item card spec: 36×36, surfaceTint bg, radiusThumb 12
               Hero(
                 tag: 'dish-${item.id}',
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: color.withValues(alpha: 0.25)),
                   ),
-                  child: Icon(Icons.restaurant_menu, color: color, size: 22),
+                  child: Icon(Icons.restaurant_menu, color: color, size: 26),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1401,7 +1440,7 @@ class _RecentScanTile extends StatelessWidget {
                         color: _kTextTitle,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       ScanHistoryItem.timeAgo(item.scannedAt),
                       style: GoogleFonts.inter(
@@ -1428,7 +1467,6 @@ class _RecentScanTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -1457,17 +1495,17 @@ class _RiskBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.25), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,
         style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
           color: color,
         ),
       ),
@@ -1495,8 +1533,8 @@ class _MetricPill extends StatelessWidget {
       child: Text(
         label,
         style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
           color: color,
         ),
       ),
@@ -1504,7 +1542,7 @@ class _MetricPill extends StatelessWidget {
   }
 }
 
-// ── Stagger-in (unchanged logic) ───────────────────────────────────────────────
+// ── Stagger-in animation ───────────────────────────────────────────────────────
 class _StaggerIn extends StatelessWidget {
   final AnimationController controller;
   final int index;

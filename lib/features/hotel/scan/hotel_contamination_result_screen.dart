@@ -33,7 +33,9 @@ class HotelContaminationResultScreen extends StatelessWidget {
       detections: result.detections.map((d) => d.label).toList(growable: false),
       onPrimary: () => context.go(AppRoutes.hotelDashboard),
       onScanAgain: () => context.go(AppRoutes.hotelContaminationScan),
-      onBack: () => context.pop(),
+      onBack: () => context.canPop()
+          ? context.pop()
+          : context.go(AppRoutes.hotelDashboard),
     );
   }
 }

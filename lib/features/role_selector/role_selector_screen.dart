@@ -11,26 +11,26 @@ import '../../core/constants.dart';
 import '../../providers/venue_type_provider.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _kBg         = Color(0xFFFCFEF1); // yellow-green tinted white
-const _kLakeMist   = Color(0xFFC8BAB4);
-const _kTextTitle  = Color(0xFF26201B);
-const _kTextBody   = Color(0xFF5C4F48);
-const _kTextMuted  = Color(0xFF8C7E78);
+const _kBg = Color(0xFFFCFEF1); // yellow-green tinted white
+const _kLakeMist = Color(0xFFC8BAB4);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
 
-const _kCustPrimary  = Color(0xFFD9899F);
-const _kCustDeep     = Color(0xFFB27589);
-const _kCustSurface  = Color(0xFFF9E9F2);
-const _kCustBorder   = Color(0xFFEFCCE0);
+const _kCustPrimary = Color(0xFFD9899F);
+const _kCustDeep = Color(0xFFB27589);
+const _kCustSurface = Color(0xFFF9E9F2);
+const _kCustBorder = Color(0xFFEFCCE0);
 
-const _kRestPrimary  = Color(0xFF8FA84A);
-const _kRestDeep     = Color(0xFF5A7030);
-const _kRestSurface  = Color(0xFFE3E8D1);
-const _kRestBorder   = Color(0xFFC0D089);
+const _kRestPrimary = Color(0xFF8FA84A);
+const _kRestDeep = Color(0xFF5A7030);
+const _kRestSurface = Color(0xFFE3E8D1);
+const _kRestBorder = Color(0xFFC0D089);
 
 const _kHotelPrimary = Color(0xFF5A9FC9);
-const _kHotelDeep    = Color(0xFF35658F);
+const _kHotelDeep = Color(0xFF35658F);
 const _kHotelSurface = Color(0xFFD9E9F5);
-const _kHotelBorder  = Color(0xFFA8C8E1);
+const _kHotelBorder = Color(0xFFA8C8E1);
 
 class RoleSelectorScreen extends StatefulWidget {
   const RoleSelectorScreen({super.key});
@@ -85,9 +85,8 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
         children: [
           AnimatedBuilder(
             animation: _blobAnim,
-            builder: (_, _) => CustomPaint(
-              painter: _BlobBgPainter(_blobAnim.value),
-            ),
+            builder: (_, __) =>
+                CustomPaint(painter: _BlobBgPainter(_blobAnim.value)),
           ),
 
           SafeArea(
@@ -223,7 +222,8 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              width: 6, height: 6,
+                              width: 6,
+                              height: 6,
                               decoration: BoxDecoration(
                                 color: _kCustPrimary.withOpacity(0.60),
                                 shape: BoxShape.circle,
@@ -239,7 +239,8 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              width: 6, height: 6,
+                              width: 6,
+                              height: 6,
                               decoration: BoxDecoration(
                                 color: _kRestPrimary.withOpacity(0.60),
                                 shape: BoxShape.circle,
@@ -264,28 +265,36 @@ class _LogoBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 78, height: 78,
+      width: 78,
+      height: 78,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Container(
-            width: 78, height: 78,
+            width: 78,
+            height: 78,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: _kHotelPrimary.withOpacity(0.30), width: 1.5),
+                color: _kHotelPrimary.withOpacity(0.30),
+                width: 1.5,
+              ),
             ),
           ),
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: _kRestPrimary.withOpacity(0.35), width: 1.5),
+                color: _kRestPrimary.withOpacity(0.35),
+                width: 1.5,
+              ),
             ),
           ),
           Container(
-            width: 52, height: 52,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _kCustPrimary,
@@ -340,136 +349,148 @@ class _RoleCardState extends State<_RoleCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 130),
-        child: Container(
-          decoration: BoxDecoration(
-            color: widget.surfaceColor,
-            borderRadius: BorderRadius.circular(AppRadii.innerCard),
-            border: Border.all(color: widget.borderColor, width: 1.3),
-            boxShadow: [
-              BoxShadow(
-                color: widget.primary.withOpacity(0.13),
-                blurRadius: 18,
-                offset: const Offset(0, 5),
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.97 : 1.0,
+            duration: const Duration(milliseconds: 130),
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.surfaceColor,
+                borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                border: Border.all(color: widget.borderColor, width: 1.3),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.primary.withOpacity(0.13),
+                    blurRadius: 18,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
-            ],
-          ),
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
+              padding: const EdgeInsets.all(18),
+              child: Row(
                 children: [
-                  Container(
-                    width: 54, height: 54,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.primary,
-                      boxShadow: [
-                        BoxShadow(
-                          color: widget.primary.withOpacity(0.28),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: widget.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.primary.withOpacity(0.28),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(widget.icon, color: Colors.white, size: 24),
+                      ),
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: widget.accentDots[0],
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: widget.surfaceColor,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -2,
+                        left: -2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: widget.accentDots[1].withOpacity(0.75),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: widget.surfaceColor,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.subtitle,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 12,
+                            color: _kTextBody,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _AccentPill(color: widget.primary),
+                            const SizedBox(width: 4),
+                            _AccentPill(color: widget.accentDots[0]),
+                            const SizedBox(width: 4),
+                            _AccentPill(color: widget.accentDots[1]),
+                          ],
                         ),
                       ],
                     ),
-                    child: Icon(widget.icon, color: Colors.white, size: 24),
                   ),
-                  Positioned(
-                    top: -2, right: -2,
-                    child: Container(
-                      width: 10, height: 10,
-                      decoration: BoxDecoration(
-                        color: widget.accentDots[0],
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: widget.surfaceColor, width: 1.5),
-                      ),
+
+                  const SizedBox(width: 12),
+
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: widget.primary.withOpacity(0.14),
+                      shape: BoxShape.circle,
                     ),
-                  ),
-                  Positioned(
-                    bottom: -2, left: -2,
-                    child: Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(
-                        color: widget.accentDots[1].withOpacity(0.75),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: widget.surfaceColor, width: 1.5),
-                      ),
+                    child: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: widget.deep,
+                      size: 14,
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(width: 16),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: _kTextTitle,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.subtitle,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        color: _kTextBody,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _AccentPill(color: widget.primary),
-                        const SizedBox(width: 4),
-                        _AccentPill(color: widget.accentDots[0]),
-                        const SizedBox(width: 4),
-                        _AccentPill(color: widget.accentDots[1]),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color: widget.primary.withOpacity(0.14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: widget.deep,
-                  size: 14,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    )
+        )
         .animate()
         .fadeIn(
-            delay: Duration(milliseconds: widget.delay), duration: 500.ms)
+          delay: Duration(milliseconds: widget.delay),
+          duration: 500.ms,
+        )
         .slideY(
           begin: 0.15,
           end: 0,
@@ -487,7 +508,8 @@ class _AccentPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 18, height: 4,
+      width: 18,
+      height: 4,
       decoration: BoxDecoration(
         color: color.withOpacity(0.55),
         borderRadius: BorderRadius.circular(2),
@@ -503,7 +525,8 @@ class _DividerDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 7, height: 7,
+      width: 7,
+      height: 7,
       decoration: BoxDecoration(
         color: color.withOpacity(0.65),
         shape: BoxShape.circle,
@@ -516,7 +539,8 @@ class _DividerLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 28, height: 1,
+      width: 28,
+      height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 5),
       color: _kLakeMist,
     );
@@ -533,31 +557,43 @@ class _BlobBgPainter extends CustomPainter {
 
     void blob(double cx, double cy, double r, Color c, double op) {
       final center = Offset(cx, cy);
-      canvas.drawCircle(center, r,
-        Paint()..shader = RadialGradient(
-          colors: [c.withOpacity(op), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: center, radius: r)));
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [c.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: center, radius: r)),
+      );
     }
 
     blob(
       size.width * 0.12 + math.cos(angle) * 24,
       size.height * 0.18 + math.sin(angle) * 18,
-      size.width * 0.50, _kCustPrimary, 0.11,
+      size.width * 0.50,
+      _kCustPrimary,
+      0.11,
     );
     blob(
       size.width * 0.88 + math.sin(angle * 0.7) * 22,
       size.height * 0.70 + math.cos(angle * 0.7) * 26,
-      size.width * 0.45, _kRestPrimary, 0.09,
+      size.width * 0.45,
+      _kRestPrimary,
+      0.09,
     );
     blob(
       size.width * 0.5 + math.sin(angle * 1.2) * 18,
       size.height * 0.48 + math.cos(angle * 1.0) * 22,
-      size.width * 0.32, _kHotelPrimary, 0.08,
+      size.width * 0.32,
+      _kHotelPrimary,
+      0.08,
     );
     blob(
       size.width * 0.80 + math.cos(angle * 0.9) * 20,
       size.height * 0.12 + math.sin(angle * 1.1) * 16,
-      size.width * 0.30, const Color(0xFFEDD5A8), 0.35,
+      size.width * 0.30,
+      const Color(0xFFEDD5A8),
+      0.35,
     );
   }
 

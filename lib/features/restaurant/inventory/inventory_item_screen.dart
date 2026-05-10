@@ -9,14 +9,15 @@ import '../../../shared/widgets/animated_button.dart';
 import '../../../shared/widgets/freshness_badge.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextMuted = Color(0xFFB08080);
-const _warning    = Color(0xFFFFAB5B);
-const _danger     = Color(0xFFFF7070);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
+const _warning = Color(0xFFFFAB5B);
+const _danger = Color(0xFFFF7070);
 
 class InventoryItemScreen extends StatelessWidget {
   final String id;
@@ -40,7 +41,7 @@ class InventoryItemScreen extends StatelessWidget {
               primary: _rDeep,
               onPrimary: Colors.white,
               surface: Colors.white,
-              onSurface: Color(0xFF3D1515),
+              onSurface: Color(0xFF26201B),
             ),
           ),
           child: child!,
@@ -53,9 +54,9 @@ class InventoryItemScreen extends StatelessWidget {
     await provider.updateExpiryDate(id, picked);
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppStrings.ok)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(AppStrings.ok)));
   }
 
   Widget _buildHeader(BuildContext context, String title) {
@@ -76,7 +77,8 @@ class InventoryItemScreen extends StatelessWidget {
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
-              width: 38, height: 38,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -138,9 +140,7 @@ class InventoryItemScreen extends StatelessWidget {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
@@ -179,10 +179,7 @@ class InventoryItemScreen extends StatelessWidget {
                             '${it.quantity.toStringAsFixed(it.quantity % 1 == 0 ? 0 : 1)} ${it.unit}',
                       ),
                       const SizedBox(height: 10),
-                      _InfoTile(
-                        label: AppStrings.expiry,
-                        value: date,
-                      ),
+                      _InfoTile(label: AppStrings.expiry, value: date),
                       const SizedBox(height: 10),
                       _InfoTile(
                         label: AppStrings.status,
@@ -205,8 +202,7 @@ class InventoryItemScreen extends StatelessWidget {
                               label: AppStrings.keep,
                               color: const Color(0xFF52C98A),
                               textColor: Colors.white,
-                              onTap: () =>
-                                  provider.updateStatus(id, 'fresh'),
+                              onTap: () => provider.updateStatus(id, 'fresh'),
                               height: 48,
                             ),
                           ),
@@ -252,11 +248,7 @@ class _InfoTile extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _InfoTile({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoTile({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -265,8 +257,7 @@ class _InfoTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: _rSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
+        border: Border.all(color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
       ),
       child: Row(
         children: [

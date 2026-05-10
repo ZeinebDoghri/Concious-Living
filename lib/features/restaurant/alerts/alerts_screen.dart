@@ -7,17 +7,17 @@ import '../../../core/constants.dart';
 import '../../../providers/alerts_provider.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary   = Color(0xFFF2A7A7);
-const _rDeep      = Color(0xFFE47878);
-const _rSurface   = Color(0xFFFFF5F5);
-const _rSoftBg    = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody  = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
-const _danger     = Color(0xFFFF7070);
-const _dangerBg   = Color(0xFFFFEEEE);
-const _fresh      = Color(0xFF52C98A);
-const _freshBg    = Color(0xFFE8F9F1);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
+const _danger = Color(0xFFFF7070);
+const _dangerBg = Color(0xFFFFEEEE);
+const _fresh = Color(0xFF52C98A);
+const _freshBg = Color(0xFFE8F9F1);
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -49,8 +49,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   colors: [_rSoftBg, _rSurface],
                 ),
                 border: Border(
-                  bottom: BorderSide(
-                      color: _rPrimary.withValues(alpha: 0.2)),
+                  bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Column(
@@ -69,7 +68,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: provider.pendingCount > 0
                               ? _dangerBg
@@ -81,9 +82,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: provider.pendingCount > 0
-                                ? _danger
-                                : _fresh,
+                            color: provider.pendingCount > 0 ? _danger : _fresh,
                           ),
                         ),
                       ),
@@ -97,9 +96,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Column(
                   children: [
@@ -112,15 +109,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
                           _FilterTab(
                             label: AppStrings.pending,
                             selected: _filter == 'pending',
-                            onTap: () =>
-                                setState(() => _filter = 'pending'),
+                            onTap: () => setState(() => _filter = 'pending'),
                           ),
                           const SizedBox(width: 10),
                           _FilterTab(
                             label: AppStrings.resolved,
                             selected: _filter == 'resolved',
-                            onTap: () =>
-                                setState(() => _filter = 'resolved'),
+                            onTap: () => setState(() => _filter = 'resolved'),
                           ),
                           const Spacer(),
                         ],
@@ -138,7 +133,8 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                 return TweenAnimationBuilder<double>(
                                   tween: Tween(begin: 0, end: 1),
                                   duration: Duration(
-                                      milliseconds: 250 + (index * 35)),
+                                    milliseconds: 250 + (index * 35),
+                                  ),
                                   curve: Curves.easeOutCubic,
                                   builder: (context, v, child) {
                                     return Opacity(
@@ -151,28 +147,25 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                   },
                                   child: GestureDetector(
                                     onTap: () => context.go(
-                                        AppRoutes.restaurantAlertDetail(
-                                            a.id)),
+                                      AppRoutes.restaurantAlertDetail(a.id),
+                                    ),
                                     child: Container(
-                                      margin:
-                                          const EdgeInsets.only(bottom: 12),
+                                      margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: a.status == 'pending'
-                                              ? _rPrimary
-                                                  .withValues(alpha: 0.3)
-                                              : _fresh
-                                                  .withValues(alpha: 0.3),
+                                              ? _rPrimary.withValues(alpha: 0.3)
+                                              : _fresh.withValues(alpha: 0.3),
                                           width: 0.8,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: _rPrimary
-                                                .withValues(alpha: 0.06),
+                                            color: _rPrimary.withValues(
+                                              alpha: 0.06,
+                                            ),
                                             blurRadius: 10,
                                             offset: const Offset(0, 3),
                                           ),
@@ -195,8 +188,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                             ),
                                             child: Icon(
                                               a.status == 'pending'
-                                                  ? Icons
-                                                      .warning_amber_rounded
+                                                  ? Icons.warning_amber_rounded
                                                   : Icons.check_circle_rounded,
                                               color: a.status == 'pending'
                                                   ? _danger
@@ -232,17 +224,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                                 Container(
                                                   padding:
                                                       const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                          vertical: 3),
+                                                        horizontal: 8,
+                                                        vertical: 3,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: _dangerBg,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            8),
+                                                          8,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     AppStrings.containsAllergen(
-                                                        a.allergen),
+                                                      a.allergen,
+                                                    ),
                                                     style: GoogleFonts.inter(
                                                       fontSize: 11,
                                                       fontWeight:
@@ -255,8 +250,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
                                               ],
                                             ),
                                           ),
-                                          Icon(Icons.chevron_right,
-                                              color: _rTextMuted),
+                                          Icon(
+                                            Icons.chevron_right,
+                                            color: _rTextMuted,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -293,8 +290,7 @@ class _FilterTab extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? _rSoftBg : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -330,10 +326,7 @@ class _EmptyAlerts extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: BoxDecoration(
-              color: _rSoftBg,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: _rSoftBg, shape: BoxShape.circle),
             child: Icon(
               filter == 'pending'
                   ? Icons.notifications_off_outlined

@@ -12,17 +12,16 @@ import '../../../providers/user_provider.dart';
 import '../../../providers/venue_type_provider.dart';
 
 // ── Customer — Twilight Lupine (rosy terracotta) ───────────────────────────────
-const _kBg       = Color(0xFFFDF5F4); // lightest tint of customer rose
-const _kPrimary  = Color(0xFFD9899F);
-const _kDeep     = Color(0xFFB27589);
-const _kSoftBg   = Color(0xFFF9E9F2);
-const _kBorder   = Color(0xFFEFCCE0);
-const _kTitle    = Color(0xFF26201B);
-const _kMuted    = Color(0xFF8C7E78);
-const _kBody     = Color(0xFF5C4F48);
+const _kBg = Color(0xFFFDF5F4); // lightest tint of customer rose
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kBorder = Color(0xFFEFCCE0);
+const _kTitle = Color(0xFF26201B);
+const _kMuted = Color(0xFF8C7E78);
 
 // accent dots from other roles
-const _kRestAccent  = Color(0xFF8FA84A);
+const _kRestAccent = Color(0xFF8FA84A);
 const _kHotelAccent = Color(0xFF5A9FC9);
 
 class CustomerRegisterScreen extends StatefulWidget {
@@ -34,17 +33,17 @@ class CustomerRegisterScreen extends StatefulWidget {
 
 class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _nameCtrl      = TextEditingController();
-  final _emailCtrl     = TextEditingController();
-  final _passwordCtrl  = TextEditingController();
-  final _confirmCtrl   = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
 
   final _passwordFocus = FocusNode();
 
-  bool _obscure   = true;
-  bool _obscure2  = true;
+  bool _obscure = true;
+  bool _obscure2 = true;
   bool _isLoading = false;
-  bool _pressed   = false;
+  bool _pressed = false;
 
   String? _emailError;
 
@@ -86,7 +85,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   int _passwordStrength(String v) {
     if (v.isEmpty) return 0;
     int score = 0;
-    if (v.length >= 6)  score++;
+    if (v.length >= 6) score++;
     if (v.length >= 10) score++;
     if (RegExp(r'[A-Z]').hasMatch(v)) score++;
     if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
@@ -98,6 +97,38 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
+  void _showRegisterError(Object error) {
+    final message = _readable(error);
+    String snackMessage = message;
+    String? actionLabel;
+    String? actionRoute;
+
+    if (message.toLowerCase().contains('already in use')) {
+      snackMessage = 'This email is already registered.';
+      actionLabel = 'Sign In';
+      actionRoute = AppRoutes.customerLogin;
+    } else if (message.toLowerCase().contains('weak')) {
+      snackMessage = 'Password too weak (minimum 6 characters).';
+    } else if (message.toLowerCase().contains('valid email')) {
+      snackMessage = 'Invalid email address.';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(snackMessage),
+        action: actionLabel == null
+            ? null
+            : SnackBarAction(
+                label: actionLabel,
+                textColor: Colors.white,
+                onPressed: () => context.go(actionRoute!),
+              ),
+        duration: const Duration(seconds: 5),
+        backgroundColor: const Color(0xFFFF6B8A),
+      ),
+    );
+  }
+
   String _readable(Object e) {
     final s = e.toString();
     if (s.startsWith('Exception: ')) return s.substring(11);
@@ -108,23 +139,27 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   Future<void> _createAccount() async {
     if (_isLoading) return;
     HapticFeedback.selectionClick();
-    
-    final name     = _nameCtrl.text.trim();
-    final email    = _emailCtrl.text.trim();
+
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
-    final confirm  = _confirmCtrl.text;
+    final confirm = _confirmCtrl.text;
 
     if (name.isEmpty) {
-      _snack(AppStrings.validationRequiredField); return;
+      _snack(AppStrings.validationRequiredField);
+      return;
     }
     if (email.isEmpty || !email.contains('@')) {
-      _snack(AppStrings.validationInvalidEmail); return;
+      _snack(AppStrings.validationInvalidEmail);
+      return;
     }
     if (password.length < 6) {
-      _snack(AppStrings.validationPasswordMin); return;
+      _snack(AppStrings.validationPasswordMin);
+      return;
     }
     if (password != confirm) {
-      _snack(AppStrings.validationPasswordsMismatch); return;
+      _snack(AppStrings.validationPasswordsMismatch);
+      return;
     }
 
     setState(() => _isLoading = true);
@@ -139,7 +174,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
       if (!mounted) return;
       context.go(AppRoutes.customerProfileSetup);
     } catch (e) {
-      _snack(_readable(e));
+      _showRegisterError(e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -148,14 +183,13 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final heroH   = screenH * 0.46;
+    final heroH = screenH * 0.46;
 
     final password = _passwordCtrl.text;
     final strength = _passwordStrength(password);
     final showStrength = _passwordFocus.hasFocus && password.isNotEmpty;
     final mismatch =
-        _confirmCtrl.text.isNotEmpty &&
-        _passwordCtrl.text != _confirmCtrl.text;
+        _confirmCtrl.text.isNotEmpty && _passwordCtrl.text != _confirmCtrl.text;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -165,24 +199,22 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
           // ── Full background blobs ────────────────────────────────────
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, _) => CustomPaint(
+            builder: (_, __) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
-              size: Size(double.infinity,
-                  MediaQuery.of(context).size.height),
+              size: Size(double.infinity, MediaQuery.of(context).size.height),
             ),
           ),
 
           // ── Hero zone ────────────────────────────────────────────────
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             height: heroH,
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    _kPrimary.withOpacity(0.92),
-                    _kDeep,
-                  ],
+                  colors: [_kPrimary.withOpacity(0.92), _kDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -192,7 +224,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                   // hero blobs
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, _) => CustomPaint(
+                    builder: (_, __) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),
@@ -230,7 +262,9 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                     bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -238,8 +272,10 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                           IconButton(
                             onPressed: () =>
                                 context.go(AppRoutes.customerLogin),
-                            icon: const Icon(Icons.arrow_back_ios_new,
-                                size: 20),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 20,
+                            ),
                             color: Colors.white,
                           ),
 
@@ -247,11 +283,9 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
 
                           // Brand + illustration
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Expanded(
                                   child: Column(
@@ -261,8 +295,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                                     children: [
                                       Text(
                                         'Fresh',
-                                        style: GoogleFonts
-                                            .cormorantGaramond(
+                                        style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -271,8 +304,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                                       ),
                                       Text(
                                         'Guard',
-                                        style: GoogleFonts
-                                            .cormorantGaramond(
+                                        style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white,
@@ -285,8 +317,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                                         style: GoogleFonts.dmSans(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white
-                                              .withOpacity(0.72),
+                                          color: Colors.white.withOpacity(0.72),
                                           letterSpacing: 2.2,
                                         ),
                                       ),
@@ -310,12 +341,14 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
           // ── Floating card ────────────────────────────────────────────
           Positioned(
             top: heroH - 26,
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.only(
-                  topLeft:  Radius.circular(32),
+                  topLeft: Radius.circular(32),
                   topRight: Radius.circular(32),
                 ),
                 boxShadow: [
@@ -336,8 +369,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                       children: [
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Join us',
@@ -361,18 +393,20 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                         // Role chip
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: _kSoftBg,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: _kBorder, width: 1),
+                            border: Border.all(color: _kBorder, width: 1),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 7, height: 7,
+                                width: 7,
+                                height: 7,
                                 decoration: const BoxDecoration(
                                   color: _kPrimary,
                                   shape: BoxShape.circle,
@@ -473,8 +507,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                       const SizedBox(height: 6),
                       Text(
                         AppStrings.validationPasswordsMismatch,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 11, color: _kDeep),
+                        style: GoogleFonts.dmSans(fontSize: 11, color: _kDeep),
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -502,15 +535,17 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                     // Already have account
                     Center(
                       child: GestureDetector(
-                        onTap: () =>
-                            context.go(AppRoutes.customerLogin),
+                        onTap: () => context.go(AppRoutes.customerLogin),
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.dmSans(
-                                fontSize: 13, color: _kMuted),
+                              fontSize: 13,
+                              color: _kMuted,
+                            ),
                             children: [
                               const TextSpan(
-                                  text: 'Already have an account?  '),
+                                text: 'Already have an account?  ',
+                              ),
                               TextSpan(
                                 text: 'Sign in',
                                 style: GoogleFonts.dmSans(
@@ -535,7 +570,8 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
   }
 
   Widget _pill(Color c) => Container(
-    width: 20, height: 4,
+    width: 20,
+    height: 4,
     decoration: BoxDecoration(
       color: c.withOpacity(0.50),
       borderRadius: BorderRadius.circular(2),
@@ -572,7 +608,8 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
                 onPressed: onToggleObscure,
                 icon: Icon(
                   obscure! ? Icons.visibility : Icons.visibility_off,
-                  color: _kMuted, size: 20,
+                  color: _kMuted,
+                  size: 20,
                 ),
               )
             : null,
@@ -597,9 +634,12 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
     required Future<void> Function() onTap,
   }) {
     return GestureDetector(
-      onTapDown:   (_) => setState(() => _pressed = true),
-      onTapUp:     (_) { setState(() => _pressed = false); onTap(); },
-      onTapCancel: ()  => setState(() => _pressed = false),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -624,9 +664,13 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen>
           alignment: Alignment.center,
           child: _isLoading
               ? const SizedBox(
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : Text(
                   label,
                   style: GoogleFonts.dmSans(
@@ -652,20 +696,34 @@ class _HeroBlobPainter extends CustomPainter {
     final angle = t * 2 * math.pi;
     void blob(double cx, double cy, double r, double op) {
       final c = Offset(cx, cy);
-      canvas.drawCircle(c, r,
-        Paint()..shader = RadialGradient(
-          colors: [Colors.white.withOpacity(op), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: c, radius: r)));
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [Colors.white.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
     }
-    blob(size.width * 0.15 + math.cos(angle) * 20,
-         size.height * 0.35 + math.sin(angle) * 15,
-         size.width * 0.5, 0.07);
-    blob(size.width * 0.85 + math.sin(angle * 0.7) * 18,
-         size.height * 0.6  + math.cos(angle * 0.7) * 22,
-         size.width * 0.4, 0.05);
-    blob(size.width * 0.5  + math.cos(angle * 1.4) * 14,
-         size.height * 0.2 + math.sin(angle * 1.4) * 10,
-         size.width * 0.3, 0.06);
+
+    blob(
+      size.width * 0.15 + math.cos(angle) * 20,
+      size.height * 0.35 + math.sin(angle) * 15,
+      size.width * 0.5,
+      0.07,
+    );
+    blob(
+      size.width * 0.85 + math.sin(angle * 0.7) * 18,
+      size.height * 0.6 + math.cos(angle * 0.7) * 22,
+      size.width * 0.4,
+      0.05,
+    );
+    blob(
+      size.width * 0.5 + math.cos(angle * 1.4) * 14,
+      size.height * 0.2 + math.sin(angle * 1.4) * 10,
+      size.width * 0.3,
+      0.06,
+    );
   }
 
   @override
@@ -682,17 +740,30 @@ class _BlobBgPainter extends CustomPainter {
     final angle = t * 2 * math.pi;
     void blob(double cx, double cy, double r, Color c, double op) {
       final center = Offset(cx, cy);
-      canvas.drawCircle(center, r,
-        Paint()..shader = RadialGradient(
-          colors: [c.withOpacity(op), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: center, radius: r)));
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [c.withOpacity(op), Colors.transparent],
+          ).createShader(Rect.fromCircle(center: center, radius: r)),
+      );
     }
-    blob(size.width * 0.85 + math.sin(angle * 0.6) * 20,
-         size.height * 0.75 + math.cos(angle * 0.6) * 24,
-         size.width * 0.40, _kPrimary, 0.07);
-    blob(size.width * 0.10 + math.cos(angle * 0.8) * 16,
-         size.height * 0.82 + math.sin(angle * 0.8) * 18,
-         size.width * 0.30, const Color(0xFF7A8B42), 0.05);
+
+    blob(
+      size.width * 0.85 + math.sin(angle * 0.6) * 20,
+      size.height * 0.75 + math.cos(angle * 0.6) * 24,
+      size.width * 0.40,
+      _kPrimary,
+      0.07,
+    );
+    blob(
+      size.width * 0.10 + math.cos(angle * 0.8) * 16,
+      size.height * 0.82 + math.sin(angle * 0.8) * 18,
+      size.width * 0.30,
+      const Color(0xFF8FA84A),
+      0.05,
+    );
   }
 
   @override
@@ -705,9 +776,11 @@ class _SaladIllustration extends StatelessWidget {
   const _SaladIllustration({required this.size});
 
   @override
-  Widget build(BuildContext context) =>
-      SizedBox(width: size, height: size,
-          child: CustomPaint(painter: _SaladPainter()));
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _SaladPainter()),
+  );
 }
 
 class _SaladPainter extends CustomPainter {
@@ -722,43 +795,76 @@ class _SaladPainter extends CustomPainter {
       ..close();
     canvas.drawPath(bowlPath, Paint()..color = const Color(0xFFF5E6C8));
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.50, h * 0.48),
-          width: w * 0.80, height: h * 0.16),
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.48),
+        width: w * 0.80,
+        height: h * 0.16,
+      ),
       Paint()..color = const Color(0xFFEDD9A3),
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.35, h * 0.42),
-          width: w * 0.30, height: h * 0.18),
+      Rect.fromCenter(
+        center: Offset(w * 0.35, h * 0.42),
+        width: w * 0.30,
+        height: h * 0.18,
+      ),
       Paint()..color = const Color(0xFF66BB6A),
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.58, h * 0.40),
-          width: w * 0.28, height: h * 0.17),
+      Rect.fromCenter(
+        center: Offset(w * 0.58, h * 0.40),
+        width: w * 0.28,
+        height: h * 0.17,
+      ),
       Paint()..color = const Color(0xFF81C784),
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.50, h * 0.36),
-          width: w * 0.26, height: h * 0.15),
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.36),
+        width: w * 0.26,
+        height: h * 0.15,
+      ),
       Paint()..color = const Color(0xFF43A047),
     );
-    canvas.drawCircle(Offset(w * 0.28, h * 0.37), w * 0.07,
-        Paint()..color = const Color(0xFFEF5350));
-    canvas.drawCircle(Offset(w * 0.67, h * 0.38), w * 0.065,
-        Paint()..color = const Color(0xFFEF5350));
-    canvas.drawCircle(Offset(w * 0.26, h * 0.35), w * 0.025,
-        Paint()..color = Colors.white.withOpacity(0.45));
-    canvas.drawCircle(Offset(w * 0.65, h * 0.36), w * 0.022,
-        Paint()..color = Colors.white.withOpacity(0.45));
+    canvas.drawCircle(
+      Offset(w * 0.28, h * 0.37),
+      w * 0.07,
+      Paint()..color = const Color(0xFFEF5350),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.67, h * 0.38),
+      w * 0.065,
+      Paint()..color = const Color(0xFFEF5350),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.26, h * 0.35),
+      w * 0.025,
+      Paint()..color = Colors.white.withOpacity(0.45),
+    );
+    canvas.drawCircle(
+      Offset(w * 0.65, h * 0.36),
+      w * 0.022,
+      Paint()..color = Colors.white.withOpacity(0.45),
+    );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.50, h * 0.43),
-          width: w * 0.18, height: h * 0.10),
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.43),
+        width: w * 0.18,
+        height: h * 0.10,
+      ),
       Paint()..color = const Color(0xFFFDD835),
     );
-    canvas.drawCircle(Offset(w * 0.72, h * 0.44), w * 0.055,
-        Paint()..color = const Color(0xFFC4736C));
+    canvas.drawCircle(
+      Offset(w * 0.72, h * 0.44),
+      w * 0.055,
+      Paint()..color = const Color(0xFFD9899F),
+    );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.50, h * 0.93),
-          width: w * 0.60, height: h * 0.07),
+      Rect.fromCenter(
+        center: Offset(w * 0.50, h * 0.93),
+        width: w * 0.60,
+        height: h * 0.07,
+      ),
       Paint()..color = Colors.black.withOpacity(0.08),
     );
   }

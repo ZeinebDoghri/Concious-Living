@@ -80,7 +80,9 @@ class _HotelContaminationScanScreenState
             : 'Product category captured',
         imagePath: _lastFile?.path,
         isLoading: provider.isLoading,
-        onBack: () => context.pop(),
+        onBack: () => context.canPop()
+            ? context.pop()
+            : context.go(AppRoutes.hotelDashboard),
         onCameraTap: () => _pick(ImageSource.camera),
         onGalleryTap: () => _pick(ImageSource.gallery),
         onInfoTap: () {

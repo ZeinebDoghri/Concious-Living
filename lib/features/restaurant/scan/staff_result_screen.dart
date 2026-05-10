@@ -3,27 +3,32 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
+import '../../../core/models/scan_result.dart';
 import '../../../core/models/waste_item_model.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/cloudinary_service.dart';
+import '../../../services/compost_ingestion_service.dart';
 import '../../../shared/widgets/freshness_badge.dart';
 import 'annotated_contamination_image.dart';
 import 'food_contamination_service.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
-const _rPrimary = Color(0xFFF2A7A7);
-const _rDeep = Color(0xFFE47878);
-const _rSurface = Color(0xFFFFF5F5);
-const _rSoftBg = Color(0xFFFFE4E4);
-const _rTextTitle = Color(0xFF3D1515);
-const _rTextBody = Color(0xFF7A4040);
-const _rTextMuted = Color(0xFFB08080);
+const _rPrimary = Color(0xFF8FA84A);
+const _rDeep = Color(0xFF5A7030);
+const _rSurface = Color(0xFFF5F8EE);
+const _rSoftBg = Color(0xFFE3E8D1);
+const _rTextTitle = Color(0xFF26201B);
+const _rTextBody = Color(0xFF5C4F48);
+const _rTextMuted = Color(0xFF8C7E78);
 const _fresh = Color(0xFF52C98A);
 const _freshBg = Color(0xFFE8F9F1);
 const _warning = Color(0xFFFFAB5B);
@@ -44,6 +49,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
   late final AnimationController _enterCtrl;
   bool _actionDone = false;
   bool _actionLoading = false;
+  bool _compostIngested = false;
 
   @override
   void initState() {
@@ -52,6 +58,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ingestCompostScan());
   }
 
   @override
@@ -89,6 +96,146 @@ class _StaffResultScreenState extends State<StaffResultScreen>
   Map<String, dynamic> get _contaminationResult =>
       (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
 
+  Future<String> _restaurantId() async {
+    final user = context.read<UserProvider>().currentUser;
+    final uid = user?.id ?? '';
+    if (uid.isEmpty) return '';
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final userData = userDoc.data() ?? <String, dynamic>{};
+    return (userData['entityId'] ??
+            userData['restaurantId'] ??
+            userData['hotelId'] ??
+            user?.entityId ??
+            user?.restaurantId ??
+            uid)
+        .toString();
+  }
+
+  Future<void> _ingestCompostScan() async {
+    if (_compostIngested) return;
+    final entityId = await _restaurantId();
+    if (entityId.isEmpty || _wasteResult.isEmpty) return;
+    _compostIngested = true;
+
+    final scan = ScanResult.fromVenueScan(
+      id: 'restaurant-${DateTime.now().millisecondsSinceEpoch}',
+      entityId: entityId,
+      timestamp: DateTime.now(),
+      wasteResult: _wasteResult,
+      compostResult: _compostResult,
+    );
+    await _saveRestaurantScan(scan);
+    await CompostIngestionService.onScanComplete(scan);
+  }
+
+  Future<void> _saveRestaurantScan(ScanResult scan) async {
+    final user = context.read<UserProvider>().currentUser;
+    final restaurantId = await _restaurantId();
+    String? imageUrl;
+    if (_imageBytes != null && _imageBytes!.isNotEmpty) {
+      imageUrl = await CloudinaryService.uploadScanImage(
+        _imageBytes!,
+        folder: 'freshguard/restaurant/$restaurantId',
+      );
+    }
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(restaurantId)
+        .collection('scans')
+        .doc(scan.id)
+        .set({
+          'id': scan.id,
+          'scanId': scan.id,
+          'timestamp': FieldValue.serverTimestamp(),
+          'imageUrl': imageUrl ?? '',
+          'scanType': _isFusion ? 'Smart scan' : 'Freshness scan',
+          'zone': widget.args['zone'] ?? 'Kitchen',
+          'entityId': restaurantId,
+          'staffName': user?.name ?? 'Staff',
+          'dishName':
+              _freshnessResult['itemName'] ??
+              _wasteResult['itemName'] ??
+              'Unknown dish',
+          'contamination_confidence': _contaminationConfidence,
+          'contamination_label': _contaminationLabel,
+          'contamination_pct': _contaminationPct,
+          'clean_pct': _cleanPct,
+          'detection_count': _detectionCount,
+          'freshness_status': _freshnessStatus,
+          'freshness_confidence': _freshnessConfidence,
+          'freshness_label': _freshnessLabel,
+          'waste_kg': _wasteKg,
+          'compostable_pct': _compostablePct,
+          'non_compostable_pct': _nonCompostablePct,
+          'riskLevel': _venueRiskLevel,
+        }, SetOptions(merge: true));
+  }
+
+  double get _contaminationConfidence =>
+      (_contaminationResult['confidence'] as num?)?.toDouble() ?? 0.0;
+
+  String get _contaminationLabel =>
+      (_contaminationResult['label'] as String?) ?? 'clean';
+
+  double get _contaminationPct {
+    final value =
+        _contaminationResult['contaminated_pct'] ??
+        _contaminationResult['contaminatedPct'] ??
+        _contaminationResult['riskPct'];
+    return (value as num?)?.toDouble() ?? 0.0;
+  }
+
+  double get _cleanPct {
+    final value = _contaminationResult['clean_pct'] ?? _contaminationResult['cleanPct'];
+    return (value as num?)?.toDouble() ?? 0.0;
+  }
+
+  int get _detectionCount {
+    final value = _contaminationResult['detection_count'];
+    if (value is num) return value.toInt();
+    final detections = _contaminationResult['detections'];
+    return detections is List ? detections.length : 0;
+  }
+
+  String get _freshnessStatus =>
+      (_freshnessResult['status'] as String?) ?? 'unknown';
+
+  double get _freshnessConfidence =>
+      (_freshnessResult['confidence'] as num?)?.toDouble() ?? 0.0;
+
+  String get _freshnessLabel =>
+      (_freshnessResult['label'] as String?) ?? 'Unknown';
+
+  double get _wasteKg {
+    final items = _wasteResult['detectedItems'];
+    if (items is! List) return 0.0;
+    return items.fold<double>(0.0, (sum, item) {
+      if (item is Map) {
+        return sum + ((item['quantityKg'] as num?)?.toDouble() ?? 0.0);
+      }
+      return sum;
+    });
+  }
+
+  double get _compostablePct =>
+      (_compostResult['compostablePct'] as num?)?.toDouble() ?? 0.0;
+
+  double get _nonCompostablePct =>
+      (_compostResult['nonCompostablePct'] as num?)?.toDouble() ?? 0.0;
+
+  String get _venueRiskLevel {
+    final contaminated =
+        (_contaminationResult['contaminatedPct'] as num?)?.toDouble() ?? 0;
+    final status = ((_freshnessResult['status'] as String?) ?? '')
+        .toLowerCase();
+    if (contaminated >= 50 || status == 'spoiled') return 'danger';
+    if (contaminated > 0 || status == 'expiring') return 'warning';
+    return 'safe';
+  }
+
   void _snack(String msg, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -113,8 +260,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     setState(() => _actionLoading = true);
 
     try {
-      final user = context.read<UserProvider>().currentUser;
-      final venueId = user?.id ?? '';
+      final venueId = await _restaurantId();
 
       // 1. Log waste items if detected
       final rawItems = _wasteResult['detectedItems'];
@@ -159,11 +305,11 @@ class _StaffResultScreenState extends State<StaffResultScreen>
         _actionDone = true;
         _actionLoading = false;
       });
-      _snack('Actions enregistrées avec succès ✓', success: true);
+      _snack('Actions saved successfully.', success: true);
     } catch (e) {
       if (!mounted) return;
       setState(() => _actionLoading = false);
-      _snack('Erreur : ${e.toString().split(':').last.trim()}');
+      _snack('Error: ${e.toString().split(':').last.trim()}');
     }
   }
 
@@ -204,7 +350,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
             leading: GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
-                context.pop();
+                context.canPop()
+                    ? context.pop()
+                    : context.go(AppRoutes.restaurantDashboard);
               },
               child: Container(
                 margin: const EdgeInsets.all(10),
@@ -287,7 +435,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Analyse complète',
+                          'Full analysis',
                           style: GoogleFonts.playfairDisplay(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -295,7 +443,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                           ),
                         ),
                         Text(
-                          '3 IA · fraîcheur · déchets · compost',
+                          '3 AI � freshness � waste � compost',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -395,7 +543,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    context.pop();
+                    context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.restaurantDashboard);
                   },
                   child: Container(
                     height: 50,
@@ -436,10 +586,10 @@ class _StaffResultScreenState extends State<StaffResultScreen>
   }
 
   String _freshnessStatusLabel(String s) {
-    if (s == 'fresh') return 'Produit frais ✓';
-    if (s == 'expiring') return 'Expire bientôt';
-    if (s == 'spoiled') return 'Périmé — retrait requis';
-    return 'Analyse fraîcheur';
+    if (s == 'fresh') return 'Fresh product';
+    if (s == 'expiring') return 'Expiring soon';
+    if (s == 'spoiled') return 'Spoiled - remove now';
+    return 'Freshness analysis';
   }
 
   Color _freshnessColor(String s) {
@@ -493,7 +643,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.restaurantScan),
                     child: Container(
                       width: 36,
                       height: 36,
@@ -560,7 +712,9 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                       _FreshnessCard(result: result),
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: () => context.pop(),
+                      onTap: () => context.canPop()
+                          ? context.pop()
+                          : context.go(AppRoutes.restaurantScan),
                       child: Container(
                         height: 50,
                         decoration: BoxDecoration(
@@ -611,7 +765,7 @@ class _SummaryBanner extends StatelessWidget {
 
     if (status == 'spoiled') {
       color = _danger;
-      text = '⚠️ Produit périmé détecté — retrait recommandé';
+      text = 'Spoiled product detected - removal recommended';
     } else if (compostPct > 55) {
       color = _fresh;
       text =
@@ -1088,7 +1242,7 @@ class _FreshnessCard extends StatelessWidget {
                 ),
                 if (daysLeft != null)
                   Text(
-                    '$daysLeft jour${daysLeft == 1 ? '' : 's'} restant(s)',
+                    ' day remaining',
                     style: GoogleFonts.inter(fontSize: 12, color: _rTextMuted),
                   ),
               ],
@@ -1098,7 +1252,7 @@ class _FreshnessCard extends StatelessWidget {
         if (isSpoiled) ...[
           const SizedBox(height: 10),
           _InfoBanner(
-            text: '⚠️ Retirer immédiatement du stock',
+            text: 'Remove from inventory immediately',
             color: _danger,
             bg: _dangerBg,
           ),
@@ -1106,15 +1260,15 @@ class _FreshnessCard extends StatelessWidget {
           const SizedBox(height: 10),
           _InfoBanner(
             text: daysLeft == null
-                ? '⏰ À utiliser très bientôt'
-                : '⏰ Utiliser avant $daysLeft jour${daysLeft == 1 ? '' : 's'}',
+                ? 'Use very soon'
+                : 'Use within  day',
             color: _warning,
             bg: _warningBg,
           ),
         ] else ...[
           const SizedBox(height: 10),
           _InfoBanner(
-            text: '✅ Produit en bon état',
+            text: 'Product is in good condition',
             color: _fresh,
             bg: _freshBg,
           ),
@@ -1184,7 +1338,7 @@ class _WasteCard extends StatelessWidget {
           const Icon(Icons.check_circle_rounded, color: _fresh, size: 20),
           const SizedBox(width: 8),
           Text(
-            'Aucun déchet excessif détecté',
+            'No excessive waste detected',
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1228,7 +1382,7 @@ class _WasteCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Plus gaspillé',
+                      'Most wasted',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: Colors.white70,
@@ -1351,8 +1505,8 @@ class _ContaminationCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   result.isClean
-                      ? 'Surface propre detectee'
-                      : 'Risque de contamination detecte',
+                      ? 'Clean surface detected'
+                      : 'Contamination risk detected',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -1486,12 +1640,12 @@ class _SmartActionButton extends StatelessWidget {
   });
 
   String get _label {
-    if (isDone) return 'Actions enregistrées ✓';
+    if (isDone) return 'Actions saved ?';
     final parts = <String>[];
-    if (detectedCount > 0) parts.add('Enregistrer les déchets');
-    if (status == 'spoiled') parts.add('Retirer du stock');
-    if (parts.isEmpty) return 'Mettre à jour l\'inventaire';
-    return parts.join(' · ');
+    if (detectedCount > 0) parts.add('Save waste');
+    if (status == 'spoiled') parts.add('Remove from inventory');
+    if (parts.isEmpty) return 'Update inventory';
+    return parts.join(' � ');
   }
 
   @override

@@ -9,14 +9,14 @@ import '../../../core/constants.dart';
 import '../../../shared/widgets/empty_state.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
-const _kPrimary   = Color(0xFFA78BFA);
-const _kDeep      = Color(0xFF7C3AED);
-const _kSurface   = Color(0xFFF5F3FF);
-const _kSoftBg    = Color(0xFFEDE9FE);
-const _kTextTitle = Color(0xFF2D1B69);
-const _kTextBody  = Color(0xFF4B3B8C);
-const _kTextMuted = Color(0xFF8B7BC0);
-const _kDanger    = Color(0xFFFF7070);
+const _kPrimary = Color(0xFFD9899F);
+const _kDeep = Color(0xFFB27589);
+const _kSurface = Color(0xFFFEFAFC);
+const _kSoftBg = Color(0xFFF9E9F2);
+const _kTextTitle = Color(0xFF26201B);
+const _kTextBody = Color(0xFF5C4F48);
+const _kTextMuted = Color(0xFF8C7E78);
+const _kDanger = Color(0xFFFF7070);
 
 class AllergenScreen extends StatefulWidget {
   const AllergenScreen({super.key});
@@ -95,12 +95,12 @@ class _AllergenScreenState extends State<AllergenScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.only(
-                  bottomLeft:  Radius.circular(24),
+                  bottomLeft: Radius.circular(24),
                   bottomRight: Radius.circular(24),
                 ),
               ),
@@ -141,9 +141,7 @@ class _AllergenScreenState extends State<AllergenScreen>
 
             Expanded(
               child: _loading
-                  ? Center(
-                      child: CircularProgressIndicator(color: _kPrimary),
-                    )
+                  ? Center(child: CircularProgressIndicator(color: _kPrimary))
                   : SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                       child: Column(
@@ -155,8 +153,12 @@ class _AllergenScreenState extends State<AllergenScreen>
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: _kSoftBg,
-                              borderRadius: BorderRadius.circular(AppRadii.innerCard),
-                              border: Border.all(color: _kPrimary.withValues(alpha: 0.2)),
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.innerCard,
+                              ),
+                              border: Border.all(
+                                color: _kPrimary.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -209,9 +211,13 @@ class _AllergenScreenState extends State<AllergenScreen>
                                       ),
                                       decoration: BoxDecoration(
                                         color: _kDanger.withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                                        borderRadius: BorderRadius.circular(
+                                          AppRadii.pill,
+                                        ),
                                         border: Border.all(
-                                          color: _kDanger.withValues(alpha: 0.35),
+                                          color: _kDanger.withValues(
+                                            alpha: 0.35,
+                                          ),
                                           width: 1,
                                         ),
                                       ),
@@ -257,7 +263,9 @@ class _AllergenScreenState extends State<AllergenScreen>
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(AppRadii.innerCard),
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.innerCard,
+                              ),
                               boxShadow: AppShadows.sm(_kPrimary),
                             ),
                             child: Row(
@@ -269,12 +277,17 @@ class _AllergenScreenState extends State<AllergenScreen>
                                     color: _kSoftBg,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(Icons.shield_outlined, color: _kPrimary, size: 22),
+                                  child: Icon(
+                                    Icons.shield_outlined,
+                                    color: _kPrimary,
+                                    size: 22,
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'No recent warnings',
@@ -303,24 +316,34 @@ class _AllergenScreenState extends State<AllergenScreen>
 
                           // ── Scan CTA ──────────────────────────────────
                           GestureDetector(
-                            onTap: () async => context.go(AppRoutes.customerScan),
+                            onTap: () async =>
+                                context.go(AppRoutes.customerScan),
                             child: Container(
                               width: double.infinity,
                               height: 52,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                                  colors: [
+                                    Color(0xFFB27589),
+                                    Color(0xFFD9899F),
+                                  ],
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                 ),
-                                borderRadius: BorderRadius.circular(AppRadii.pill),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.pill,
+                                ),
                                 boxShadow: AppShadows.md(_kPrimary),
                               ),
                               child: Center(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                                    const Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       AppStrings.scanYourDish,
@@ -420,42 +443,51 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
-                  children: _options.map((a) {
-                    final selected = _selected.contains(a);
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          if (selected) {
-                            _selected.remove(a);
-                          } else {
-                            _selected.add(a);
-                          }
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                      splashColor: _kPrimary.withValues(alpha: 0.12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: selected ? _kSoftBg : Colors.transparent,
+                  children: _options
+                      .map((a) {
+                        final selected = _selected.contains(a);
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (selected) {
+                                _selected.remove(a);
+                              } else {
+                                _selected.add(a);
+                              }
+                            });
+                          },
                           borderRadius: BorderRadius.circular(AppRadii.pill),
-                          border: Border.all(
-                            color: selected ? _kPrimary : const Color(0xFFEDE9FE),
-                            width: 1.5,
+                          splashColor: _kPrimary.withValues(alpha: 0.12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected ? _kSoftBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.pill,
+                              ),
+                              border: Border.all(
+                                color: selected
+                                    ? _kPrimary
+                                    : const Color(0xFFF9E9F2),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              a,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected ? _kDeep : _kTextMuted,
+                                height: 1.2,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          a,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? _kDeep : _kTextMuted,
-                            height: 1.2,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(growable: false),
+                        );
+                      })
+                      .toList(growable: false),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -522,7 +554,7 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                           height: 48,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                              colors: [Color(0xFFB27589), Color(0xFFD9899F)],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
