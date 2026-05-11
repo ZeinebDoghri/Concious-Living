@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +13,7 @@ import 'firebase_options.dart';
 import 'providers/alerts_provider.dart';
 import 'providers/compost_provider.dart';
 import 'providers/contamination_provider.dart';
+import 'providers/hotel_expiry_alerts_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/scan_history_provider.dart';
 import 'providers/user_provider.dart';
@@ -23,8 +25,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // On Web, IndexedDB persistence can hang/fail depending on browser settings,
-  // extensions, or storage policies. Disable it to avoid infinite spinners.
   if (kIsWeb) {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: false,
@@ -77,16 +77,16 @@ class _ConsciousLivingAppState extends State<ConsciousLivingApp>
   AmbientRole _ambientRole(String role) {
     return switch (role) {
       'restaurant' => AmbientRole.restaurant,
-      'hotel' => AmbientRole.hotel,
-      _ => AmbientRole.customer,
+      'hotel'      => AmbientRole.hotel,
+      _            => AmbientRole.customer,
     };
   }
 
   int _ambientSeed(String role) {
     return switch (role) {
       'restaurant' => 2,
-      'hotel' => 4,
-      _ => 1,
+      'hotel'      => 4,
+      _            => 1,
     };
   }
 

@@ -463,7 +463,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     required FoodAnalysisResult contamination,
     Uint8List? imageBytes,
   }) {
-    final confPct = (contamination.confidence * 100).toStringAsFixed(1);
+    final confPct = _normalizeConfidencePercent(contamination.confidence);
 
     return Column(
       children: [
@@ -571,7 +571,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                       children: [
                         Text(det.label, style: GoogleFonts.inter(fontSize: 11)),
                         Text(
-                          '${(det.confidence * 100).toStringAsFixed(0)}%',
+                          '${_normalizeConfidencePercent(det.confidence).split('.')[0]}%',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

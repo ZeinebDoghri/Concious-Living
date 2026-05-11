@@ -1290,12 +1290,54 @@ class _MiniStatStrip extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final bool isAlert;
+  final bool isAnimated;
+  final VoidCallback? onTap;
 
   const _MiniStatStrip({
     required this.label,
     required this.value,
     required this.icon,
+    this.isAlert = false,
+    this.isAnimated = false,
+    this.onTap,
   });
+
+  @override
+  State<_MiniStatCard> createState() => _MiniStatCardState();
+}
+
+class _MiniStatCardState extends State<_MiniStatCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    if (widget.isAnimated) {
+      _pulseController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_MiniStatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAnimated && !oldWidget.isAnimated) {
+      _pulseController.repeat();
+    } else if (!widget.isAnimated && oldWidget.isAnimated) {
+      _pulseController.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

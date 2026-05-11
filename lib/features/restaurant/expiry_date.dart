@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
 import '../../providers/venue_type_provider.dart';
@@ -32,6 +33,7 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
   String? _expiryDate;
   String? _status;
   String? _errorMessage;
+  String? _savedDocId; // Anti-duplicate guard
 
   bool get _isExpired => (_status ?? '').toUpperCase() == 'EXPIRED';
   bool get _isValid => (_status ?? '').toUpperCase() == 'VALID';
@@ -50,6 +52,7 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
       _expiryDate = null;
       _status = null;
       _errorMessage = null;
+      _savedDocId = null; // reset for each new scan
     });
 
     await _predict();
@@ -78,12 +81,20 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         setState(() {
-          _expiryDate = (data['expiry_date'] ?? data['date'] ?? 'Not detected')
-              .toString();
+          _expiryDate =
+              (data['expiry_date'] ?? data['date'] ?? 'Not detected')
+                  .toString();
           _status = (data['status'] ?? 'UNKNOWN').toString();
         });
-        await _saveResult();
-        if (_isExpired) _showExpiredAlert();
+
+        // Use the exact call order requested
+        await _askProductNameAndSave();
+        
+        if (_isExpired) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showExpiredAlert();
+          });
+        }
       } else {
         setState(() {
           _errorMessage = 'Server error: ${response.statusCode}';
@@ -96,7 +107,82 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
     }
   }
 
-  Future<void> _saveResult() async {
+  // ✅ Parse expiry date string → DateTime
+  DateTime? _parseExpiryDate(String? raw) {
+    if (raw == null || raw.isEmpty || raw == 'Not detected') return null;
+
+    final formats = [
+      RegExp(r'^(\d{2})/(\d{2})/(\d{4})$'), // DD/MM/YYYY
+      RegExp(r'^(\d{2})/(\d{4})$'),           // MM/YYYY
+      RegExp(r'^(\d{4})-(\d{2})-(\d{2})$'),  // YYYY-MM-DD
+    ];
+
+    try {
+      if (formats[0].hasMatch(raw)) {
+        final parts = raw.split('/');
+        return DateTime(
+            int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      }
+      if (formats[1].hasMatch(raw)) {
+        final parts = raw.split('/');
+        final month = int.parse(parts[0]);
+        final year = int.parse(parts[1]);
+        return DateTime(year, month + 1, 0);
+      }
+      if (formats[2].hasMatch(raw)) {
+        return DateTime.parse(raw);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ✅ Compute inventory status from expiry date
+  String _computeInventoryStatus(DateTime? expiryDt) {
+    if (expiryDt == null) return 'spoiled';
+    final now = DateTime.now();
+    final diff = expiryDt.difference(now).inDays;
+    if (diff < 0) return 'spoiled';
+    if (diff <= 3) return 'expiring';
+    return 'fresh';
+  }
+
+  // ✅ Clean product name — remove UUID-like prefixes and file extensions
+  String _cleanProductName(String? rawName) {
+    if (rawName == null || rawName.isEmpty) return 'Scanned product';
+
+    String name = rawName
+        // Remove file extensions
+        .replaceAll(
+            RegExp(r'\.(jfif|jpg|jpeg|png|webp|gif|bmp)$',
+                caseSensitive: false),
+            '')
+        // Remove "scaled_" prefix followed by UUID-like hex strings
+        .replaceAll(
+            RegExp(r'^scaled_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}_?',
+                caseSensitive: false),
+            '')
+        // Remove generic "image_XXXXXXXXXX" patterns
+        .replaceAll(RegExp(r'^image_\d+_?', caseSensitive: false), '')
+        // Replace underscores/hyphens with spaces and trim
+        .replaceAll(RegExp(r'[_-]'), ' ')
+        .trim();
+
+    return name.isEmpty ? 'Scanned product' : name;
+  }
+
+  // ✅ Ask product name and save
+  Future<void> _askProductNameAndSave() async {
+    if (_savedDocId != null) return; // anti-duplicate guard
+    
+    // Since we don't have the UI for asking the product name in this file yet,
+    // we just call _saveToFirestore directly to maintain the expected flow
+    await _saveToFirestore();
+  }
+
+  // ✅ Save image (base64) + expiry date to Firestore
+  Future<void> _saveToFirestore() async {
+    if (_savedDocId != null) return; // anti-duplicate guard
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString('expiry_scan_results') ?? '[]';
@@ -123,14 +209,21 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
         'timestamp': DateTime.now().toIso8601String(),
       });
 
-      await prefs.setString('expiry_scan_results', jsonEncode(results));
+      _savedDocId = docRef.id; // Mark as saved
+
+      debugPrint(
+          '✅ Saved to Firestore: ${docRef.id} — $productName ($inventoryStatus)');
+
+
     } catch (e) {
-      debugPrint('Error saving expiry result: $e');
+      debugPrint('❌ Error saving to Firestore: $e');
     }
   }
 
   void _showExpiredAlert() {
+    // ✅ Capture colors BEFORE showing dialog (no context.watch in callback)
     final colors = _roleColors(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -170,8 +263,10 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
     );
   }
 
+  // ✅ context.read instead of context.watch (no rebuild listener in callbacks)
   _ExpiryColors _roleColors(BuildContext context) {
-    final role = context.watch<VenueTypeProvider>().venueType;
+    final role =
+        Provider.of<VenueTypeProvider>(context, listen: false).venueType;
     final path = GoRouterState.of(context).uri.path;
     final isHotel = role == 'hotel' || path.startsWith('/hotel');
     return isHotel ? _ExpiryColors.hotel : _ExpiryColors.restaurant;
@@ -183,14 +278,15 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
     final statusColor = _isExpired
         ? const Color(0xFFFF7070)
         : _isValid
-        ? const Color(0xFF52C98A)
-        : colors.primary;
+            ? const Color(0xFF52C98A)
+            : colors.primary;
 
     return Scaffold(
       backgroundColor: colors.surface,
       body: SafeArea(
         child: Column(
           children: [
+            // ── Header ────────────────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 14, 20, 18),
@@ -206,15 +302,11 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.go(
-                          colors.isHotel
-                              ? AppRoutes.hotelScan
-                              : AppRoutes.restaurantScan,
-                        );
-                      }
+                      GoRouter.of(context).go(
+                        colors.isHotel
+                            ? AppRoutes.hotelDashboard
+                            : AppRoutes.restaurantDashboard,
+                      );
                     },
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     color: Colors.white,
@@ -225,7 +317,7 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Expiry date detection',
+                          '📅 Expiry date detection',
                           style: GoogleFonts.playfairDisplay(
                             fontSize: 21,
                             fontWeight: FontWeight.w700,
@@ -234,7 +326,7 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Scan a package label with the expiry AI model',
+                          'AI model scans package labels instantly 🔍',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.78),
@@ -246,11 +338,14 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                 ],
               ),
             ),
+
+            // ── Body ──────────────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
                 child: Column(
                   children: [
+                    // Image preview
                     Container(
                       width: double.infinity,
                       height: 250,
@@ -269,56 +364,60 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.event_available_rounded,
-                                    size: 58,
-                                    color: colors.primary.withValues(
-                                      alpha: 0.65,
-                                    ),
+                                  const Text(
+                                    '📸',
+                                    style: TextStyle(fontSize: 64),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    'No image selected',
+                                    'Tap to select an image',
                                     style: GoogleFonts.inter(
-                                      color: colors.textMuted,
-                                    ),
+                                        color: colors.textMuted,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                 ],
                               ),
                       ),
                     ),
+
                     const SizedBox(height: 18),
+
+                    // ✅ FIX: Use unique keys to avoid Duplicate GlobalKey error
                     Row(
                       children: [
                         Expanded(
                           child: _ExpiryActionButton(
+                            key: const ValueKey('btn_camera'),
                             colors: colors,
                             icon: Icons.camera_alt_rounded,
-                            label: 'Camera',
+                            label: '📷 Camera',
                             onTap: () => _pickImage(ImageSource.camera),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _ExpiryActionButton(
+                            key: const ValueKey('btn_gallery'),
                             colors: colors,
                             icon: Icons.photo_library_outlined,
-                            label: 'Gallery',
+                            label: '🖼️ Gallery',
                             onTap: () => _pickImage(ImageSource.gallery),
                           ),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 22),
+
+                    // Loading state
                     if (_isLoading)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.innerCard,
-                          ),
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.innerCard),
                           boxShadow: AppShadows.sm(colors.primary),
                         ),
                         child: Column(
@@ -326,88 +425,125 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
                             CircularProgressIndicator(color: colors.primary),
                             const SizedBox(height: 12),
                             Text(
-                              'Analyzing expiry date...',
+                              '⏳ Analyzing expiry date...',
                               style: GoogleFonts.inter(
                                 color: colors.textBody,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    if (!_isLoading && _expiryDate != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.innerCard,
-                          ),
-                          border: Border.all(
-                            color: statusColor.withValues(alpha: 0.32),
-                          ),
-                          boxShadow: AppShadows.sm(colors.primary),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              _isExpired
-                                  ? Icons.cancel_rounded
-                                  : _isValid
-                                  ? Icons.check_circle_rounded
-                                  : Icons.help_rounded,
-                              size: 48,
-                              color: statusColor,
-                            ),
                             const SizedBox(height: 8),
                             Text(
-                              _isExpired
-                                  ? 'EXPIRED'
-                                  : _isValid
-                                  ? 'VALID'
-                                  : 'UNKNOWN',
-                              style: GoogleFonts.playfairDisplay(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: statusColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Date: $_expiryDate',
+                              'This may take a few seconds',
                               style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: colors.textBody,
+                                color: colors.textMuted,
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                    // Result card
+                    if (!_isLoading && _expiryDate != null)
+                      ScaleTransition(
+                        scale: Tween<double>(begin: 0.8, end: 1).animate(
+                          CurvedAnimation(
+                            parent: ModalRoute.of(context)?.animation ?? AlwaysStoppedAnimation(1),
+                            curve: Curves.elasticOut,
+                          ),
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.10),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.innerCard),
+                            border: Border.all(
+                                color: statusColor.withValues(alpha: 0.32)),
+                            boxShadow: AppShadows.sm(colors.primary),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                _isExpired
+                                    ? '❌'
+                                    : _isValid
+                                        ? '✅'
+                                        : '❓',
+                                style: const TextStyle(fontSize: 56),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _isExpired
+                                    ? 'Product Expired'
+                                    : _isValid
+                                        ? 'Product Valid'
+                                        : 'Unknown Status',
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: statusColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Expiry date: $_expiryDate',
+                                style: GoogleFonts.inter(
+                                    fontSize: 14, color: colors.textBody, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF52C98A).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF52C98A).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  '📦 Added to inventory',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF2D8A56),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // Error card
                     if (!_isLoading && _errorMessage != null)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFFFAB5B,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.innerCard,
-                          ),
+                          color: const Color(0xFFFFAB5B).withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.innerCard),
                           border: Border.all(
-                            color: const Color(
-                              0xFFFFAB5B,
-                            ).withValues(alpha: 0.35),
-                          ),
+                              color: const Color(0xFFFFAB5B)
+                                  .withValues(alpha: 0.35)),
                         ),
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.inter(
-                            color: colors.textBody,
-                            height: 1.45,
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          children: [
+                            const Text(
+                              '⚠️',
+                              style: TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: GoogleFonts.inter(
+                                    color: colors.textBody, height: 1.45),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -421,6 +557,8 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
   }
 }
 
+// ── Action Button ─────────────────────────────────────────────────────────────
+
 class _ExpiryActionButton extends StatelessWidget {
   final _ExpiryColors colors;
   final IconData icon;
@@ -428,6 +566,7 @@ class _ExpiryActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ExpiryActionButton({
+    super.key,   // ✅ FIX: accepts key to avoid Duplicate GlobalKey
     required this.colors,
     required this.icon,
     required this.label,
@@ -436,35 +575,44 @@ class _ExpiryActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: colors.primary.withValues(alpha: 0.35)),
-          boxShadow: AppShadows.sm(colors.primary),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: colors.deep, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: colors.deep,
+    // ✅ FIX: use Material + InkWell instead of GestureDetector to avoid GlobalKey issues
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            border:
+                Border.all(color: colors.primary.withValues(alpha: 0.35)),
+            boxShadow: AppShadows.sm(colors.primary),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: colors.deep, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: colors.deep,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+// ── Color Themes ──────────────────────────────────────────────────────────────
 
 class _ExpiryColors {
   final bool isHotel;

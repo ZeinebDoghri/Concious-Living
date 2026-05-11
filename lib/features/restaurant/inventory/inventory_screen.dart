@@ -62,15 +62,52 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    AppStrings.inventory,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: _rTextTitle,
-                    ),
+                  Row(
+                    children: [
+                      // ── Back button ────────────────────────────────────
+                      GestureDetector(
+                        onTap: () => GoRouter.of(context).go('/restaurant/dashboard'),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _rPrimary.withValues(alpha: 0.3),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _rPrimary.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: _rDeep,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      // ── Title ──────────────────────────────────────────
+                      Text(
+                        '📦 ${AppStrings.inventory}',
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: _rTextTitle,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   if (provider.needsAttentionCount > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -166,24 +203,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       child: Row(
                         children: [
                           _FilterTab(
+                            emoji: '🔹',
                             label: AppStrings.all,
                             selected: _filter == 'all',
                             onTap: () => setState(() => _filter = 'all'),
                           ),
                           const SizedBox(width: 8),
                           _FilterTab(
+                            emoji: '🟢',
                             label: AppStrings.fresh,
                             selected: _filter == 'fresh',
                             onTap: () => setState(() => _filter = 'fresh'),
                           ),
                           const SizedBox(width: 8),
                           _FilterTab(
+                            emoji: '⏰',
                             label: AppStrings.expiringSoon,
                             selected: _filter == 'expiring',
                             onTap: () => setState(() => _filter = 'expiring'),
                           ),
                           const SizedBox(width: 8),
                           _FilterTab(
+                            emoji: '❌',
                             label: AppStrings.spoiled,
                             selected: _filter == 'spoiled',
                             onTap: () => setState(() => _filter = 'spoiled'),
@@ -210,6 +251,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       color: _rTextTitle,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Scannez des produits pour commencer',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: _rTextMuted,
                                     ),
                                   ),
                                 ],
@@ -281,16 +330,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                                     height: 1.2,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '${it.quantity.toStringAsFixed(it.quantity % 1 == 0 ? 0 : 1)} ${it.unit} · ${AppStrings.expiresOn(date)}',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 12,
-                                                    color: _rTextBody,
-                                                    height: 1.2,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    it.name,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: _rTextTitle,
+                                                      height: 1.2,
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    '${it.quantity.toStringAsFixed(it.quantity % 1 == 0 ? 0 : 1)} ${it.unit} · ${AppStrings.expiresOn(date)}',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 12,
+                                                      color: _rTextBody,
+                                                      height: 1.2,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(width: 10),
@@ -321,11 +389,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
 class _FilterTab extends StatelessWidget {
   final String label;
+  final String emoji;
   final bool selected;
   final VoidCallback onTap;
 
   const _FilterTab({
     required this.label,
+    required this.emoji,
     required this.selected,
     required this.onTap,
   });
@@ -345,16 +415,54 @@ class _FilterTab extends StatelessWidget {
                 ? _rPrimary.withValues(alpha: 0.5)
                 : _rPrimary.withValues(alpha: 0.2),
           ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? _rDeep : _rTextMuted,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                emoji,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: selected ? _rDeep : _rTextMuted,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+}
+
+// ── Helper functions ──────────────────────────────────────────────────────────
+
+String _statusEmoji(String status) {
+  switch (status.toLowerCase()) {
+    case 'fresh':
+      return '🥒';
+    case 'expiring':
+      return '⏳';
+    case 'spoiled':
+      return '🚫';
+    default:
+      return '📦';
+  }
+}
+
+Color _getStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'fresh':
+      return const Color(0xFF52C98A);
+    case 'expiring':
+      return const Color(0xFFFFAB5B);
+    case 'spoiled':
+      return const Color(0xFFFF7070);
+    default:
+      return const Color(0xFFE47878);
   }
 }
