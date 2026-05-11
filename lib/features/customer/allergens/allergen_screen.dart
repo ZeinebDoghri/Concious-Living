@@ -1,11 +1,18 @@
 import 'dart:convert';
+import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/firebase_service.dart';
+import '../../../core/models/alert_model.dart';
+import '../../../providers/alerts_provider.dart';
+import '../../../providers/user_provider.dart';
 import '../../../shared/widgets/empty_state.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
@@ -30,7 +37,9 @@ class _AllergenScreenState extends State<AllergenScreen>
   static const _prefsKey = 'customer_allergens_json';
 
   bool _loading = true;
+  bool _saving = false;
   List<String> _allergens = <String>[];
+  Timer? _autoSaveDebounce;
 
   @override
   void initState() {
@@ -39,32 +48,106 @@ class _AllergenScreenState extends State<AllergenScreen>
   }
 
   Future<void> _load() async {
+    final userProvider = context.read<UserProvider>();
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);
 
-    List<String> next = <String>[];
-    if (raw != null && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) next = decoded.whereType<String>().toList();
-      } catch (_) {
-        next = <String>[];
+    final cached = _decodeSaved(raw);
+    if (mounted) {
+      setState(() {
+        _allergens = cached;
+        _loading = false;
+      });
+    }
+
+    try {
+      final remote = _normalizeAllergens(await FirebaseService.getUserAllergens());
+      await prefs.setString(_prefsKey, jsonEncode(remote));
+
+      if (!mounted) return;
+      setState(() {
+        _allergens = remote;
+        _loading = false;
+      });
+
+      userProvider.updateCurrentUserAllergens(remote);
+    } catch (_) {}
+  }
+
+  List<String> _decodeSaved(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return <String>[];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) return _normalizeAllergens(decoded.whereType<String>());
+    } catch (_) {}
+    return <String>[];
+  }
+
+  List<String> _normalizeAllergens(Iterable<String> values) {
+    final cleaned = values
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList(growable: false)
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return cleaned;
+  }
+
+  @override
+  void dispose() {
+    _autoSaveDebounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _save(
+    List<String> next, {
+    bool showFeedback = false,
+    bool fromAutoSave = false,
+  }) async {
+    final userProvider = context.read<UserProvider>();
+    final normalized = _normalizeAllergens(next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, jsonEncode(normalized));
+
+    if (mounted) {
+      setState(() {
+        _allergens = normalized;
+        if (!fromAutoSave) _saving = true;
+      });
+    }
+
+    try {
+      await FirebaseService.saveUserAllergens(normalized);
+      userProvider.updateCurrentUserAllergens(normalized);
+
+      if (!mounted) return;
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Allergens saved to your account.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Saved on this device. Account sync will retry when online.',
+            ),
+          ),
+        );
       }
     }
 
     if (!mounted) return;
-    setState(() {
-      _allergens = next;
-      _loading = false;
-    });
+    setState(() => _saving = false);
   }
 
-  Future<void> _save(List<String> next) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode(next));
-
-    if (!mounted) return;
-    setState(() => _allergens = next);
+  void _scheduleAutoSave(Set<String> selected) {
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 450), () {
+      _save(selected.toList(), fromAutoSave: true);
+    });
   }
 
   Future<void> _edit() async {
@@ -74,16 +157,23 @@ class _AllergenScreenState extends State<AllergenScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return _EditAllergensSheet(initial: initial);
+        return _EditAllergensSheet(
+          initial: initial,
+          onSelectionChanged: _scheduleAutoSave,
+        );
       },
     );
 
     if (selected == null) return;
-    await _save(selected.toList()..sort());
+    await _save(selected.toList(), showFeedback: true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final alertsProvider = context.watch<AlertsProvider>();
+    final providerPendingAlerts = alertsProvider.filterByStatus('pending');
+    final authUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: _kSurface,
       body: SafeArea(
@@ -147,6 +237,10 @@ class _AllergenScreenState extends State<AllergenScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (_saving) ...[
+                            LinearProgressIndicator(color: _kPrimary),
+                            const SizedBox(height: 12),
+                          ],
                           // ── Info banner ───────────────────────────────
                           Container(
                             width: double.infinity,
@@ -257,60 +351,146 @@ class _AllergenScreenState extends State<AllergenScreen>
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // Placeholder info card
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(
-                                AppRadii.innerCard,
-                              ),
-                              boxShadow: AppShadows.sm(_kPrimary),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
+                          StreamBuilder<List<AlertModel>>(
+                            stream: authUid.isEmpty
+                                ? const Stream<List<AlertModel>>.empty()
+                                : FirebaseService.watchAlertsByCustomer(authUid),
+                            builder: (context, snapshot) {
+                              final streamPending = (snapshot.data ?? const <AlertModel>[])
+                                  .where((a) => a.status == 'pending')
+                                  .toList(growable: false);
+                              final pendingAlerts = streamPending.isNotEmpty
+                                  ? streamPending
+                                  : providerPendingAlerts;
+
+                              if (pendingAlerts.isEmpty) {
+                                return Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: _kSoftBg,
-                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadii.innerCard,
+                                    ),
+                                    boxShadow: AppShadows.sm(_kPrimary),
                                   ),
-                                  child: Icon(
-                                    Icons.shield_outlined,
-                                    color: _kPrimary,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'No recent warnings',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: _kTextTitle,
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: _kSoftBg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.shield_outlined,
+                                          color: _kPrimary,
+                                          size: 22,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Scan a dish to check for allergen risks.',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: _kTextMuted,
-                                          height: 1.4,
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'No recent warnings',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: _kTextTitle,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              snapshot.hasError
+                                                  ? 'Could not load warnings (${snapshot.error}).'
+                                                  : 'Scan a dish to check for allergen risks.',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: _kTextMuted,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
+                                );
+                              }
+
+                              return Column(
+                                children: pendingAlerts
+                                    .take(5)
+                                    .map(
+                                      (alert) => Container(
+                                        width: double.infinity,
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: _kDanger.withValues(alpha: 0.10),
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadii.innerCard,
+                                          ),
+                                          border: Border.all(
+                                            color: _kDanger.withValues(alpha: 0.35),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              Icons.warning_amber_rounded,
+                                              color: _kDanger,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'DANGEROUS ALLERGEN ALERT',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: _kDanger,
+                                                      letterSpacing: 0.2,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    '${alert.dishName} contains ${alert.allergen}',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: _kTextBody,
+                                                      height: 1.35,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    alert.customerName,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11,
+                                                      color: _kTextMuted,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(growable: false),
+                              );
+                            },
                           ),
                           const SizedBox(height: 18),
 
@@ -371,8 +551,12 @@ class _AllergenScreenState extends State<AllergenScreen>
 
 class _EditAllergensSheet extends StatefulWidget {
   final Set<String> initial;
+  final ValueChanged<Set<String>>? onSelectionChanged;
 
-  const _EditAllergensSheet({required this.initial});
+  const _EditAllergensSheet({
+    required this.initial,
+    this.onSelectionChanged,
+  });
 
   @override
   State<_EditAllergensSheet> createState() => _EditAllergensSheetState();
@@ -455,6 +639,9 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                                 _selected.add(a);
                               }
                             });
+                            widget.onSelectionChanged?.call(
+                              Set<String>.from(_selected),
+                            );
                           },
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                           splashColor: _kPrimary.withValues(alpha: 0.12),
@@ -519,6 +706,7 @@ class _EditAllergensSheetState extends State<_EditAllergensSheet> {
                       _selected.add(t);
                       _customController.clear();
                     });
+                    widget.onSelectionChanged?.call(Set<String>.from(_selected));
                   },
                 ),
                 const SizedBox(height: 16),

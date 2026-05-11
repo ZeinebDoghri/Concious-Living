@@ -161,6 +161,38 @@ class FirebaseService {
     return UserModel.fromJson(doc.data()!);
   }
 
+  static Future<List<String>> getUserAllergens({String? uid}) async {
+    final resolvedUid = uid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (resolvedUid == null || resolvedUid.isEmpty) return <String>[];
+
+    final doc = await _db
+        .collection('users')
+        .doc(resolvedUid)
+        .get()
+        .timeout(_networkTimeout);
+    final data = doc.data();
+    if (data == null) return <String>[];
+    final raw = data['allergens'];
+    if (raw is! List) return <String>[];
+    return raw.whereType<String>().toList(growable: false);
+  }
+
+  static Future<void> saveUserAllergens(
+    List<String> allergens, {
+    String? uid,
+  }) async {
+    final resolvedUid = uid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (resolvedUid == null || resolvedUid.isEmpty) {
+      throw StateError('Cannot save allergens without an authenticated user.');
+    }
+
+    await _db
+        .collection('users')
+        .doc(resolvedUid)
+        .set({'allergens': allergens}, SetOptions(merge: true))
+        .timeout(_networkTimeout);
+  }
+
   // Scan history: subcollection under each user
   static Future<void> saveScan(String userId, ScanHistoryItem scan) async {
     await _db
@@ -198,13 +230,26 @@ class FirebaseService {
     await _db.collection('alerts').doc(alert.id).set(alert.toJson());
   }
 
-  static Stream<List<AlertModel>> watchAlerts(String venueId) {
+  static Stream<List<AlertModel>> watchAlertsByVenue(String venueId) {
     return _db
         .collection('alerts')
         .where('venueId', isEqualTo: venueId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => AlertModel.fromJson(d.data())).toList());
+  }
+
+  static Stream<List<AlertModel>> watchAlertsByCustomer(String customerId) {
+    return _db
+        .collection('alerts')
+        .where('customerId', isEqualTo: customerId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => AlertModel.fromJson(d.data())).toList());
+  }
+
+  static Stream<List<AlertModel>> watchAlerts(String venueId) {
+    return watchAlertsByVenue(venueId);
   }
 
   static Future<void> resolveAlert(String alertId) async {

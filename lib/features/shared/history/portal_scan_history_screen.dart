@@ -212,6 +212,12 @@ class _PortalScanHistoryScreenState extends State<PortalScanHistoryScreen> {
           'readOnly': true,
           'dishName': _dishName(data),
           'result': data['result'] ?? data['results']?['nutrition'] ?? {},
+          'allergyResult': {
+            'dish': _dishName(data),
+            'allergens': _detectedAllergens(data),
+            'allergen_source': 'history',
+            'confidence': 0,
+          },
           'imagePath': data['imagePath'],
           'imageUrl': data['imageUrl'],
         },
@@ -518,6 +524,9 @@ class _CustomerCardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasAllergenAlert = _hasAllergenAlert(data);
+    final matched = _matchedAllergens(data);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -530,6 +539,31 @@ class _CustomerCardBody extends StatelessWidget {
         const SizedBox(height: 6),
         Text('${_calories(data).toStringAsFixed(0)} kcal', style: _subStyle()),
         const SizedBox(height: 6),
+        if (hasAllergenAlert)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF7070).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: const Color(0xFFFF7070).withValues(alpha: 0.35),
+              ),
+            ),
+            child: Text(
+              matched.isEmpty
+                  ? 'ALLERGEN ALERT'
+                  : 'ALLERGEN ALERT: ${matched.join(', ')}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFFFF7070),
+                letterSpacing: 0.15,
+              ),
+            ),
+          ),
+        if (hasAllergenAlert) const SizedBox(height: 6),
         Text(_formatRelative(timestamp), style: _subStyle()),
       ],
     );
@@ -977,6 +1011,8 @@ String _dishName(Map<String, dynamic> data) {
 }
 
 String _riskLevel(Map<String, dynamic> data) {
+  if (_hasAllergenAlert(data)) return 'danger';
+
   final root = data['riskLevel'];
   final results = data['results'];
   final nested = results is Map ? results['riskLevel'] : null;
@@ -987,6 +1023,67 @@ String _riskLevel(Map<String, dynamic> data) {
   if (risk == 'moderate') return 'warning';
   if (risk == 'low') return 'safe';
   return risk;
+}
+
+List<String> _matchedAllergens(Map<String, dynamic> data) {
+  final root = data['matchedAllergens'];
+  if (root is List) {
+    return root
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  final results = data['results'];
+  if (results is Map) {
+    final allergens = results['allergens'];
+    if (allergens is Map && allergens['matched'] is List) {
+      return (allergens['matched'] as List)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+    }
+  }
+
+  return const <String>[];
+}
+
+List<String> _detectedAllergens(Map<String, dynamic> data) {
+  final root = data['detectedAllergens'];
+  if (root is List) {
+    return root
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  final results = data['results'];
+  if (results is Map) {
+    final allergens = results['allergens'];
+    if (allergens is Map && allergens['detected'] is List) {
+      return (allergens['detected'] as List)
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+    }
+  }
+
+  return const <String>[];
+}
+
+bool _hasAllergenAlert(Map<String, dynamic> data) {
+  final root = data['hasAllergenAlert'];
+  if (root is bool) return root;
+
+  final results = data['results'];
+  if (results is Map) {
+    final allergens = results['allergens'];
+    if (allergens is Map && allergens['hasAlert'] is bool) {
+      return allergens['hasAlert'] as bool;
+    }
+  }
+
+  return _matchedAllergens(data).isNotEmpty;
 }
 
 int _riskRank(Map<String, dynamic> data) {

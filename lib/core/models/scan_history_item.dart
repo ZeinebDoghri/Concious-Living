@@ -14,6 +14,10 @@ class ScanHistoryItem {
   final String? imageUrl;
   final DateTime scannedAt;
   final NutrientResult result;
+  final List<String> detectedAllergens;
+  final List<String> matchedAllergens;
+
+  bool get hasAllergenAlert => matchedAllergens.isNotEmpty;
 
   ScanHistoryItem({
     String? id,
@@ -22,6 +26,8 @@ class ScanHistoryItem {
     required this.result,
     this.imagePath,
     this.imageUrl,
+    this.detectedAllergens = const <String>[],
+    this.matchedAllergens = const <String>[],
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() {
@@ -37,6 +43,9 @@ class ScanHistoryItem {
           : result.overallRisk == 'moderate'
           ? 'warning'
           : 'safe',
+        'detectedAllergens': detectedAllergens,
+        'matchedAllergens': matchedAllergens,
+        'hasAllergenAlert': hasAllergenAlert,
       'result': result.toJson(),
       'results': {
         'dishName': dishName,
@@ -52,6 +61,11 @@ class ScanHistoryItem {
           'sugar_g': result.sugar.value,
           'calories': 0,
         },
+        'allergens': {
+          'detected': detectedAllergens,
+          'matched': matchedAllergens,
+          'hasAlert': hasAllergenAlert,
+        },
       },
     };
   }
@@ -66,7 +80,21 @@ class ScanHistoryItem {
       result: NutrientResult.fromJson(
         (json['result'] ?? {}) as Map<String, dynamic>,
       ),
+      detectedAllergens: _stringList(
+        json['detectedAllergens'] ?? (json['results'] as Map?)?['allergens']?['detected'],
+      ),
+      matchedAllergens: _stringList(
+        json['matchedAllergens'] ?? (json['results'] as Map?)?['allergens']?['matched'],
+      ),
     );
+  }
+
+  static List<String> _stringList(dynamic raw) {
+    if (raw is! List) return <String>[];
+    return raw
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
   }
 
   static DateTime _dateFromJson(Map<String, dynamic> json) {
