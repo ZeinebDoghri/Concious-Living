@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -100,11 +101,43 @@ class _ConsciousLivingAppState extends State<ConsciousLivingApp>
           create: (_) => ScanHistoryProvider(),
           update: (_, userProvider, scanProvider) {
             final provider = scanProvider ?? ScanHistoryProvider();
-            provider.setUser(userProvider.currentUser?.id);
+            final authUid = FirebaseAuth.instance.currentUser?.uid;
+            final userId = (userProvider.currentUser?.id ?? '').trim();
+            provider.setUser(userId.isEmpty ? authUid : userId);
             return provider;
           },
         ),
-        ChangeNotifierProvider(create: (_) => AlertsProvider()),
+        ChangeNotifierProxyProvider<UserProvider, AlertsProvider>(
+          create: (_) => AlertsProvider(),
+          update: (_, userProvider, alertsProvider) {
+            final provider = alertsProvider ?? AlertsProvider();
+            final user = userProvider.currentUser;
+            if (user == null) {
+              provider.setUserContext(role: 'customer', id: null);
+              return provider;
+            }
+
+            final rawRole = user.role.trim().toLowerCase();
+            final role = rawRole.isEmpty
+              ? 'customer'
+              : (rawRole == 'restaurant' || rawRole == 'hotel'
+                  ? rawRole
+                  : 'customer');
+            final authUid = FirebaseAuth.instance.currentUser?.uid;
+            final fallbackUserId = user.id.trim().isEmpty ? authUid : user.id;
+            final scopeId = role == 'customer'
+                ? fallbackUserId
+                : (user.entityId ??
+                      (role == 'restaurant' ? user.restaurantId : user.hotelId) ??
+                      fallbackUserId);
+            final normalizedScopeId = (scopeId ?? '').trim();
+            provider.setUserContext(
+              role: role,
+              id: normalizedScopeId.isEmpty ? null : normalizedScopeId,
+            );
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => CompostProvider()),
         ChangeNotifierProvider(create: (_) => ContaminationProvider()),

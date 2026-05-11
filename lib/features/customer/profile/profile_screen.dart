@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
@@ -27,8 +24,6 @@ const _kWarning = Color(0xFFFFAB5B);
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  static const _prefsAllergensKey = 'customer_allergens_json';
 
   String _fmtText(String? value, {String fallback = '—'}) {
     final v = (value ?? '').trim();
@@ -83,14 +78,11 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<List<String>> _loadAllergens() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsAllergensKey);
-
-    if (raw == null || raw.trim().isEmpty) return <String>[];
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) return <String>[];
 
     try {
-      final decoded = jsonDecode(raw);
-      if (decoded is List) return decoded.whereType<String>().toList();
+      return await FirebaseService.getUserAllergens(uid: uid);
     } catch (_) {}
 
     return <String>[];

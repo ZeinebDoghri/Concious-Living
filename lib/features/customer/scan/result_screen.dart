@@ -1,14 +1,19 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/firebase_service.dart';
+import '../../../core/models/alert_model.dart';
 import '../../../core/models/nutrient_result.dart';
 import '../../../core/models/scan_history_item.dart';
+import '../../../core/models/user_model.dart';
 import '../../../providers/scan_history_provider.dart';
 import '../../../providers/user_provider.dart';
 import '../../../services/cloudinary_service.dart';
@@ -42,6 +47,10 @@ class _ResultScreenState extends State<ResultScreen>
   late final TextEditingController _dishNameController;
 
   bool _saved = false;
+  bool _saving = false;
+  bool _loadingAllergenMatches = true;
+  List<String> _matchedAllergens = const <String>[];
+  List<String> _detectedAllergens = const <String>[];
 
   @override
   void initState() {
@@ -59,6 +68,8 @@ class _ResultScreenState extends State<ResultScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..forward();
+
+    _prepareAllergenMatching();
   }
 
   @override
@@ -96,67 +107,166 @@ class _ResultScreenState extends State<ResultScreen>
     return null;
   }
 
+  Future<void> _prepareAllergenMatching() async {
+    final allergyResult = _parseAllergyResult();
+    if (allergyResult == null) {
+      if (!mounted) return;
+      setState(() {
+        _detectedAllergens = const <String>[];
+        _matchedAllergens = const <String>[];
+        _loadingAllergenMatches = false;
+      });
+      return;
+    }
+
+    final detected = allergyResult.allergens
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    final matches = await getMatchingAllergens(detected);
+    if (!mounted) return;
+    setState(() {
+      _detectedAllergens = detected;
+      _matchedAllergens = matches;
+      _loadingAllergenMatches = false;
+    });
+  }
+
+  Future<void> _saveAlertsIfNeeded({
+    required UserModel? user,
+    required ScanHistoryItem item,
+    required List<String> matchedAllergens,
+  }) async {
+    if (matchedAllergens.isEmpty) return;
+    final authUid = FirebaseAuth.instance.currentUser?.uid;
+    final customerId = (user?.id ?? '').trim().isEmpty
+        ? (authUid ?? '')
+        : user!.id;
+    if (customerId.isEmpty) return;
+
+    final venueId = (widget.args['venueId'] as String?)?.trim();
+    final venueType = (widget.args['venueType'] as String?)?.trim();
+    final now = DateTime.now();
+
+    for (final allergen in matchedAllergens) {
+      final alert = AlertModel(
+        id: const Uuid().v4(),
+        customerId: customerId,
+        customerName: (user?.name ?? '').trim().isEmpty
+            ? 'Customer'
+            : user!.name,
+        dishName: item.dishName,
+        allergen: allergen,
+        venueId: (venueId == null || venueId.isEmpty) ? null : venueId,
+        venueType: (venueType == null || venueType.isEmpty) ? null : venueType,
+        timestamp: now,
+        status: 'pending',
+      );
+      await FirebaseService.saveAlert(alert);
+    }
+  }
+
   Future<void> _save() async {
-    if (_saved) return;
+    if (_saved || _saving) return;
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final userProvider = context.read<UserProvider>();
+    final scanHistoryProvider = context.read<ScanHistoryProvider>();
 
-    final dish = _dishNameController.text.trim().isEmpty
-        ? 'Dish'
-        : _dishNameController.text.trim();
+    setState(() => _saving = true);
 
-    final imagePath = (widget.args['imagePath'] as String?)?.trim();
-    final rawImageBytes = widget.args['imageBytes'];
-    final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
-    final result = _parseResult();
-    final calorieResult = _parseCalorieResult();
-    String? imageUrl;
+    try {
+      if (_loadingAllergenMatches) {
+        await _prepareAllergenMatching();
+      }
 
-    if (imageBytes != null && imageBytes.isNotEmpty) {
-      imageUrl = await CloudinaryService.uploadScanImage(
-        imageBytes,
-        folder: 'freshguard/customer',
+      final dish = _dishNameController.text.trim().isEmpty
+          ? 'Dish'
+          : _dishNameController.text.trim();
+
+      final imagePath = (widget.args['imagePath'] as String?)?.trim();
+      final rawImageBytes = widget.args['imageBytes'];
+      final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
+      final result = _parseResult();
+      final calorieResult = _parseCalorieResult();
+      String? imageUrl;
+
+      try {
+        if (imageBytes != null && imageBytes.isNotEmpty) {
+          imageUrl = await CloudinaryService.uploadScanImage(
+            imageBytes,
+            folder: 'freshguard/customer',
+          );
+        } else if (imagePath != null && imagePath.isNotEmpty && !kIsWeb) {
+          final fileBytes = await File(imagePath).readAsBytes();
+          imageUrl = await CloudinaryService.uploadScanImage(
+            fileBytes,
+            folder: 'freshguard/customer',
+          );
+        }
+      } catch (_) {
+        imageUrl = null;
+      }
+
+      final item = ScanHistoryItem(
+        dishName: dish,
+        scannedAt: DateTime.now(),
+        result: result,
+        imagePath: imagePath,
+        imageUrl: imageUrl,
+        detectedAllergens: _detectedAllergens,
+        matchedAllergens: _matchedAllergens,
       );
-    } else if (imagePath != null && imagePath.isNotEmpty && !kIsWeb) {
-      final fileBytes = await File(imagePath).readAsBytes();
-      imageUrl = await CloudinaryService.uploadScanImage(
-        fileBytes,
-        folder: 'freshguard/customer',
+
+      final user = userProvider.currentUser;
+      final uid = user?.id ?? '';
+
+      await scanHistoryProvider.addScan(item);
+      await _saveAlertsIfNeeded(
+        user: user,
+        item: item,
+        matchedAllergens: _matchedAllergens,
       );
+      if (uid.isNotEmpty) {
+        await NutrientTrackingService.onScanSaved(uid, {
+          'scanId': item.id,
+          'cholesterol_mg': result.cholesterol.value,
+          'saturated_fat_g': result.saturatedFat.value,
+          'sodium_mg': result.sodium.value,
+          'sugar_g': result.sugar.value,
+          'calories': calorieResult?.calories ?? 0.0,
+        });
+      }
+
+      if (!mounted) return;
+
+      setState(() => _saved = true);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _matchedAllergens.isNotEmpty
+                ? 'Saved. Allergen alert flagged and added to history.'
+                : 'Saved to history successfully.',
+          ),
+          backgroundColor: _matchedAllergens.isNotEmpty
+              ? const Color(0xFFFF7070)
+              : const Color(0xFF45C4B0),
+        ),
+      );
+      router.go(AppRoutes.customerHistory);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Could not save scan: $e'),
+          backgroundColor: const Color(0xFFFF7070),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
-
-    final item = ScanHistoryItem(
-      dishName: dish,
-      scannedAt: DateTime.now(),
-      result: result,
-      imagePath: imagePath,
-      imageUrl: imageUrl,
-    );
-
-    final uid = context.read<UserProvider>().currentUser?.id ?? '';
-
-    await context.read<ScanHistoryProvider>().addScan(item);
-    if (uid.isNotEmpty) {
-      await NutrientTrackingService.onScanSaved(uid, {
-        'scanId': item.id,
-        'cholesterol_mg': result.cholesterol.value,
-        'saturated_fat_g': result.saturatedFat.value,
-        'sodium_mg': result.sodium.value,
-        'sugar_g': result.sugar.value,
-        'calories': calorieResult?.calories ?? 0.0,
-      });
-    }
-
-    if (!mounted) return;
-
-    setState(() => _saved = true);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Scan saved - Nutrition tracker updated'),
-        backgroundColor: Color(0xFF45C4B0),
-      ),
-    );
-    router.go(AppRoutes.customerHome);
   }
 
   @override
@@ -242,6 +352,10 @@ class _ResultScreenState extends State<ResultScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (!_loadingAllergenMatches && _matchedAllergens.isNotEmpty)
+                      _AllergenAlertBanner(matches: _matchedAllergens),
+                    if (!_loadingAllergenMatches && _matchedAllergens.isNotEmpty)
+                      const SizedBox(height: 14),
                     // ── Dish image ────────────────────────────────────────
                     if (hasImageBytes || hasImagePath) ...[
                       Hero(
@@ -368,7 +482,10 @@ class _ResultScreenState extends State<ResultScreen>
 
                     // ── Nutrient cards ────────────────────────────────────
                     if (allergyResult != null) ...[
-                      _AllergenModelCard(result: allergyResult),
+                      _AllergenModelCard(
+                        result: allergyResult,
+                        matches: _matchedAllergens,
+                      ),
                       const SizedBox(height: 18),
                     ],
 
@@ -497,7 +614,7 @@ class _ResultScreenState extends State<ResultScreen>
                     // ── Save CTA ──────────────────────────────────────────
                     if (!readOnly) ...[
                       GestureDetector(
-                        onTap: _save,
+                        onTap: _saving ? null : _save,
                         child: Container(
                           width: double.infinity,
                           height: 52,
@@ -527,7 +644,9 @@ class _ResultScreenState extends State<ResultScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  _saved
+                                  _saving
+                                      ? Icons.hourglass_top_rounded
+                                      : _saved
                                       ? Icons.check_circle_outline
                                       : Icons.bookmark_add_outlined,
                                   color: Colors.white,
@@ -535,7 +654,9 @@ class _ResultScreenState extends State<ResultScreen>
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  AppStrings.saveToHistory,
+                                  _saving
+                                      ? 'Saving...'
+                                      : AppStrings.saveToHistory,
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -587,119 +708,155 @@ class _ResultScreenState extends State<ResultScreen>
 
 class _AllergenModelCard extends StatelessWidget {
   final AllergyResult result;
+  final List<String> matches;
 
-  const _AllergenModelCard({required this.result});
+  const _AllergenModelCard({required this.result, required this.matches});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<String>>(
-      future: getMatchingAllergens(result.allergens),
-      builder: (context, snapshot) {
-        final matches = snapshot.data ?? const <String>[];
-        final hasRisk = matches.isNotEmpty;
-        final confidencePct = result.confidence <= 1
-            ? (result.confidence * 100).round()
-            : result.confidence.round();
-        final accent = hasRisk ? const Color(0xFFFF7070) : _kPrimary;
+    final hasRisk = matches.isNotEmpty;
+    final confidencePct = result.confidence <= 1
+        ? (result.confidence * 100).round()
+        : result.confidence.round();
+    final accent = hasRisk ? const Color(0xFFFF7070) : _kPrimary;
 
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: hasRisk
-                ? const Color(0xFFFF7070).withValues(alpha: 0.10)
-                : _kSoftBg,
-            borderRadius: BorderRadius.circular(AppRadii.innerCard),
-            border: Border.all(color: accent.withValues(alpha: 0.25)),
-            boxShadow: AppShadows.sm(_kPrimary),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: hasRisk ? const Color(0xFFFF7070).withValues(alpha: 0.10) : _kSoftBg,
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        boxShadow: AppShadows.sm(_kPrimary),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    hasRisk
-                        ? Icons.warning_amber_rounded
-                        : Icons.verified_outlined,
-                    color: accent,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      hasRisk
-                          ? 'Allergen risk detected'
-                          : 'Allergen model result',
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _kTextTitle,
-                      ),
-                    ),
-                  ),
-                  if (confidencePct > 0)
-                    Text(
-                      '$confidencePct%',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _kTextMuted,
-                      ),
-                    ),
-                ],
+              Icon(
+                hasRisk ? Icons.warning_amber_rounded : Icons.verified_outlined,
+                color: accent,
               ),
-              const SizedBox(height: 10),
-              Text(
-                result.dish.trim().isEmpty ? 'Dish detected' : result.dish,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _kTextBody,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasRisk ? 'Allergen risk detected' : 'Allergen model result',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _kTextTitle,
+                  ),
                 ),
               ),
-              if (result.allergens.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: result.allergens
-                      .map((allergen) {
-                        final risky = matches.any(
-                          (match) =>
-                              match.toLowerCase() == allergen.toLowerCase(),
-                        );
-                        final color = risky
-                            ? const Color(0xFFFF7070)
-                            : _kPrimary;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                            border: Border.all(
-                              color: color.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Text(
-                            allergen,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
+              if (confidencePct > 0)
+                Text(
+                  '$confidencePct%',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: _kTextMuted,
+                  ),
                 ),
-              ],
             ],
           ),
-        );
-      },
+          const SizedBox(height: 10),
+          Text(
+            result.dish.trim().isEmpty ? 'Dish detected' : result.dish,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _kTextBody,
+            ),
+          ),
+          if (result.allergens.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: result.allergens
+                  .map((allergen) {
+                    final risky = matches.any(
+                      (match) => match.toLowerCase() == allergen.toLowerCase(),
+                    );
+                    final color = risky ? const Color(0xFFFF7070) : _kPrimary;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        allergen,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AllergenAlertBanner extends StatelessWidget {
+  final List<String> matches;
+
+  const _AllergenAlertBanner({required this.matches});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF7070).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadii.innerCard),
+        border: Border.all(color: const Color(0xFFFF7070).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF7070)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ALLERGEN ALERT',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFFF7070),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Matched allergens: ${matches.join(', ')}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _kTextBody,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
