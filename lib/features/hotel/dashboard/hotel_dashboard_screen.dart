@@ -1343,7 +1343,7 @@ class _ActionBtnState extends State<_ActionBtn> {
       child: AnimatedScale(
         scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 100),
-        child: Container(
+        child: SizedBox(
           width: 64,
           child: Column(
             mainAxisSize: MainAxisSize.min,

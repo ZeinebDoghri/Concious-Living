@@ -265,7 +265,7 @@ class _PortalScanHistoryScreenState extends State<PortalScanHistoryScreen> {
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                             itemCount: docs.length + (_hasMore ? 1 : 0),
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               if (index == docs.length) {
@@ -640,12 +640,12 @@ class _VenueScanDetails extends StatelessWidget {
                 height: 180,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => const ShimmerBox(
+                placeholder: (_, _) => const ShimmerBox(
                   width: double.infinity,
                   height: 180,
                   radius: 14,
                 ),
-                errorWidget: (_, __, ___) => Container(
+                errorWidget: (_, _, _) => Container(
                   height: 180,
                   color: const Color(0xFFF2F2F2),
                   alignment: Alignment.center,
@@ -920,16 +920,16 @@ class _Thumb extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.cover,
-                placeholder: (_, __) =>
+                placeholder: (_, _) =>
                     const ShimmerBox(width: 58, height: 58, radius: 12),
-                errorWidget: (_, __, ___) => const Icon(Icons.image_outlined),
+                errorWidget: (_, _, _) => const Icon(Icons.image_outlined),
               )
             : imagePath.isEmpty || kIsWeb
             ? const Icon(Icons.image_outlined)
             : Image.file(
                 File(imagePath),
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined),
+                errorBuilder: (_, _, _) => const Icon(Icons.image_outlined),
               ),
       ),
     );

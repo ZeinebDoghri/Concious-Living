@@ -1,7 +1,6 @@
 // lib/features/customer/nutrition/calorie_provider.dart
 // ─────────────────────────────────────────────────────────────────────────────
 
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'calorie_inference_service.dart';
 

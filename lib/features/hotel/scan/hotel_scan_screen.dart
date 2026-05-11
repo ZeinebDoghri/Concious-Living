@@ -348,7 +348,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                     builder: (_, box) {
                       return AnimatedBuilder(
                         animation: _scanLine,
-                        builder: (_, __) {
+                        builder: (_, _) {
                           final maxTop = (box.maxHeight - 24).clamp(
                             0.0,
                             double.infinity,

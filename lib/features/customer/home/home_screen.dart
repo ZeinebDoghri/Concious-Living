@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -405,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   stream: NutrientTrackingService.watchTodayLog(user!.id),
                                   builder: (context, logSnap) {
                                     return StreamBuilder<Map<String, dynamic>>(
-                                      stream: NutrientTrackingService.watchLimits(user!.id),
+                                      stream: NutrientTrackingService.watchLimits(user.id),
                                       builder: (context, limitSnap) {
                                         final log = logSnap.data ?? const <String, dynamic>{};
                                         final limits = limitSnap.data ?? const {
@@ -440,7 +439,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               stream: NutrientTrackingService.watchTodayLog(user!.id),
                               builder: (context, logSnap) {
                                 return StreamBuilder<Map<String, dynamic>>(
-                                  stream: NutrientTrackingService.watchLimits(user!.id),
+                                  stream: NutrientTrackingService.watchLimits(user.id),
                                   builder: (context, limitSnap) {
                                     final log = logSnap.data ?? const <String, dynamic>{};
                                     final limits = limitSnap.data ?? const {
@@ -611,7 +610,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: IgnorePointer(
                       child: AnimatedBuilder(
                         animation: _motionController,
-                        builder: (_, __) => CustomPaint(
+                        builder: (_, _) => CustomPaint(
                           painter: _BlobPainter(
                             _motionController.value,
                             _kBlob1,
@@ -723,7 +722,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 stream: NutrientTrackingService.watchTodayLog(user!.id),
                 builder: (context, logSnap) {
                   return StreamBuilder<Map<String, dynamic>>(
-                    stream: NutrientTrackingService.watchLimits(user!.id),
+                    stream: NutrientTrackingService.watchLimits(user.id),
                     builder: (context, limitSnap) {
                       final log = logSnap.data ?? const <String, dynamic>{};
                       final limits = limitSnap.data ?? const {
@@ -801,7 +800,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
                               itemCount: alertCards.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 12),
+                              separatorBuilder: (_, _) => const SizedBox(width: 12),
                               itemBuilder: (context, index) =>
                                   _AlertCard(data: alertCards[index]),
                             ),
@@ -906,7 +905,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       stream: NutrientTrackingService.watchTodayLog(user!.id),
                       builder: (context, logSnap) {
                         return StreamBuilder<Map<String, dynamic>>(
-                          stream: NutrientTrackingService.watchLimits(user!.id),
+                          stream: NutrientTrackingService.watchLimits(user.id),
                           builder: (context, limitSnap) {
                             final log = logSnap.data ?? const <String, dynamic>{};
                             final limits = limitSnap.data ?? const {
@@ -983,9 +982,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           'S',
                         ];
                         final count = weeklyCounts[index];
-                        final barH = min(
+                        final barH = math.min(
                           44.0,
-                          max(6.0, count == 0 ? 6.0 : count * 10.0),
+                          math.max(6.0, count == 0 ? 6.0 : count * 10.0),
                         );
                         final color = _weekColor(count);
                         return Expanded(
@@ -994,7 +993,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               AnimatedBuilder(
                                 animation: _motionController,
-                                builder: (_, __) {
+                                builder: (_, _) {
                                   final wave = math.sin(
                                     _motionController.value * 2 * math.pi +
                                         index * 0.8,
@@ -1174,7 +1173,7 @@ class _SectionTitle extends StatelessWidget {
     required this.title,
     required this.actionLabel,
     required this.onTap,
-    this.topPadding = 20,
+    this.topPadding = 0,
   });
 
   @override

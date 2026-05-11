@@ -357,7 +357,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                     builder: (context, constraints) {
                       return AnimatedBuilder(
                         animation: _scanLine,
-                        builder: (_, __) {
+                        builder: (_, _) {
                           final maxTop = (constraints.maxHeight - 2).clamp(
                             0.0,
                             double.infinity,

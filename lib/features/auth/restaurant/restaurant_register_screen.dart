@@ -105,8 +105,9 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
     if (v.length >= 6) score++;
     if (v.length >= 10) score++;
     if (RegExp(r'[A-Z]').hasMatch(v)) score++;
-    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v))
+    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
       score++;
+    }
     return score.clamp(0, 4);
   }
 
@@ -225,7 +226,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
           // ── Full background blobs ────────────────────────────────────
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, __) => CustomPaint(
+            builder: (_, _) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
               size: Size(double.infinity, MediaQuery.of(context).size.height),
             ),
@@ -249,7 +250,7 @@ class _RestaurantRegisterScreenState extends State<RestaurantRegisterScreen>
                 children: [
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, __) => CustomPaint(
+                    builder: (_, _) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),

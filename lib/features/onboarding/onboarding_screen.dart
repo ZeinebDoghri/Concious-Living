@@ -167,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             // Blobs
             AnimatedBuilder(
               animation: _blobAnim,
-              builder: (_, __) => CustomPaint(
+              builder: (_, _) => CustomPaint(
                 painter: _BlobPainter(_blobAnim.value, page.blobs),
               ),
             ),

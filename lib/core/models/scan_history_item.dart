@@ -74,8 +74,9 @@ class ScanHistoryItem {
     if (timestamp is Timestamp) return timestamp.toDate();
     final scannedAt = json['scannedAt'];
     if (scannedAt is Timestamp) return scannedAt.toDate();
-    if (scannedAt is String)
+    if (scannedAt is String) {
       return DateTime.tryParse(scannedAt) ?? DateTime.now();
+    }
     return DateTime.now();
   }
 

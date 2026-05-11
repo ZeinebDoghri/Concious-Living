@@ -328,8 +328,12 @@ class ProfileScreen extends StatelessWidget {
           ),
 
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
+            child: Builder(
+              builder: (ctx) {
+                final bottomInset = MediaQuery.of(ctx).padding.bottom;
+                final bottomPadding = 24.0 + bottomInset + kBottomNavigationBarHeight;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: bottomPadding),
               child: Column(
                 children: [
                   // ── Health snapshot card ───────────────────────────────
@@ -910,6 +914,8 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
+                );
+              },
             ),
           ),
         ],

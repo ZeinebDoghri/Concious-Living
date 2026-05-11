@@ -70,8 +70,9 @@ class _EditHotelProfileScreenState extends State<EditHotelProfileScreen>
     _hotelNameController.text = user?.hotelName ?? '';
 
     final type = (user?.hotelType ?? '').trim();
-    if (type.isNotEmpty)
+    if (type.isNotEmpty) {
       _hotelType = _typeOptions.contains(type) ? type : 'Other';
+    }
 
     final rooms = user?.rooms;
     if (rooms != null) _rooms = rooms.toDouble().clamp(10, 500);
@@ -538,7 +539,7 @@ class _HotelDetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
-          value: hotelType,
+          initialValue: hotelType,
           decoration: InputDecoration(
             labelText: 'Hotel type',
             prefixIcon: const Icon(Icons.apartment_outlined, color: _kMuted),
@@ -721,7 +722,7 @@ class _TeamSetupStep extends StatelessWidget {
           child: SwitchListTile(
             value: allergyHandling,
             onChanged: onAllergyHandling,
-            activeColor: _kPrimary,
+            activeThumbColor: _kPrimary,
             title: Text(
               'Allergy handling',
               style: GoogleFonts.inter(
@@ -783,7 +784,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifySpoilage,
                 onChanged: onNotifySpoilage,
-                activeColor: _kPrimary,
+                activeThumbColor: _kPrimary,
                 title: Text(
                   'Spoilage alerts',
                   style: GoogleFonts.inter(
@@ -797,7 +798,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifyLowInventory,
                 onChanged: onNotifyLowInventory,
-                activeColor: _kPrimary,
+                activeThumbColor: _kPrimary,
                 title: Text(
                   'Low inventory alerts',
                   style: GoogleFonts.inter(
@@ -811,7 +812,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifyWasteTips,
                 onChanged: onNotifyWasteTips,
-                activeColor: _kPrimary,
+                activeThumbColor: _kPrimary,
                 title: Text(
                   'Waste reduction tips',
                   style: GoogleFonts.inter(

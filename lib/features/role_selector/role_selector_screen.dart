@@ -85,7 +85,7 @@ class _RoleSelectorScreenState extends State<RoleSelectorScreen>
         children: [
           AnimatedBuilder(
             animation: _blobAnim,
-            builder: (_, __) =>
+            builder: (_, _) =>
                 CustomPaint(painter: _BlobBgPainter(_blobAnim.value)),
           ),
 
