@@ -4,6 +4,8 @@ class AlertModel {
   final String customerName;
   final String dishName;
   final String allergen;
+  final String? venueId;
+  final String? venueType;
   final DateTime timestamp;
   final String status; // 'pending' | 'resolved'
 
@@ -13,6 +15,8 @@ class AlertModel {
     required this.customerName,
     required this.dishName,
     required this.allergen,
+    this.venueId,
+    this.venueType,
     required this.timestamp,
     required this.status,
   });
@@ -26,6 +30,8 @@ class AlertModel {
       customerName: customerName,
       dishName: dishName,
       allergen: allergen,
+      venueId: venueId,
+      venueType: venueType,
       timestamp: timestamp,
       status: status ?? this.status,
     );
@@ -38,6 +44,8 @@ class AlertModel {
       'customerName': customerName,
       'dishName': dishName,
       'allergen': allergen,
+      'venueId': venueId,
+      'venueType': venueType,
       'timestamp': timestamp.toIso8601String(),
       'status': status,
     };
@@ -50,6 +58,8 @@ class AlertModel {
       customerName: (json['customerName'] ?? '') as String,
       dishName: (json['dishName'] ?? '') as String,
       allergen: (json['allergen'] ?? '') as String,
+      venueId: json['venueId'] as String?,
+      venueType: json['venueType'] as String?,
       timestamp: DateTime.tryParse((json['timestamp'] ?? '') as String) ??
           DateTime.now(),
       status: (json['status'] ?? 'pending') as String,

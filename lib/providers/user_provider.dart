@@ -98,6 +98,13 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  void updateCurrentUserAllergens(List<String> allergens) {
+    final existing = currentUser;
+    if (existing == null) return;
+    currentUser = existing.copyWith(allergens: allergens);
+    notifyListeners();
+  }
+
   String _friendlyFirebaseError(Object error) {
     if (error is TimeoutException) {
       return 'Request timed out. This is usually a network/CORS/firewall issue on Web. Check your connection, disable ad blockers for localhost, and verify Firebase authorized domains.';
