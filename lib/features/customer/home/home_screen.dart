@@ -1410,7 +1410,7 @@ class _ScanBannerState extends State<_ScanBanner>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Cholesterol · Sodium · Sugar · Saturated Fats',
+                      'Allergens · Calories · Nutrients',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
