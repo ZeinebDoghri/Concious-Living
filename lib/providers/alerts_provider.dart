@@ -8,7 +8,8 @@ class AlertsProvider extends ChangeNotifier {
   final List<AlertModel> _alerts = [];
 
   StreamSubscription<List<AlertModel>>? _sub;
-  String? _venueId;
+  String? _scopeId;
+  String _role = 'customer';
 
   List<AlertModel> get alerts => List.unmodifiable(_alerts);
 
@@ -20,19 +21,24 @@ class AlertsProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  void setVenueId(String? venueId) {
-    if (_venueId == venueId) return;
+  void setUserContext({required String role, required String? id}) {
+    if (_scopeId == id && _role == role) return;
 
-    _venueId = venueId;
+    _scopeId = id;
+    _role = role;
     _sub?.cancel();
 
-    if (venueId == null || venueId.isEmpty) {
+    if (id == null || id.isEmpty) {
       _alerts.clear();
       notifyListeners();
       return;
     }
 
-    _sub = FirebaseService.watchAlerts(venueId).listen((items) {
+    final stream = role == 'customer'
+        ? FirebaseService.watchAlertsByCustomer(id)
+        : FirebaseService.watchAlertsByVenue(id);
+
+    _sub = stream.listen((items) {
       _alerts
         ..clear()
         ..addAll(items);
@@ -40,6 +46,10 @@ class AlertsProvider extends ChangeNotifier {
     });
 
     notifyListeners();
+  }
+
+  void setVenueId(String? venueId) {
+    setUserContext(role: 'restaurant', id: venueId);
   }
 
   int get pendingCount => _alerts.where((a) => a.status == 'pending').length;
