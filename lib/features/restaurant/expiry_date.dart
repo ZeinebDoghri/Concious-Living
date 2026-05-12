@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
 import '../../providers/venue_type_provider.dart';
@@ -209,10 +210,14 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
         'timestamp': DateTime.now().toIso8601String(),
       });
 
-      _savedDocId = docRef.id; // Mark as saved
+      await prefs.setString('expiry_scan_results', jsonEncode(results));
+      _savedDocId = DateTime.now().millisecondsSinceEpoch.toString(); // Mark as saved
+
+      final productName = _cleanProductName(_imageName);
+      final inventoryStatus = _computeInventoryStatus(_parseExpiryDate(_expiryDate));
 
       debugPrint(
-          '✅ Saved to Firestore: ${docRef.id} — $productName ($inventoryStatus)');
+          '✅ Saved locally: $_savedDocId — $productName ($inventoryStatus)');
 
 
     } catch (e) {

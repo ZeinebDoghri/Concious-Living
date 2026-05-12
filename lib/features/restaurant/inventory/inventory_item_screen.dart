@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants.dart';
 import '../../../providers/inventory_provider.dart';
+import '../../../shared/widgets/freshness_badge.dart';
+import '../../../shared/widgets/animated_button.dart';
 
 // ── FreshGuard restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
@@ -23,9 +25,14 @@ class InventoryItemScreen extends StatefulWidget {
 
   const InventoryItemScreen({super.key, required this.id});
 
+  @override
+  State<InventoryItemScreen> createState() => _InventoryItemScreenState();
+}
+
+class _InventoryItemScreenState extends State<InventoryItemScreen> {
   Future<void> _pickExpiry(BuildContext context) async {
     final provider = context.read<InventoryProvider>();
-    final it = provider.byId(id);
+    final it = provider.byId(widget.id);
     if (it == null) return;
 
     final picked = await showDatePicker(
@@ -50,57 +57,12 @@ class InventoryItemScreen extends StatefulWidget {
 
     if (picked == null) return;
 
-    await provider.updateExpiryDate(id, picked);
+    await provider.updateExpiryDate(widget.id, picked);
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(AppStrings.ok)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppStrings.ok)));
   }
 
-  Widget _buildHeader(BuildContext context, String title) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_rSoftBg, _rSurface],
-        ),
-        border: Border(
-          bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
-        ),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
-              ),
-              child: Icon(Icons.arrow_back_ios_new, color: _rDeep, size: 16),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            title,
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: _rTextTitle,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-class _InventoryItemScreenState extends State<InventoryItemScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<InventoryProvider>();
@@ -157,13 +119,6 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
                           color: _rTextTitle,
                           height: 1.2,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _rPrimary.withValues(alpha: 0.18),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
                       ),
                       const SizedBox(height: 16),
                       _InfoTile(
@@ -179,9 +134,8 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
                         value: FreshnessBadge.label(it.status),
                         valueColor: FreshnessBadge.textColor(it.status),
                       ),
-                    ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
                     // ── Expiry date card ──────────────────────────────────
                     Container(
@@ -203,20 +157,15 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
                       ),
                       child: Row(
                         children: [
-                          Expanded(
-                            child: AnimatedButton(
-                              label: AppStrings.keep,
-                              color: const Color(0xFF52C98A),
-                              textColor: Colors.white,
-                              onTap: () => provider.updateStatus(id, 'fresh'),
-                              height: 48,
+                            Expanded(
+                              child: AnimatedButton(
+                                label: AppStrings.keep,
+                                color: const Color(0xFF52C98A),
+                                textColor: Colors.white,
+                                onTap: () => provider.updateStatus(widget.id, 'fresh'),
+                                height: 48,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.calendar_today_rounded,
-                              color: _rDeep,
-                              size: 20,
-                            ),
-                          ),
                           const SizedBox(width: 14),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,6 +315,7 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
                 ),
               ),
             ),
+            ),
           ],
         ),
       ),
@@ -373,18 +323,24 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+class _Header extends StatelessWidget {
+  final VoidCallback onBack;
 
-  const _InfoTile({required this.label, required this.value, this.valueColor});
+  const _Header({required this.onBack});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
       decoration: BoxDecoration(
-        color: _rSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _rPrimary.withValues(alpha: 0.2), width: 0.8),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_rSoftBg, _rSurface],
+        ),
+        border: Border(
+          bottom: BorderSide(color: _rPrimary.withValues(alpha: 0.2)),
+        ),
       ),
       child: Row(
         children: [
@@ -396,11 +352,9 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: _rPrimary.withValues(alpha: 0.3)),
+                border: Border.all(color: _rPrimary.withValues(alpha: 0.3)),
               ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  color: _rDeep, size: 16),
+              child: const Icon(Icons.arrow_back_ios_new, color: _rDeep, size: 16),
             ),
           ),
           const SizedBox(width: 14),
@@ -414,6 +368,39 @@ class _InventoryItemScreenState extends State<InventoryItemScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _InfoTile({required this.label, required this.value, this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: _rTextMuted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: valueColor ?? _rTextTitle,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

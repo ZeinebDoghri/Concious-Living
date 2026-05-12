@@ -1286,7 +1286,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // ── Mini stat cards ────────────────────────────────────────────────────────────
-class _MiniStatStrip extends StatelessWidget {
+class _MiniStatStrip extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -1304,10 +1304,10 @@ class _MiniStatStrip extends StatelessWidget {
   });
 
   @override
-  State<_MiniStatCard> createState() => _MiniStatCardState();
+  State<_MiniStatStrip> createState() => _MiniStatStripState();
 }
 
-class _MiniStatCardState extends State<_MiniStatCard>
+class _MiniStatStripState extends State<_MiniStatStrip>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
 
@@ -1324,7 +1324,7 @@ class _MiniStatCardState extends State<_MiniStatCard>
   }
 
   @override
-  void didUpdateWidget(_MiniStatCard oldWidget) {
+  void didUpdateWidget(_MiniStatStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isAnimated && !oldWidget.isAnimated) {
       _pulseController.repeat();
@@ -1358,12 +1358,12 @@ class _MiniStatCardState extends State<_MiniStatCard>
               color: _fresh.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: _fresh, size: 19),
+            child: Icon(widget.icon, color: _fresh, size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              label,
+              widget.label,
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1372,7 +1372,7 @@ class _MiniStatCardState extends State<_MiniStatCard>
             ),
           ),
           Text(
-            value,
+            widget.value,
             style: GoogleFonts.playfairDisplay(
               fontSize: 20,
               fontWeight: FontWeight.w700,

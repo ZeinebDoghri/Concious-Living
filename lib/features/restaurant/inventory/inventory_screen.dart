@@ -330,8 +330,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                                     height: 1.2,
                                                   ),
                                                 ),
-                                              ),
+                                              ],
                                             ),
+                                          ),
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
@@ -360,7 +361,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                                 ],
                                               ),
                                             ),
-                                          ),
                                           const SizedBox(width: 10),
                                           FreshnessBadge(it.status),
                                           const SizedBox(width: 8),
@@ -415,7 +415,8 @@ class _FilterTab extends StatelessWidget {
                 ? _rPrimary.withValues(alpha: 0.5)
                 : _rPrimary.withValues(alpha: 0.2),
           ),
-          child: Row(
+        ),
+        child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -434,7 +435,6 @@ class _FilterTab extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }

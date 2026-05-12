@@ -459,6 +459,10 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     );
   }
 
+  String _normalizeConfidencePercent(double confidence) {
+    return (confidence * 100).toStringAsFixed(1);
+  }
+
   Widget _contaminationCard({
     required FoodAnalysisResult contamination,
     Uint8List? imageBytes,
