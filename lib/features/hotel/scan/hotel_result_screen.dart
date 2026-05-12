@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -80,6 +80,8 @@ class _HotelResultScreenState extends State<HotelResultScreen>
       (widget.args['compostResult'] as Map<String, dynamic>?) ?? {};
   Map<String, dynamic> get _contaminationResult =>
       (widget.args['contaminationResult'] as Map<String, dynamic>?) ?? {};
+  Map<String, dynamic> get _nutritionResult =>
+      (widget.args['nutritionResult'] as Map<String, dynamic>?) ?? {};
 
   Future<String> _hotelId() async {
     final user = context.read<UserProvider>().currentUser;
@@ -143,7 +145,7 @@ class _HotelResultScreenState extends State<HotelResultScreen>
     if (_imageBytes != null && _imageBytes!.isNotEmpty) {
       imageUrl = await CloudinaryService.uploadScanImage(
         _imageBytes!,
-        folder: 'freshguard/hotel/$hotelId',
+        folder: 'orka/hotel/$hotelId',
       );
     }
     await FirebaseFirestore.instance
@@ -179,6 +181,10 @@ class _HotelResultScreenState extends State<HotelResultScreen>
           'background_pct': _backgroundPct,
           'compostable_kg': _compostableKg,
           'riskLevel': _venueRiskLevel,
+          'calories': (_nutritionResult['calories'] as num?)?.toDouble() ?? 0.0,
+          'protein_g': (_nutritionResult['protein'] as num?)?.toDouble() ?? 0.0,
+          'carbs_g': (_nutritionResult['carbs'] as num?)?.toDouble() ?? 0.0,
+          'fat_g': (_nutritionResult['fat'] as num?)?.toDouble() ?? 0.0,
         }, SetOptions(merge: true));
   }
 
@@ -288,11 +294,8 @@ class _HotelResultScreenState extends State<HotelResultScreen>
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (_imageBytes != null && contamination != null)
-                    AnnotatedContaminationImage(
-                      imageBytes: _imageBytes!,
-                      detections: contamination.detections,
-                    )
+                  if (_imageBytes != null)
+                    Image.memory(_imageBytes!, fit: BoxFit.cover)
                   else
                     (_imageFile != null && !kIsWeb
                         ? Image.file(_imageFile!, fit: BoxFit.cover)
@@ -391,6 +394,15 @@ class _HotelResultScreenState extends State<HotelResultScreen>
                     _contaminationCard(
                       contamination: contamination,
                       imageBytes: _imageBytes,
+                    ),
+                  const SizedBox(height: 12),
+                  if (_nutritionResult.isNotEmpty)
+                    _SectionCard(
+                      title: 'Nutrition analysis',
+                      subtitle: 'Gemini 1.5 Flash Vision',
+                      color: const Color(0xFFC4748A),
+                      delay: 350,
+                      child: _NutritionCard(data: _nutritionResult),
                     ),
                   const SizedBox(height: 20),
                   GestureDetector(
@@ -921,6 +933,60 @@ class _Dot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+    );
+  }
+}
+
+class _NutritionCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _NutritionCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final cal = (data['calories'] as num?)?.toDouble() ?? 0;
+    final pro = (data['protein'] as num?)?.toDouble() ?? 0;
+    final car = (data['carb'] as num?)?.toDouble() ?? 0;
+    final fat = (data['fat'] as num?)?.toDouble() ?? 0;
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _NutrientCol('Calories', '${cal.toInt()} kcal', _kCherry),
+            _NutrientCol('Protein', '${pro.toStringAsFixed(1)}g', _kEmerald),
+            _NutrientCol('Carbs', '${car.toStringAsFixed(1)}g', _kAmber),
+            _NutrientCol('Fat', '${fat.toStringAsFixed(1)}g', _kRose),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _NutrientCol extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _NutrientCol(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 10, color: _kSlate),
+        ),
+      ],
     );
   }
 }

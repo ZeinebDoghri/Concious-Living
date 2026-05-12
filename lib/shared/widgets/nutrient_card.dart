@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
@@ -26,9 +26,9 @@ class NutrientCard extends StatelessWidget {
 
   static Color riskColor(String level) {
     switch (level.toLowerCase()) {
-      case 'high': return FreshGuardTheme.danger;
-      case 'moderate': return FreshGuardTheme.warning;
-      case 'low': default: return FreshGuardTheme.fresh;
+      case 'high': return ORKATheme.danger;
+      case 'moderate': return ORKATheme.warning;
+      case 'low': default: return ORKATheme.fresh;
     }
   }
 

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ import '../../../shared/widgets/freshness_badge.dart';
 import 'annotated_contamination_image.dart';
 import 'food_contamination_service.dart';
 
-// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+// ── ORKA restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);
@@ -156,7 +156,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     if (_imageBytes != null && _imageBytes!.isNotEmpty) {
       imageUrl = await CloudinaryService.uploadScanImage(
         _imageBytes!,
-        folder: 'freshguard/restaurant/$restaurantId',
+        folder: 'orka/restaurant/$restaurantId',
       );
     }
     await FirebaseFirestore.instance
@@ -422,13 +422,8 @@ class _StaffResultScreenState extends State<StaffResultScreen>
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Scanned image
-                  if (_imageBytes != null && contamination != null)
-                    AnnotatedContaminationImage(
-                      imageBytes: _imageBytes!,
-                      detections: contamination.detections,
-                    )
-                  else if (_imageBytes != null)
+                  // Scanned image (plain, no bounding boxes at top)
+                  if (_imageBytes != null)
                     Image.memory(
                       _imageBytes!,
                       fit: BoxFit.cover,

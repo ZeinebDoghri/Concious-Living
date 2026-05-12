@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -22,7 +22,7 @@ import '../../../features/shared/compost_dashboard_panel.dart';
 import '../../../shared/animations/shimmer_box.dart';
 import '../../../widgets/animated_chat_fab.dart';
 
-// ── FreshGuard restaurant pastel tokens ───────────────────────────────────────
+// ── ORKA restaurant pastel tokens ───────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);
@@ -393,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
             Text(
-              'FreshGuard',
+              'ORKA',
               style: GoogleFonts.playfairDisplay(
                 color: Colors.white,
                 fontSize: 20,
@@ -403,6 +403,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined, color: Colors.white),
+            tooltip: 'Calendar',
+            onPressed: () => context.go('/restaurant/waste'),
+          ),
           IconButton(
             icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
             tooltip: 'Chef AI',

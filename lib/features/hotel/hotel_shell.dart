@@ -6,7 +6,7 @@ import '../../shared/animations/role_animated_background.dart';
 import '../../shared/widgets/floating_navbar.dart';
 import '../../theme/role_colors.dart';
 
-const _branchMap = [0, 1, 2, 3];
+const _branchMap = [0, 1, 2, 3, 4];
 
 const _items = [
   FloatingNavItem(
@@ -18,6 +18,11 @@ const _items = [
     iconOff: Icons.qr_code_scanner_outlined,
     iconOn: Icons.qr_code_scanner_rounded,
     label: 'Scan',
+  ),
+  FloatingNavItem(
+    iconOff: Icons.delete_outline_rounded,
+    iconOn: Icons.delete_rounded,
+    label: 'Waste',
   ),
   FloatingNavItem(
     iconOff: Icons.history_outlined,
@@ -67,7 +72,7 @@ class _HotelShellState extends State<HotelShell>
 
   void _onTap(int visualIndex) {
     final branchIndex = _branchMap[visualIndex];
-    if (branchIndex == 3) {
+    if (branchIndex == 4) {
       context.go(AppRoutes.hotelProfile);
     } else {
       widget.navigationShell.goBranch(

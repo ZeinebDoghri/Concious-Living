@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
@@ -10,7 +10,7 @@ class CloudinaryService {
 
   static Future<String?> uploadScanImage(
     Uint8List imageBytes, {
-    String folder = 'freshguard/scans',
+    String folder = 'orka/scans',
   }) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));

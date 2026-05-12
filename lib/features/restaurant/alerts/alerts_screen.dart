@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../providers/alerts_provider.dart';
 
-// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+// ── ORKA restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);
@@ -55,13 +55,21 @@ class _AlertsScreenState extends State<AlertsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    AppStrings.alerts,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: _rTextTitle,
-                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: _rTextTitle),
+                        onPressed: () => context.pop(),
+                      ),
+                      Text(
+                        AppStrings.alerts,
+                        style: GoogleFonts.playfairDisplay(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: _rTextTitle,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Row(

@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -57,19 +57,19 @@ class _OliveHeaderState extends State<OliveHeader>
   @override
   Widget build(BuildContext context) {
     const colors = RoleColors(
-      primary: FreshGuardTheme.hotelPrimary,
-      deep: FreshGuardTheme.hotelDeep,
-      surface: FreshGuardTheme.hotelSurface,
-      cardBg: FreshGuardTheme.hotelCardBg,
-      softBg: FreshGuardTheme.hotelSoftGreen,
-      cream: FreshGuardTheme.hotelMint,
-      textTitle: FreshGuardTheme.hotelTextTitle,
-      textBody: FreshGuardTheme.hotelTextBody,
-      textMuted: FreshGuardTheme.hotelTextMuted,
-      aiDark: FreshGuardTheme.hotelAiDark,
-      aiLight: FreshGuardTheme.hotelAiLight,
-      heroBlob1: FreshGuardTheme.hotelHeroBlob1,
-      heroBlob2: FreshGuardTheme.hotelHeroBlob2,
+      primary: ORKATheme.hotelPrimary,
+      deep: ORKATheme.hotelDeep,
+      surface: ORKATheme.hotelSurface,
+      cardBg: ORKATheme.hotelCardBg,
+      softBg: ORKATheme.hotelSoftGreen,
+      cream: ORKATheme.hotelMint,
+      textTitle: ORKATheme.hotelTextTitle,
+      textBody: ORKATheme.hotelTextBody,
+      textMuted: ORKATheme.hotelTextMuted,
+      aiDark: ORKATheme.hotelAiDark,
+      aiLight: ORKATheme.hotelAiLight,
+      heroBlob1: ORKATheme.hotelHeroBlob1,
+      heroBlob2: ORKATheme.hotelHeroBlob2,
     );
 
     return SizedBox(

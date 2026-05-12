@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -67,7 +67,7 @@ class HotelProfileScreen extends StatelessWidget {
               AppStrings.confirm,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
-                color: FreshGuardTheme.danger,
+                color: ORKATheme.danger,
               ),
             ),
           ),
@@ -462,14 +462,14 @@ class HotelProfileScreen extends StatelessWidget {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: FreshGuardTheme.danger.withValues(
+                              color: ORKATheme.danger.withValues(
                                 alpha: 0.08,
                               ),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.logout,
-                              color: FreshGuardTheme.danger,
+                              color: ORKATheme.danger,
                               size: 18,
                             ),
                           ),
@@ -478,7 +478,7 @@ class HotelProfileScreen extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: FreshGuardTheme.danger,
+                              color: ORKATheme.danger,
                             ),
                           ),
                           onTap: () => _signOut(context),

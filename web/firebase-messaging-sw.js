@@ -17,7 +17,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(
-    payload.notification?.title ?? "FreshGuard",
+    payload.notification?.title ?? "ORKA",
     {
       body: payload.notification?.body,
       icon: "/icons/Icon-192.png",

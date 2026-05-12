@@ -322,11 +322,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: _kSurface,
-      floatingActionButton: AnimatedChatFab(
-        color: const Color(0xFF45C4B0),
-        label: 'Ask Nora',
-        icon: Icons.psychology_rounded,
-        onTap: () => context.go('/customer/nutritionist'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 72),
+        child: AnimatedChatFab(
+          color: const Color(0xFF45C4B0),
+          label: 'Ask Nora',
+          icon: Icons.psychology_rounded,
+          onTap: () => context.go('/customer/nutritionist'),
+        ),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -414,7 +417,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                           'sodium_mg': 2300,
                                           'sugar_g': 50,
                                         };
-                                        // Count exceeded nutrients
                                         int exceededCount = 0;
                                         limits.forEach((key, limit) {
                                           if (log[key] != null && (log[key] as num) > (limit as num)) {
@@ -629,6 +631,141 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
               child: _ScanBanner(
                 onTap: () => context.go(AppRoutes.customerScan),
+              ),
+            ),
+
+            // ── Today's Calories ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Today's Calories",
+                      style: GoogleFonts.playfairDisplay(fontSize: 16, fontWeight: FontWeight.w700, color: _kTextTitle)),
+                  GestureDetector(
+                    onTap: () => context.push('/customer/calorie-tracker'),
+                    child: Text("Details", style: GoogleFonts.inter(color: const Color(0xFFC4748A), fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+            if (user?.id != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: StreamBuilder<Map<String, dynamic>>(
+                  stream: NutrientTrackingService.watchTodayLog(user!.id),
+                  builder: (context, snap) {
+                    final log = snap.data ?? {};
+                    final consumed = (log['calories'] ?? 0.0) as double;
+                    final goal = user?.calorieGoal ?? 2000;
+                    final pct = goal > 0 ? (consumed / goal).clamp(0.0, 1.0) : 0.0;
+
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
+                      child: Column(children: [
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: pct),
+                          duration: const Duration(milliseconds: 800),
+                          builder: (_, value, __) => CircularPercentIndicator(
+                            radius: 55,
+                            lineWidth: 8,
+                            percent: value,
+                            center: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${consumed.toInt()}',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFC4748A))),
+                                const Text('kcal', style: TextStyle(fontSize: 12, color: Colors.black45)),
+                              ],
+                            ),
+                            progressColor: pct >= 1.0
+                                ? const Color(0xFFFF6B8A)
+                                : pct >= 0.75
+                                    ? const Color(0xFFFFB347)
+                                    : const Color(0xFF45C4B0),
+                            backgroundColor: const Color(0xFFFFD6E0),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Goal: $goal kcal', style: const TextStyle(color: Colors.black45, fontSize: 13)),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _MiniMacro(
+                              label: 'P',
+                              value: (log['protein_g'] ?? 0.0).toDouble(),
+                              goal: (goal * 0.25) / 4.0,
+                              color: const Color(0xFF45C4B0),
+                            ),
+                            _MiniMacro(
+                              label: 'C',
+                              value: (log['carbs_g'] ?? 0.0).toDouble(),
+                              goal: (goal * 0.50) / 4.0,
+                              color: const Color(0xFFFFB347),
+                            ),
+                            _MiniMacro(
+                              label: 'F',
+                              value: (log['fat_g'] ?? 0.0).toDouble(),
+                              goal: (goal * 0.25) / 9.0,
+                              color: const Color(0xFFFF6B8A),
+                            ),
+                          ],
+                        ),
+                      ]),
+                    );
+                  },
+                ),
+              ),
+
+            // ── FoodMap entry card ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: GestureDetector(
+                onTap: () => context.push('/customer/foodmap'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFC4748A), Color(0xFFFF8FAB)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(
+                      color: const Color(0xFFC4748A).withValues(alpha: 0.35),
+                      blurRadius: 12, offset: const Offset(0, 4),
+                    )],
+                  ),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.restaurant_menu_rounded, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Find Safe Restaurants',
+                              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Filtered by your allergies & goals',
+                              style: GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                  ]),
+                ),
               ),
             ),
 
@@ -1096,6 +1233,7 @@ class _BlobPainter extends CustomPainter {
 class _HealthScoreRing extends StatelessWidget {
   final int exceededCount;
   final int totalNutrients;
+
   const _HealthScoreRing({
     required this.exceededCount,
     required this.totalNutrients,
@@ -1411,7 +1549,7 @@ class _ScanBannerState extends State<_ScanBanner>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Cholesterol · Sodium · Sugar · Saturated Fats',
+                      'Allergens · Calories · Nutrients',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -1874,6 +2012,53 @@ class _StaggerIn extends StatelessWidget {
         ).animate(curve),
         child: child,
       ),
+    );
+  }
+}
+class _MiniMacro extends StatelessWidget {
+  final String label;
+  final double value;
+  final double goal;
+  final Color color;
+
+  const _MiniMacro({
+    required this.label,
+    required this.value,
+    required this.goal,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0;
+    return Column(
+      children: [
+        CircularPercentIndicator(
+          radius: 18,
+          lineWidth: 3,
+          percent: pct,
+          center: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          progressColor: color,
+          backgroundColor: color.withValues(alpha: 0.15),
+          circularStrokeCap: CircularStrokeCap.round,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${value.toInt()}g',
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+      ],
     );
   }
 }

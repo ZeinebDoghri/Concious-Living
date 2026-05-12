@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +8,7 @@ import '../../core/constants.dart';
 import '../../providers/venue_type_provider.dart';
 import '../../shared/animations/role_animated_background.dart';
 
-// ── Restaurant FreshGuard pastel theme tokens ──────────────────────────────────
+// ── Restaurant ORKA pastel theme tokens ──────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);

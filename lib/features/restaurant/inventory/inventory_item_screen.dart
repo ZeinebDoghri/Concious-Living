@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +9,7 @@ import '../../../providers/inventory_provider.dart';
 import '../../../shared/widgets/freshness_badge.dart';
 import '../../../shared/widgets/animated_button.dart';
 
-// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+// ── ORKA restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);

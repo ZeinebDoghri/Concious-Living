@@ -246,7 +246,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        'Fresh',
+                                        'Customer',
                                         style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,
@@ -255,7 +255,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen>
                                         ),
                                       ),
                                       Text(
-                                        'Guard',
+                                        'Portal',
                                         style: GoogleFonts.cormorantGaramond(
                                           fontSize: 40,
                                           fontWeight: FontWeight.w700,

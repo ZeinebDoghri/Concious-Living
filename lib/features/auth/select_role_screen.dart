@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -49,7 +49,7 @@ class SelectRoleScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           children: [
             Text(
-              'Welcome to FreshGuard - I am a...',
+              'Welcome to ORKA - I am a...',
               style: GoogleFonts.cormorantGaramond(
                 fontSize: 32,
                 height: 1.05,

@@ -34,6 +34,9 @@ class NutrientTrackingService {
         'sodium_mg': _num(current['sodium_mg']) + _num(nutrition['sodium_mg']),
         'sugar_g': _num(current['sugar_g']) + _num(nutrition['sugar_g']),
         'calories': _num(current['calories']) + _num(nutrition['calories']),
+        'protein_g': _num(current['protein_g']) + _num(nutrition['protein_g']),
+        'carbs_g': _num(current['carbs_g']) + _num(nutrition['carbs_g']),
+        'fat_g': _num(current['fat_g']) + _num(nutrition['fat_g']),
         'scan_refs': FieldValue.arrayUnion([nutrition['scanId'] ?? '']),
         'last_updated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -78,6 +81,18 @@ class NutrientTrackingService {
         'calories': max(
           0.0,
           _num(current['calories']) - _num(nutrition['calories']),
+        ),
+        'protein_g': max(
+          0.0,
+          _num(current['protein_g']) - _num(nutrition['protein_g']),
+        ),
+        'carbs_g': max(
+          0.0,
+          _num(current['carbs_g']) - _num(nutrition['carbs_g']),
+        ),
+        'fat_g': max(
+          0.0,
+          _num(current['fat_g']) - _num(nutrition['fat_g']),
         ),
         'scan_refs': FieldValue.arrayRemove([nutrition['scanId'] ?? '']),
         'last_updated': FieldValue.serverTimestamp(),
@@ -186,7 +201,10 @@ class NutrientTrackingService {
       'saturated_fat_g': scan.nutrition.saturated_fat_g,
       'sodium_mg': scan.nutrition.sodium_mg,
       'sugar_g': scan.nutrition.sugar_g,
-      'calories': 0.0,
+      'calories': scan.nutrition.calories,
+      'protein_g': scan.nutrition.protein,
+      'carbs_g': scan.nutrition.carbs,
+      'fat_g': scan.nutrition.fat,
     };
   }
 

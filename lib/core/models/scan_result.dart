@@ -30,6 +30,10 @@ class ScanNutrition {
       saturated_fat_g: result.saturatedFat.value,
       sodium_mg: result.sodium.value,
       sugar_g: result.sugar.value,
+      calories: result.calories.value,
+      carbs: result.carbs.value,
+      fat: result.totalFat.value,
+      protein: result.protein.value,
     );
   }
 

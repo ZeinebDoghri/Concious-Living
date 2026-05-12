@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
@@ -26,9 +26,9 @@ class RiskBadge extends StatelessWidget {
 
   static Color bgColor(String level) {
     switch (level) {
-      case 'high': return FreshGuardTheme.danger.withValues(alpha: 0.12);
-      case 'moderate': return FreshGuardTheme.warning.withValues(alpha: 0.15);
-      case 'low': default: return FreshGuardTheme.fresh.withValues(alpha: 0.12);
+      case 'high': return ORKATheme.danger.withValues(alpha: 0.12);
+      case 'moderate': return ORKATheme.warning.withValues(alpha: 0.15);
+      case 'low': default: return ORKATheme.fresh.withValues(alpha: 0.12);
     }
   }
 

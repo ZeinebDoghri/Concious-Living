@@ -8,7 +8,9 @@ import 'package:provider/provider.dart';
 import '../../../core/constants.dart';
 import '../../../core/firebase_service.dart';
 import '../../../providers/scan_history_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../providers/user_provider.dart';
+import '../../../services/nutrient_tracking_service.dart';
 
 // ── Customer design tokens ─────────────────────────────────────────────────────
 const _kPrimary = Color(0xFFD9899F);
@@ -292,6 +294,24 @@ class ProfileScreen extends StatelessWidget {
                         height: 1.2,
                       ),
                     ),
+                    if (user?.city != null && user!.city!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.location_on_outlined,
+                              size: 14, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text(
+                            user!.city!,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       _memberSinceText(),
@@ -321,7 +341,9 @@ class ProfileScreen extends StatelessWidget {
 
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom + 100,
+              ),
               child: Column(
                 children: [
                   // ── Health snapshot card ───────────────────────────────
@@ -329,100 +351,168 @@ class ProfileScreen extends StatelessWidget {
                     offset: const Offset(0, -20),
                     child: _SectionCard(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Health snapshot',
-                                style: GoogleFonts.playfairDisplay(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: _kTextTitle,
-                                ),
-                              ),
-                              const Spacer(),
-                              InkWell(
-                                onTap: () =>
-                                    context.go('/customer/nutrition-goals'),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 6,
-                                  ),
-                                  child: Text(
-                                    'Edit goals',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: _kPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _MiniProgressRow(
-                            icon: Icons.favorite_border,
-                            name: 'Cholesterol',
-                            pct: intakePct['cholesterol'] ?? 0,
-                            barColor: _barColor(intakePct['cholesterol'] ?? 0),
-                          ),
-                          _MiniProgressRow(
-                            icon: Icons.blur_circular,
-                            name: 'Saturated fat',
-                            pct: intakePct['saturatedFat'] ?? 0,
-                            barColor: _barColor(intakePct['saturatedFat'] ?? 0),
-                          ),
-                          _MiniProgressRow(
-                            icon: Icons.water_drop_outlined,
-                            name: 'Sodium',
-                            pct: intakePct['sodium'] ?? 0,
-                            barColor: _barColor(intakePct['sodium'] ?? 0),
-                          ),
-                          _MiniProgressRow(
-                            icon: Icons.cookie_outlined,
-                            name: 'Sugar',
-                            pct: intakePct['sugar'] ?? 0,
-                            barColor: _barColor(intakePct['sugar'] ?? 0),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(color: _kSoftBg, height: 1),
-                          ),
-                          FutureBuilder<List<String>>(
-                            future: _loadAllergens(),
-                            builder: (context, snap) {
-                              final allergens = snap.data ?? const <String>[];
-                              return Row(
+                      child: user?.id == null ? const SizedBox.shrink() : StreamBuilder<Map<String, dynamic>>(
+                        stream: NutrientTrackingService.watchTodayLog(user!.id),
+                        builder: (context, logSnap) {
+                          return StreamBuilder<Map<String, dynamic>>(
+                            stream: NutrientTrackingService.watchLimits(user!.id),
+                            builder: (context, limitSnap) {
+                              final log = logSnap.data ?? const <String, dynamic>{};
+                              final limits = limitSnap.data ?? const {
+                                'cholesterol_mg': 300,
+                                'saturated_fat_g': 20,
+                                'sodium_mg': 2300,
+                                'sugar_g': 50,
+                              };
+                              
+                              double pct(String key) {
+                                final value = (log[key] as num?)?.toDouble() ?? 0;
+                                final limit = (limits[key] as num?)?.toDouble() ?? 1;
+                                return limit <= 0 ? 0.0 : (value / limit) * 100;
+                              }
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Dietary: None set',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: _kTextMuted,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Health snapshot',
+                                        style: GoogleFonts.playfairDisplay(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: _kTextTitle,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      InkWell(
+                                        onTap: () =>
+                                            context.go('/customer/nutrition-goals'),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 6,
+                                          ),
+                                          child: Text(
+                                            'Edit goals',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: _kPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    'Allergens: ${allergens.length} flagged',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: _kPrimary,
-                                    ),
+                                  const SizedBox(height: 8),
+                                  _MiniProgressRow(
+                                    icon: Icons.favorite_border,
+                                    name: 'Cholesterol',
+                                    pct: pct('cholesterol_mg'),
+                                    barColor: _barColor(pct('cholesterol_mg')),
+                                  ),
+                                  _MiniProgressRow(
+                                    icon: Icons.blur_circular,
+                                    name: 'Saturated fat',
+                                    pct: pct('saturated_fat_g'),
+                                    barColor: _barColor(pct('saturated_fat_g')),
+                                  ),
+                                  _MiniProgressRow(
+                                    icon: Icons.water_drop_outlined,
+                                    name: 'Sodium',
+                                    pct: pct('sodium_mg'),
+                                    barColor: _barColor(pct('sodium_mg')),
+                                  ),
+                                  _MiniProgressRow(
+                                    icon: Icons.cookie_outlined,
+                                    name: 'Sugar',
+                                    pct: pct('sugar_g'),
+                                    barColor: _barColor(pct('sugar_g')),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    child: Divider(color: _kSoftBg, height: 1),
+                                  ),
+                                  StreamBuilder<DocumentSnapshot>(
+                                    stream: FirebaseFirestore.instance.collection('users').doc(user!.id).snapshots(),
+                                    builder: (context, userSnap) {
+                                      final userData = userSnap.data?.data() as Map<String, dynamic>?;
+                                      final allergens = List<String>.from(userData?['allergens'] ?? []);
+                                      return Row(
+                                        children: [
+                                          Text(
+                                            'Dietary: None set',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: _kTextMuted,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            'Allergens: ${allergens.length} flagged',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: _kPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ],
                               );
                             },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // ── My Health Plan card ───────────────────────────────
+                  if (user?.healthGoal != null)
+                    _HealthPlanCard(
+                      goalLabel: (user?.healthGoal ?? 'Health Plan')
+                          .replaceAll('_', ' ')
+                          .toUpperCase(),
+                      calorieGoal: user?.calorieGoal ?? 2000,
+                      proteinG: user?.proteinGoal_g ?? 120,
+                      carbsG: user?.carbsGoal_g ?? 250,
+                      fatG: user?.fatGoal_g ?? 70,
+                    )
+                  else
+                    _SectionCard(
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Unlock your personalized health plan 🎯',
+                            style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: () => context.go(AppRoutes.customerQuiz),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _kPrimary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Start Health Quiz',
+                                style: GoogleFonts.inter(
+                                    color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
 
                   // ── Personal information ───────────────────────────────
                   _SectionCard(
@@ -631,6 +721,42 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
 
+                  // ── Health Goals ──────────────────────────────────────
+                  _SectionCard(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Health Goals',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          initialValue: (user?.calorieGoal ?? 2000).toString(),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Daily calorie goal (kcal)',
+                            suffixText: 'kcal',
+                          ),
+                          onChanged: (val) {
+                            final parsed = int.tryParse(val);
+                            if (parsed != null && parsed > 0 && user?.id != null) {
+                              FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user!.id)
+                                  .update({'calorieGoal': parsed});
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // ── Activity ──────────────────────────────────────────
                   _SectionCard(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -670,6 +796,85 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Food Map ──────────────────────────────────────────
+                  _SectionCard(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Food Map (Recent Meals)',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Builder(builder: (context) {
+                          final allScans = context.watch<ScanHistoryProvider>().items;
+                          final recent = allScans.take(15).toList();
+                          final approved = <String>[];
+                          final cheat = <String>[];
+                          for (final item in recent) {
+                            final values = [
+                              item.result.cholesterol.dailyValuePct,
+                              item.result.saturatedFat.dailyValuePct,
+                              item.result.sodium.dailyValuePct,
+                              item.result.sugar.dailyValuePct,
+                            ];
+                            final avg = values.fold<double>(0, (a, b) => a + b) / values.length;
+                            if (avg < 80) {
+                              approved.add(item.dishName);
+                            } else {
+                              cheat.add(item.dishName);
+                            }
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Dietitian Approved', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kFresh)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: approved.isEmpty
+                                    ? [Text('No approved meals recently.', style: GoogleFonts.inter(fontSize: 12, color: _kTextMuted))]
+                                    : approved.map((c) => Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: _kFresh.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: _kFresh),
+                                        ),
+                                        child: Text(c, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _kFresh)),
+                                      )).toList(),
+                              ),
+                              const SizedBox(height: 12),
+                              Text('Cheat Meals', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _kDanger)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: cheat.isEmpty
+                                    ? [Text('No cheat meals recently.', style: GoogleFonts.inter(fontSize: 12, color: _kTextMuted))]
+                                    : cheat.map((c) => Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: _kDanger.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: _kDanger),
+                                        ),
+                                        child: Text(c, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _kDanger)),
+                                      )).toList(),
+                              ),
+                            ],
+                          );
+                        }),
                       ],
                     ),
                   ),
@@ -1162,6 +1367,147 @@ class _ChipsWrap extends StatelessWidget {
       spacing: 10,
       runSpacing: 10,
       children: chips.map(chipBuilder).toList(growable: false),
+    );
+  }
+}
+
+class _HealthPlanCard extends StatelessWidget {
+  final String goalLabel;
+  final int calorieGoal;
+  final int proteinG;
+  final int carbsG;
+  final int fatG;
+
+  const _HealthPlanCard({
+    required this.goalLabel,
+    required this.calorieGoal,
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFC4748A), Color(0xFFFF8FAB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFC4748A).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'My Health Plan',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  goalLabel,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _PlanStat(icon: '🔥', value: '$calorieGoal', label: 'kcal/day'),
+              _PlanStat(icon: '🥩', value: '${proteinG}g', label: 'Protein'),
+              _PlanStat(icon: '🌾', value: '${carbsG}g', label: 'Carbs'),
+              _PlanStat(icon: '🥑', value: '${fatG}g', label: 'Fat'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Colors.white.withOpacity(0.2)),
+          TextButton(
+            onPressed: () => context.go(AppRoutes.customerQuiz),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Recalculate your plan',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanStat extends StatelessWidget {
+  final String icon;
+  final String value;
+  final String label;
+
+  const _PlanStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

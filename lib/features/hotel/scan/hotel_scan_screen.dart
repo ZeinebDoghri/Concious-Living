@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/api_config.dart';
 import '../../../core/constants.dart';
+import '../../customer/nutrition/calorie_inference_service.dart';
 import '../../restaurant/scan/food_contamination_service.dart';
 import '../../restaurant/waste/compost_inference_service.dart';
 import '../../restaurant/waste/waste_pipeline_service.dart';
@@ -43,6 +44,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
     baseUrl: ApiConfig.wastePipelineApi,
   );
   final _contaminationService = FoodContaminationService();
+  final _nutritionService = CalorieInferenceService();
 
   XFile? _lastFile;
   bool _isAnalysing = false;
@@ -184,6 +186,14 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                 'detection_count': 0,
               };
             }),
+
+        // 5. Nutritional inference (Gemini)
+        _nutritionService.predict(imageBytes).then((r) => r?.toJson()).catchError((
+          e,
+        ) {
+          debugPrint('[Hotel Scan] Nutrition error: $e');
+          return null;
+        }),
       ]);
 
       if (!mounted) return;
@@ -198,6 +208,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
           'freshnessResult': futures[1] as Map<String, dynamic>,
           'wasteResult': futures[2] as Map<String, dynamic>,
           'contaminationResult': futures[3] as Map<String, dynamic>,
+          'nutritionResult': futures[4] as Map<String, dynamic>?,
           'isFusion': true,
         },
       );

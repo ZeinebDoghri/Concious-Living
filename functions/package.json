@@ -1,5 +1,5 @@
 {
-  "name": "freshguard-functions",
+  "name": "orka-functions",
   "private": true,
   "main": "lib/index.js",
   "scripts": {

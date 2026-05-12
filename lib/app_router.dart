@@ -20,7 +20,11 @@ import 'features/customer/customer_shell.dart';
 import 'features/customer/history/history_detail_screen.dart';
 import 'features/customer/history/history_screen.dart';
 import 'features/customer/home/home_screen.dart';
+import 'features/customer/nutrition/health_quiz_screen.dart';
 import 'features/customer/nutrition/nutrients_screen.dart';
+import 'features/customer/nutrition/calorie_tracker_screen.dart';
+import 'features/customer/foodmap/foodmap_screen.dart';
+import 'features/customer/foodmap/restaurant_detail_screen.dart';
 import 'features/customer/nutritionist/nora_chat_page.dart';
 import 'features/customer/profile/health_goals_screen.dart';
 import 'features/customer/profile/edit_profile_screen.dart';
@@ -290,6 +294,28 @@ GoRouter createAppRouter() {
                     slidePage(child: const NutrientsScreen()),
               ),
               GoRoute(
+                path: AppRoutes.customerQuiz,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const HealthQuizScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.customerCalorieTracker,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const CalorieTrackerScreen()),
+              ),
+              GoRoute(
+                path: '/customer/foodmap',
+                pageBuilder: (context, state) =>
+                    slidePage(child: const FoodMapScreen()),
+              ),
+              GoRoute(
+                path: '/customer/foodmap/:restaurantId',
+                pageBuilder: (context, state) {
+                  final id = state.pathParameters['restaurantId'] ?? '';
+                  return slidePage(child: RestaurantDetailScreen(restaurantId: id));
+                },
+              ),
+              GoRoute(
                 path: AppRoutes.healthGoals,
                 pageBuilder: (context, state) =>
                     slidePage(child: const HealthGoalsScreen()),
@@ -368,6 +394,15 @@ GoRouter createAppRouter() {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.hotelWaste,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const WasteScreen(hotelMode: true)),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: AppRoutes.hotelHistory,
                 pageBuilder: (context, state) =>
                     slidePage(child: const HotelHistoryScreen()),
@@ -385,6 +420,11 @@ GoRouter createAppRouter() {
                 path: AppRoutes.hotelProfileEdit,
                 pageBuilder: (context, state) =>
                     slidePage(child: const EditHotelProfileScreen()),
+              ),
+              GoRoute(
+                path: AppRoutes.hotelChatbot,
+                pageBuilder: (context, state) =>
+                    slidePage(child: const SageChatPage()),
               ),
             ],
           ),

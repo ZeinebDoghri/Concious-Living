@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -229,7 +229,7 @@ class _CompostDashboardPanelState extends State<CompostDashboardPanel> {
                             accent: widget.accent,
                             onTap: () {
                               Share.share(
-                                'We composted ${compostKg.toStringAsFixed(1)} kg = ${trees.toStringAsFixed(1)} trees saved! #FreshGuard',
+                                'We composted ${compostKg.toStringAsFixed(1)} kg = ${trees.toStringAsFixed(1)} trees saved! #ORKA',
                               );
                             },
                           ),

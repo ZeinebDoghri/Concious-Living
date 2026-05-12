@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -100,7 +100,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                 AppStrings.ok,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
-                  color: FreshGuardTheme.restaurantDeep,
+                  color: ORKATheme.restaurantDeep,
                 ),
               ),
             ),
@@ -155,7 +155,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     final hasLogo = logoUrl.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: FreshGuardTheme.restaurantSurface,
+      backgroundColor: ORKATheme.restaurantSurface,
       body: Column(
         children: [
           SizedBox(
@@ -169,8 +169,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        FreshGuardTheme.restaurantPrimary,
-                        FreshGuardTheme.restaurantDeep,
+                        ORKATheme.restaurantPrimary,
+                        ORKATheme.restaurantDeep,
                       ],
                     ),
                   ),
@@ -189,7 +189,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             child: Container(
                               width: 84,
                               height: 84,
-                              color: FreshGuardTheme.restaurantSoftPink,
+                              color: ORKATheme.restaurantSoftPink,
                               alignment: Alignment.center,
                               child: hasLogo
                                   ? Image.network(
@@ -201,14 +201,14 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                         return const Icon(
                                           Icons.restaurant,
                                           size: 36,
-                                          color: FreshGuardTheme.restaurantDeep,
+                                          color: ORKATheme.restaurantDeep,
                                         );
                                       },
                                     )
                                   : const Icon(
                                       Icons.restaurant,
                                       size: 36,
-                                      color: FreshGuardTheme.restaurantDeep,
+                                      color: ORKATheme.restaurantDeep,
                                     ),
                             ),
                           ),
@@ -311,7 +311,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '$pendingAlerts',
                                   label: 'Alerts',
-                                  numberColor: FreshGuardTheme.danger,
+                                  numberColor: ORKATheme.danger,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -327,7 +327,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '12kg',
                                   label: 'Waste',
-                                  numberColor: FreshGuardTheme.restaurantDeep,
+                                  numberColor: ORKATheme.restaurantDeep,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -335,7 +335,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 child: _KpiTile(
                                   number: '$freshPct%',
                                   label: 'Fresh',
-                                  numberColor: FreshGuardTheme.restaurantDeep,
+                                  numberColor: ORKATheme.restaurantDeep,
                                 ),
                               ),
                             ],
@@ -364,7 +364,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                               onPressed: () =>
                                   context.push('/restaurant/profile/edit'),
                               icon: const Icon(Icons.edit_outlined),
-                              color: FreshGuardTheme.restaurantDeep,
+                              color: ORKATheme.restaurantDeep,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
@@ -416,7 +416,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                 '/restaurant/profile/edit?step=2',
                               ),
                               icon: const Icon(Icons.edit_outlined),
-                              color: FreshGuardTheme.restaurantDeep,
+                              color: ORKATheme.restaurantDeep,
                               iconSize: 18,
                               splashRadius: 18,
                             ),
@@ -444,9 +444,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           ),
                           chipBuilder: (r) => _Chip(
                             text: r,
-                            bg: FreshGuardTheme.restaurantSoftPink,
-                            border: FreshGuardTheme.restaurantPrimary,
-                            fg: FreshGuardTheme.restaurantDeep,
+                            bg: ORKATheme.restaurantSoftPink,
+                            border: ORKATheme.restaurantPrimary,
+                            fg: ORKATheme.restaurantDeep,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -469,8 +469,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                   : Icons.cancel,
                               size: 16,
                               color: (user?.allergyHandling ?? false)
-                                  ? FreshGuardTheme.fresh
-                                  : FreshGuardTheme.danger,
+                                  ? ORKATheme.fresh
+                                  : ORKATheme.danger,
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -526,8 +526,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         const SizedBox(height: 6),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: FreshGuardTheme.restaurantDeep,
-                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                          activeThumbColor: ORKATheme.restaurantDeep,
+                          activeTrackColor: ORKATheme.restaurantPrimary
                               .withValues(alpha: 0.25),
                           title: Text(
                             'Allergen alerts',
@@ -548,8 +548,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: FreshGuardTheme.restaurantDeep,
-                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                          activeThumbColor: ORKATheme.restaurantDeep,
+                          activeTrackColor: ORKATheme.restaurantPrimary
                               .withValues(alpha: 0.25),
                           title: Text(
                             'Expiry warnings',
@@ -564,8 +564,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: FreshGuardTheme.restaurantDeep,
-                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                          activeThumbColor: ORKATheme.restaurantDeep,
+                          activeTrackColor: ORKATheme.restaurantPrimary
                               .withValues(alpha: 0.25),
                           title: Text(
                             'Daily waste report',
@@ -586,8 +586,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          activeThumbColor: FreshGuardTheme.restaurantDeep,
-                          activeTrackColor: FreshGuardTheme.restaurantPrimary
+                          activeThumbColor: ORKATheme.restaurantDeep,
+                          activeTrackColor: ORKATheme.restaurantPrimary
                               .withValues(alpha: 0.25),
                           title: Text(
                             'Waste threshold alerts',
@@ -611,7 +611,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(
                             Icons.people_outline,
-                            color: FreshGuardTheme.restaurantDeep,
+                            color: ORKATheme.restaurantDeep,
                           ),
                           title: Text(
                             'Manage staff',
@@ -627,7 +627,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(
                             Icons.bar_chart,
-                            color: FreshGuardTheme.restaurantDeep,
+                            color: ORKATheme.restaurantDeep,
                           ),
                           title: Text(
                             'View full reports',
@@ -660,14 +660,14 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(
                             Icons.logout,
-                            color: FreshGuardTheme.restaurantDeep,
+                            color: ORKATheme.restaurantDeep,
                           ),
                           title: Text(
                             'Sign out',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: FreshGuardTheme.restaurantDeep,
+                              color: ORKATheme.restaurantDeep,
                             ),
                           ),
                           onTap: () => _signOut(context),

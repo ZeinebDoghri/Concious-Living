@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -187,21 +187,55 @@ class _ResultScreenState extends State<ResultScreen>
       final imagePath = (widget.args['imagePath'] as String?)?.trim();
       final rawImageBytes = widget.args['imageBytes'];
       final imageBytes = rawImageBytes is Uint8List ? rawImageBytes : null;
-      final result = _parseResult();
+      final baseResult = _parseResult();
       final calorieResult = _parseCalorieResult();
+
+      // Merge Vision results into rule-based result for history persistence
+      final result = NutrientResult(
+        calories: NutrientValue(
+          value: calorieResult?.calories ?? baseResult.calories.value,
+          unit: 'kcal',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        protein: NutrientValue(
+          value: calorieResult?.protein ?? baseResult.protein.value,
+          unit: 'g',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        carbs: NutrientValue(
+          value: calorieResult?.carb ?? baseResult.carbs.value,
+          unit: 'g',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        totalFat: NutrientValue(
+          value: calorieResult?.fat ?? baseResult.totalFat.value,
+          unit: 'g',
+          dailyValuePct: 0,
+          riskLevel: 'low',
+        ),
+        cholesterol: baseResult.cholesterol,
+        saturatedFat: baseResult.saturatedFat,
+        sodium: baseResult.sodium,
+        sugar: baseResult.sugar,
+        overallRisk: baseResult.overallRisk,
+        message: baseResult.message,
+      );
       String? imageUrl;
 
       try {
         if (imageBytes != null && imageBytes.isNotEmpty) {
           imageUrl = await CloudinaryService.uploadScanImage(
             imageBytes,
-            folder: 'freshguard/customer',
+            folder: 'orka/customer',
           );
         } else if (imagePath != null && imagePath.isNotEmpty && !kIsWeb) {
           final fileBytes = await File(imagePath).readAsBytes();
           imageUrl = await CloudinaryService.uploadScanImage(
             fileBytes,
-            folder: 'freshguard/customer',
+            folder: 'orka/customer',
           );
         }
       } catch (_) {
@@ -235,6 +269,9 @@ class _ResultScreenState extends State<ResultScreen>
           'sodium_mg': result.sodium.value,
           'sugar_g': result.sugar.value,
           'calories': calorieResult?.calories ?? 0.0,
+          'protein_g': calorieResult?.protein ?? 0.0,
+          'carbs_g': calorieResult?.carb ?? 0.0,
+          'fat_g': calorieResult?.fat ?? 0.0,
         });
       }
 
@@ -536,32 +573,65 @@ class _ResultScreenState extends State<ResultScreen>
                               children: [
                                 _MetricChip(
                                   label: 'Protein',
-                                  value:
-                                      '${calorieResult.protein.toStringAsFixed(1)} g',
+                                  value: '${calorieResult.protein.toStringAsFixed(1)} g',
                                   color: const Color(0xFF10B981),
                                 ),
                                 _MetricChip(
                                   label: 'Fat',
-                                  value:
-                                      '${calorieResult.fat.toStringAsFixed(1)} g',
+                                  value: '${calorieResult.fat.toStringAsFixed(1)} g',
                                   color: const Color(0xFFF59E0B),
                                 ),
                                 _MetricChip(
                                   label: 'Carbs',
-                                  value:
-                                      '${calorieResult.carb.toStringAsFixed(1)} g',
+                                  value: '${calorieResult.carb.toStringAsFixed(1)} g',
                                   color: _kPrimary,
                                 ),
                               ],
                             ),
+                          ] else if (result.calories.value > 0 ||
+                              result.protein.value > 0 ||
+                              result.carbs.value > 0 ||
+                              result.totalFat.value > 0) ...[
+                            if (result.calories.value > 0)
+                              Text(
+                                '${result.calories.value.toStringAsFixed(0)} kcal',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kTextBody,
+                                ),
+                              ),
+                            if (result.calories.value > 0) const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (result.protein.value > 0)
+                                  _MetricChip(
+                                    label: 'Protein',
+                                    value: '${result.protein.value.toStringAsFixed(1)} g',
+                                    color: const Color(0xFF10B981),
+                                  ),
+                                if (result.totalFat.value > 0)
+                                  _MetricChip(
+                                    label: 'Fat',
+                                    value: '${result.totalFat.value.toStringAsFixed(1)} g',
+                                    color: const Color(0xFFF59E0B),
+                                  ),
+                                if (result.carbs.value > 0)
+                                  _MetricChip(
+                                    label: 'Carbs',
+                                    value: '${result.carbs.value.toStringAsFixed(1)} g',
+                                    color: _kPrimary,
+                                  ),
+                              ],
+                            ),
                           ] else
                             Text(
-                              calorieError.isNotEmpty
-                                  ? 'Calorie analysis unavailable: $calorieError'
-                                  : 'Calorie analysis is unavailable for this scan.',
+                              'Scan a dish to see calorie analysis.',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: _kTextBody,
+                                color: _kTextMuted,
                                 height: 1.4,
                               ),
                             ),

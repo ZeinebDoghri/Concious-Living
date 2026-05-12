@@ -165,6 +165,7 @@ class _FilterBarState extends State<FilterBar> {
                   FilterChipOption(id: 'safe', label: 'Safe'),
                   FilterChipOption(id: 'warning', label: 'Warning'),
                   FilterChipOption(id: 'danger', label: 'Danger'),
+                  FilterChipOption(id: 'expiry_check', label: '📅 Expiry Check'),
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),

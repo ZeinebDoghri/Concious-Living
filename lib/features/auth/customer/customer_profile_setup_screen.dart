@@ -220,7 +220,7 @@ class _CustomerProfileSetupScreenState extends State<CustomerProfileSetupScreen>
 
     await _screenExitController.forward(from: 0.0);
     if (!mounted) return;
-    context.go(AppRoutes.customerHome);
+    context.go(AppRoutes.customerQuiz);
   }
 
   Widget _stepContent() {

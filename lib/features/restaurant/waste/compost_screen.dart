@@ -1,8 +1,9 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,7 +15,7 @@ import '../../../providers/compost_provider.dart';
 import '../../../providers/user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+// ── ORKA restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);
@@ -107,6 +108,10 @@ class _CompostHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: _rTextTitle),
+                  onPressed: () => context.pop(),
+                ),
                 // Compost AI icon badge
                 Container(
                   width: 42,

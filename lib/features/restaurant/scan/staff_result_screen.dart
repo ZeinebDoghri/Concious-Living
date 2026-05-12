@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ import '../../../shared/widgets/freshness_badge.dart';
 import 'annotated_contamination_image.dart';
 import 'food_contamination_service.dart';
 
-// ── FreshGuard restaurant theme tokens ────────────────────────────────────────
+// ── ORKA restaurant theme tokens ────────────────────────────────────────
 const _rPrimary = Color(0xFF8FA84A);
 const _rDeep = Color(0xFF5A7030);
 const _rSurface = Color(0xFFF5F8EE);
@@ -138,7 +138,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
     if (_imageBytes != null && _imageBytes!.isNotEmpty) {
       imageUrl = await CloudinaryService.uploadScanImage(
         _imageBytes!,
-        folder: 'freshguard/restaurant/$restaurantId',
+        folder: 'orka/restaurant/$restaurantId',
       );
     }
     await FirebaseFirestore.instance
@@ -443,7 +443,7 @@ class _StaffResultScreenState extends State<StaffResultScreen>
                           ),
                         ),
                         Text(
-                          '3 AI � freshness � waste � compost',
+                          '3 AI � freshness � waste � compost',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -1655,7 +1655,7 @@ class _SmartActionButton extends StatelessWidget {
     if (detectedCount > 0) parts.add('Save waste');
     if (status == 'spoiled') parts.add('Remove from inventory');
     if (parts.isEmpty) return 'Update inventory';
-    return parts.join(' � ');
+    return parts.join(' � ');
   }
 
   @override

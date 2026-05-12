@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -114,7 +114,7 @@ class _HotelDashboardScreenState extends State<HotelDashboardScreen>
               ),
             ),
             Text(
-              'FreshGuard',
+              'ORKA',
               style: GoogleFonts.playfairDisplay(
                 color: Colors.white,
                 fontSize: 20,
@@ -1523,11 +1523,11 @@ class _QuickActionsRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           _ActionBtn(
-            icon: Icons.person_add_rounded,
-            label: 'Check-in',
-            color: _kOlive,
-            bg: _kOliveM,
-            onTap: () => _checkInGuest(context),
+            icon: Icons.calendar_month_rounded,
+            label: 'Nouveau',
+            color: const Color(0xFFC4748A),
+            bg: const Color(0xFFF9E9F2),
+            onTap: () => context.go(AppRoutes.hotelWaste),
           ),
           const SizedBox(width: 12),
           _ActionBtn(
@@ -1536,6 +1536,14 @@ class _QuickActionsRow extends StatelessWidget {
             color: _kCherry,
             bg: _kCherryB,
             onTap: () => context.go(AppRoutes.hotelScan),
+          ),
+          const SizedBox(width: 12),
+          _ActionBtn(
+            icon: Icons.person_add_rounded,
+            label: 'Check-in',
+            color: _kOlive,
+            bg: _kOliveM,
+            onTap: () => _checkInGuest(context),
           ),
           const SizedBox(width: 12),
           _ActionBtn(

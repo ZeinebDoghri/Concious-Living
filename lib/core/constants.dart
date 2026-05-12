@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
-// ── FreshGuard v2 — Pastel Vibrant Design System ────────────────────────────
+// ── ORKA v2 — Pastel Vibrant Design System ────────────────────────────
 
-class FreshGuardTheme {
+class ORKATheme {
   // Restaurant — Rose Corail & Creme
   static const restaurantPrimary = Color(0xFF8FA84A);
   static const restaurantDeep = Color(0xFF5A7030);
@@ -60,9 +60,9 @@ class FreshGuardTheme {
 }
 
 class AppColors {
-  static const primary = FreshGuardTheme.restaurantPrimary;
-  static const secondary = FreshGuardTheme.restaurantDeep;
-  static const danger = FreshGuardTheme.danger;
+  static const primary = ORKATheme.restaurantPrimary;
+  static const secondary = ORKATheme.restaurantDeep;
+  static const danger = ORKATheme.danger;
   static const textSecondary = cocoa;
   static const cardBackground = parchment;
   static const cardBackgroundAlt = cream;
@@ -211,6 +211,8 @@ class AppRoutes {
   static const nutritionProgress = '/customer/nutrition-progress';
   static const nutritionGoals = '/customer/nutrition-goals';
   static const customerNutrients = '/customer/nutrients';
+  static const customerCalorieTracker = '/customer/calorie-tracker';
+  static const customerQuiz = '/customer/quiz';
 
   static const restaurantDashboard = '/restaurant/dashboard';
   static const restaurantScan = '/restaurant/scan';
@@ -238,8 +240,11 @@ class AppRoutes {
   static const hotelCompost = '/hotel/compost';
   static const hotelHistory = '/hotel/history';
   static const hotelCompostHistory = '/hotel/compost/history';
+  static const hotelWaste = '/hotel/waste';
   static const hotelProfile = '/hotel/profile';
   static const hotelProfileEdit = '/hotel/profile/edit';
+  static const hotelChatbot = '/hotel/chatbot';
+
 
   static String customerHistoryDetail(String id) => '/customer/history/$id';
   static String restaurantAlertDetail(String id) => '/restaurant/alert/$id';
@@ -264,8 +269,8 @@ class AppData {
 }
 
 class AppStrings {
-  static const appNameUpper = 'FRESHGUARD';
-  static const appName = 'FreshGuard';
+  static const appNameUpper = 'ORKA';
+  static const appName = 'ORKA';
   static const tagline = 'Eat smart. Waste less.';
   static const taglineLong = 'Eat smart · Waste less · Live better';
 
@@ -308,7 +313,7 @@ class AppStrings {
   static const notRestaurantStaff = 'Not restaurant staff?';
 
   static const createYourAccount = 'Create your account';
-  static const joinToday = 'Join FreshGuard today';
+  static const joinToday = 'Join ORKA today';
   static const fullName = 'Full name';
   static const confirmPassword = 'Confirm password';
   static const createAccountCta = 'Create account';

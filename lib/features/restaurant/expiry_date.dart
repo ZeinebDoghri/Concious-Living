@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
+import '../../providers/user_provider.dart';
 import '../../providers/venue_type_provider.dart';
 
 class ExpiryDatePage extends StatefulWidget {
@@ -180,15 +181,12 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
     await _saveToFirestore();
   }
 
-  // ✅ Save image (base64) + expiry date to Firestore
+  // ✅ Save image + expiry date to Firestore + local prefs
   Future<void> _saveToFirestore() async {
     if (_savedDocId != null) return; // anti-duplicate guard
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString('expiry_scan_results') ?? '[]';
-      final results = jsonDecode(jsonString) as List<dynamic>;
-
+      // ── 1. Upload image to Storage ───────────────────────────────────────
       String? imageUrl;
       try {
         final ref = FirebaseStorage.instance.ref(
@@ -203,25 +201,60 @@ class _ExpiryDatePageState extends State<ExpiryDatePage> {
         debugPrint('Error uploading expiry image: $e');
       }
 
+      // ── 2. Local SharedPreferences backup ───────────────────────────────
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString('expiry_scan_results') ?? '[]';
+      final results = jsonDecode(jsonString) as List<dynamic>;
       results.add({
         'expiry_date': _expiryDate,
         'status': _status,
         'imageUrl': imageUrl,
         'timestamp': DateTime.now().toIso8601String(),
       });
-
       await prefs.setString('expiry_scan_results', jsonEncode(results));
-      _savedDocId = DateTime.now().millisecondsSinceEpoch.toString(); // Mark as saved
 
+      // ── 3. Save to Firestore history (same collection as history page) ───
       final productName = _cleanProductName(_imageName);
-      final inventoryStatus = _computeInventoryStatus(_parseExpiryDate(_expiryDate));
+      final expiryDt = _parseExpiryDate(_expiryDate);
+      final inventoryStatus = _computeInventoryStatus(expiryDt);
 
-      debugPrint(
-          '✅ Saved locally: $_savedDocId — $productName ($inventoryStatus)');
+      if (mounted) {
+        final role =
+            Provider.of<VenueTypeProvider>(context, listen: false).venueType;
+        final userProvider =
+            Provider.of<UserProvider>(context, listen: false);
+        final user = userProvider.currentUser;
+        final entityCollection = role == 'hotel' ? 'hotels' : 'restaurants';
+        final venueId = role == 'hotel'
+            ? (user?.entityId ?? user?.hotelId ?? user?.id ?? '')
+            : (user?.entityId ?? user?.restaurantId ?? user?.id ?? '');
 
-
+        if (venueId.isNotEmpty) {
+          final doc = await FirebaseFirestore.instance
+              .collection(entityCollection)
+              .doc(venueId)
+              .collection('scans')
+              .add({
+            'type': 'expiry_check',
+            'expiryDate': _expiryDate ?? '',
+            'status': inventoryStatus,
+            'productName': productName,
+            'imageUrl': imageUrl ?? '',
+            'timestamp': FieldValue.serverTimestamp(),
+            'scannedAt': FieldValue.serverTimestamp(),
+            'venueId': venueId,
+          });
+          _savedDocId = doc.id;
+          debugPrint('✅ Saved to Firestore: ${doc.id} — $productName ($inventoryStatus)');
+        } else {
+          _savedDocId = DateTime.now().millisecondsSinceEpoch.toString();
+          debugPrint('⚠️ No venueId — saved locally only');
+        }
+      } else {
+        _savedDocId = DateTime.now().millisecondsSinceEpoch.toString();
+      }
     } catch (e) {
-      debugPrint('❌ Error saving to Firestore: $e');
+      debugPrint('❌ Error saving: $e');
     }
   }
 

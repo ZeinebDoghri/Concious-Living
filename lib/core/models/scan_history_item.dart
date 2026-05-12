@@ -43,9 +43,20 @@ class ScanHistoryItem {
           : result.overallRisk == 'moderate'
           ? 'warning'
           : 'safe',
-        'detectedAllergens': detectedAllergens,
-        'matchedAllergens': matchedAllergens,
-        'hasAllergenAlert': hasAllergenAlert,
+      'detectedAllergens': detectedAllergens,
+      'matchedAllergens': matchedAllergens,
+      'hasAllergenAlert': hasAllergenAlert,
+      'allergens': detectedAllergens,
+      'nutrition': {
+        'calories': result.calories.value,
+        'protein_g': result.protein.value,
+        'carbs_g': result.carbs.value,
+        'fat_g': result.totalFat.value,
+        'cholesterol_mg': result.cholesterol.value,
+        'saturated_fat_g': result.saturatedFat.value,
+        'sodium_mg': result.sodium.value,
+        'sugar_g': result.sugar.value,
+      },
       'result': result.toJson(),
       'results': {
         'dishName': dishName,
@@ -59,7 +70,7 @@ class ScanHistoryItem {
           'saturated_fat_g': result.saturatedFat.value,
           'sodium_mg': result.sodium.value,
           'sugar_g': result.sugar.value,
-          'calories': 0,
+          'calories': result.calories.value,
         },
         'allergens': {
           'detected': detectedAllergens,
@@ -78,7 +89,7 @@ class ScanHistoryItem {
       imageUrl: json['imageUrl'] as String?,
       scannedAt: _dateFromJson(json),
       result: NutrientResult.fromJson(
-        (json['result'] ?? {}) as Map<String, dynamic>,
+        _extractNutrition(json),
       ),
       detectedAllergens: _stringList(
         json['detectedAllergens'] ?? (json['results'] as Map?)?['allergens']?['detected'],
@@ -87,6 +98,65 @@ class ScanHistoryItem {
         json['matchedAllergens'] ?? (json['results'] as Map?)?['allergens']?['matched'],
       ),
     );
+  }
+
+  // Merge all known nutrition locations into a single NutrientResult-compatible map
+  static Map<String, dynamic> _extractNutrition(Map<String, dynamic> json) {
+    final merged = <String, dynamic>{};
+
+    // 1. Base: result map has NutrientValue maps (cholesterol, fat, sodium, sugar…)
+    final result = json['result'];
+    if (result is Map) {
+      result.forEach((k, v) => merged[k.toString()] = v);
+    }
+
+    // 2. Overlay: results.nutrition has flat numbers — fill any gap
+    final results = json['results'];
+    if (results is Map) {
+      final nutrition = results['nutrition'];
+      if (nutrition is Map) {
+        void tryAdd(String destKey, dynamic raw, String unit) {
+          // Skip only if existing NutrientValue map already has a non-zero value
+          final existing = merged[destKey];
+          if (existing is Map) {
+            final existingVal = (existing['value'] as num?)?.toDouble() ?? 0.0;
+            if (existingVal > 0) return;
+          }
+          if (raw is num && raw > 0) {
+            merged[destKey] = {
+              'value': raw.toDouble(),
+              'unit': unit,
+              'dailyValuePct': 0.0,
+              'riskLevel': 'low',
+            };
+          }
+        }
+
+        tryAdd('calories',     nutrition['calories'],                 'kcal');
+        tryAdd('protein',      nutrition['protein_g'] ?? nutrition['protein'], 'g');
+        tryAdd('carbs',        nutrition['carbs_g']   ?? nutrition['carbs'],   'g');
+        tryAdd('totalFat',     nutrition['fat_g']     ?? nutrition['totalFat'],'g');
+        tryAdd('cholesterol',  nutrition['cholesterol_mg'] ?? nutrition['cholesterol'], 'mg');
+        tryAdd('fat',          nutrition['saturated_fat_g'] ?? nutrition['fat'], 'g');
+        tryAdd('sodium',       nutrition['sodium_mg'] ?? nutrition['sodium'],   'mg');
+        tryAdd('sugar',        nutrition['sugar_g']   ?? nutrition['sugar'],    'g');
+      }
+
+      // carry overallRisk from results if missing
+      if (!merged.containsKey('overallRisk')) {
+        final risk = results['overallRisk'] ?? results['riskLevel'];
+        if (risk != null) merged['overallRisk'] = risk;
+      }
+    }
+
+    // 3. Top-level nutrition fallback
+    if (merged.isEmpty) {
+      final n = json['nutrition'];
+      if (n is Map<String, dynamic>) return n;
+      if (n is Map) return n.map((k, v) => MapEntry(k.toString(), v));
+    }
+
+    return merged;
   }
 
   static List<String> _stringList(dynamic raw) {

@@ -400,6 +400,65 @@ class _HistoryDetailScreenState extends State<HistoryDetailScreen>
                     ),
                     const SizedBox(height: 16),
 
+                    // ── Calorie & Macros section ───────────────────────────
+                    if (item.result.calories.value > 0 ||
+                        item.result.protein.value > 0 ||
+                        item.result.carbs.value > 0 ||
+                        item.result.totalFat.value > 0) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          'Calorie & Nutrition Analysis',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _kTextTitle,
+                          ),
+                        ),
+                      ),
+                      if (item.result.calories.value > 0) ...[
+                        _MacroRow(
+                          icon: Icons.local_fire_department_rounded,
+                          label: 'Calories',
+                          value: item.result.calories.value,
+                          unit: 'kcal',
+                          color: const Color(0xFFFF6B8A),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (item.result.protein.value > 0) ...[
+                        _MacroRow(
+                          icon: Icons.fitness_center_rounded,
+                          label: 'Protein',
+                          value: item.result.protein.value,
+                          unit: 'g',
+                          color: const Color(0xFF45C4B0),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (item.result.carbs.value > 0) ...[
+                        _MacroRow(
+                          icon: Icons.grain_rounded,
+                          label: 'Carbohydrates',
+                          value: item.result.carbs.value,
+                          unit: 'g',
+                          color: const Color(0xFFFFB347),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (item.result.totalFat.value > 0) ...[
+                        _MacroRow(
+                          icon: Icons.water_drop_rounded,
+                          label: 'Total Fat',
+                          value: item.result.totalFat.value,
+                          unit: 'g',
+                          color: const Color(0xFFD9899F),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      const SizedBox(height: 10),
+                    ],
+
                     // ── Nutrient cards ────────────────────────────────────
                     NutrientCard(
                       name: AppStrings.cholesterolLabel,
@@ -498,6 +557,66 @@ class _ImagePlaceholder extends StatelessWidget {
       color: _kSoftBg,
       alignment: Alignment.center,
       child: Icon(Icons.image_outlined, size: 40, color: _kTextMuted),
+    );
+  }
+}
+
+class _MacroRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double value;
+  final String unit;
+  final Color color;
+
+  const _MacroRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _kTextTitle,
+              ),
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(1)} $unit',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -33,6 +33,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _dobController = TextEditingController();
+  final _cityController = TextEditingController();
   final _scrollController = ScrollController();
 
   final _healthSectionKey = GlobalKey();
@@ -65,6 +66,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.text = user?.name ?? '';
     _emailController.text = user?.email ?? '';
     _phoneController.text = user?.phone ?? '';
+    _cityController.text = user?.city ?? '';
 
     _dob = user?.dateOfBirth;
     _gender = user?.gender;
@@ -82,6 +84,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _cityController.dispose();
     _dobController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -240,6 +243,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final name = _nameController.text.trim();
     final email = existing.email.trim();
     final phone = _phoneController.text.trim();
+    final city = _cityController.text.trim();
 
     if (name.isEmpty) {
       _snack(AppStrings.validationRequiredField);
@@ -267,6 +271,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final updated = existing.copyWith(
       name: name,
       phone: phone.isEmpty ? null : phone,
+      city: city.isEmpty ? null : city,
       dateOfBirth: _dob,
       gender: _gender,
       conditions: _conditions.toList(growable: false),
@@ -489,6 +494,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       decoration: _decoration(
                         label: 'Phone number',
                         icon: Icons.phone_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _cityController,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: _kTextTitle,
+                      ),
+                      decoration: _decoration(
+                        label: 'City',
+                        icon: Icons.location_city_rounded,
                       ),
                     ),
                     const SizedBox(height: 14),

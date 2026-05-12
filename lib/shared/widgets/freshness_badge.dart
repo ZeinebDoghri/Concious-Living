@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
@@ -26,9 +26,9 @@ class FreshnessBadge extends StatelessWidget {
 
   static Color bgColor(String status) {
     switch (status) {
-      case 'spoiled': return FreshGuardTheme.danger.withValues(alpha: 0.12);
-      case 'expiring': return FreshGuardTheme.warning.withValues(alpha: 0.15);
-      case 'fresh': default: return FreshGuardTheme.fresh.withValues(alpha: 0.12);
+      case 'spoiled': return ORKATheme.danger.withValues(alpha: 0.12);
+      case 'expiring': return ORKATheme.warning.withValues(alpha: 0.15);
+      case 'fresh': default: return ORKATheme.fresh.withValues(alpha: 0.12);
     }
   }
 

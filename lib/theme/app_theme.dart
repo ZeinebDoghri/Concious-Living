@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/constants.dart';
@@ -97,7 +97,7 @@ class AppTheme {
     );
     final errorBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppRadii.input),
-      borderSide: BorderSide(color: FreshGuardTheme.danger, width: 1.5),
+      borderSide: BorderSide(color: ORKATheme.danger, width: 1.5),
     );
 
     return base.copyWith(
@@ -108,7 +108,7 @@ class AppTheme {
         surface: colors.cardBg,
         onSurface: colors.textTitle,
         onPrimary: Colors.white,
-        error: FreshGuardTheme.danger,
+        error: ORKATheme.danger,
       ),
       textTheme: textTheme,
 
@@ -234,7 +234,7 @@ class AppTheme {
         errorStyle: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          color: FreshGuardTheme.danger,
+          color: ORKATheme.danger,
         ),
         enabledBorder: inputBorder,
         focusedBorder: focusedBorder,
@@ -325,51 +325,51 @@ class AppTheme {
     switch (role) {
       case 'restaurant':
         return const RoleColors(
-          primary: FreshGuardTheme.restaurantPrimary,
-          deep: FreshGuardTheme.restaurantDeep,
-          surface: FreshGuardTheme.restaurantSurface,
-          cardBg: FreshGuardTheme.restaurantCardBg,
-          softBg: FreshGuardTheme.restaurantSoftPink,
-          cream: FreshGuardTheme.restaurantCream,
-          textTitle: FreshGuardTheme.restaurantTextTitle,
-          textBody: FreshGuardTheme.restaurantTextBody,
-          textMuted: FreshGuardTheme.restaurantTextMuted,
-          aiDark: FreshGuardTheme.restaurantAiDark,
-          aiLight: FreshGuardTheme.restaurantAiLight,
-          heroBlob1: FreshGuardTheme.restaurantHeroBlob1,
-          heroBlob2: FreshGuardTheme.restaurantHeroBlob2,
+          primary: ORKATheme.restaurantPrimary,
+          deep: ORKATheme.restaurantDeep,
+          surface: ORKATheme.restaurantSurface,
+          cardBg: ORKATheme.restaurantCardBg,
+          softBg: ORKATheme.restaurantSoftPink,
+          cream: ORKATheme.restaurantCream,
+          textTitle: ORKATheme.restaurantTextTitle,
+          textBody: ORKATheme.restaurantTextBody,
+          textMuted: ORKATheme.restaurantTextMuted,
+          aiDark: ORKATheme.restaurantAiDark,
+          aiLight: ORKATheme.restaurantAiLight,
+          heroBlob1: ORKATheme.restaurantHeroBlob1,
+          heroBlob2: ORKATheme.restaurantHeroBlob2,
         );
       case 'hotel':
         return const RoleColors(
-          primary: FreshGuardTheme.hotelPrimary,
-          deep: FreshGuardTheme.hotelDeep,
-          surface: FreshGuardTheme.hotelSurface,
-          cardBg: FreshGuardTheme.hotelCardBg,
-          softBg: FreshGuardTheme.hotelSoftGreen,
-          cream: FreshGuardTheme.hotelMint,
-          textTitle: FreshGuardTheme.hotelTextTitle,
-          textBody: FreshGuardTheme.hotelTextBody,
-          textMuted: FreshGuardTheme.hotelTextMuted,
-          aiDark: FreshGuardTheme.hotelAiDark,
-          aiLight: FreshGuardTheme.hotelAiLight,
-          heroBlob1: FreshGuardTheme.hotelHeroBlob1,
-          heroBlob2: FreshGuardTheme.hotelHeroBlob2,
+          primary: ORKATheme.hotelPrimary,
+          deep: ORKATheme.hotelDeep,
+          surface: ORKATheme.hotelSurface,
+          cardBg: ORKATheme.hotelCardBg,
+          softBg: ORKATheme.hotelSoftGreen,
+          cream: ORKATheme.hotelMint,
+          textTitle: ORKATheme.hotelTextTitle,
+          textBody: ORKATheme.hotelTextBody,
+          textMuted: ORKATheme.hotelTextMuted,
+          aiDark: ORKATheme.hotelAiDark,
+          aiLight: ORKATheme.hotelAiLight,
+          heroBlob1: ORKATheme.hotelHeroBlob1,
+          heroBlob2: ORKATheme.hotelHeroBlob2,
         );
       default:
         return const RoleColors(
-          primary: FreshGuardTheme.customerPrimary,
-          deep: FreshGuardTheme.customerDeep,
-          surface: FreshGuardTheme.customerSurface,
-          cardBg: FreshGuardTheme.customerCardBg,
-          softBg: FreshGuardTheme.customerSoftLavender,
-          cream: FreshGuardTheme.customerLilac,
-          textTitle: FreshGuardTheme.customerTextTitle,
-          textBody: FreshGuardTheme.customerTextBody,
-          textMuted: FreshGuardTheme.customerTextMuted,
-          aiDark: FreshGuardTheme.customerAiDark,
-          aiLight: FreshGuardTheme.customerAiLight,
-          heroBlob1: FreshGuardTheme.customerHeroBlob1,
-          heroBlob2: FreshGuardTheme.customerHeroBlob2,
+          primary: ORKATheme.customerPrimary,
+          deep: ORKATheme.customerDeep,
+          surface: ORKATheme.customerSurface,
+          cardBg: ORKATheme.customerCardBg,
+          softBg: ORKATheme.customerSoftLavender,
+          cream: ORKATheme.customerLilac,
+          textTitle: ORKATheme.customerTextTitle,
+          textBody: ORKATheme.customerTextBody,
+          textMuted: ORKATheme.customerTextMuted,
+          aiDark: ORKATheme.customerAiDark,
+          aiLight: ORKATheme.customerAiLight,
+          heroBlob1: ORKATheme.customerHeroBlob1,
+          heroBlob2: ORKATheme.customerHeroBlob2,
         );
     }
   }

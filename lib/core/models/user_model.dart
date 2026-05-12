@@ -18,6 +18,8 @@ class UserModel {
   final String? entityId;
   final String? restaurantId;
   final String? hotelId;
+  final String? city;
+
 
   // Restaurant-only fields
   final String? restaurantName;
@@ -35,6 +37,16 @@ class UserModel {
   final String? hotelName;
   final String? hotelType;
   final int? rooms;
+
+  // Health Plan fields
+  final String? healthGoal;
+  final String? activityLevel;
+  final int? proteinGoal_g;
+  final int? carbsGoal_g;
+  final int? fatGoal_g;
+  final double? waterGoal_L;
+  final double? bmi;
+  final List<String> dietaryPreferences;
 
   const UserModel({
     required this.id,
@@ -67,6 +79,15 @@ class UserModel {
     this.hotelName,
     this.hotelType,
     this.rooms,
+    this.healthGoal,
+    this.activityLevel,
+    this.proteinGoal_g,
+    this.carbsGoal_g,
+    this.fatGoal_g,
+    this.waterGoal_L,
+    this.bmi,
+    this.dietaryPreferences = const <String>[],
+    this.city,
   });
 
   UserModel copyWith({
@@ -100,6 +121,15 @@ class UserModel {
     String? hotelName,
     String? hotelType,
     int? rooms,
+    String? healthGoal,
+    String? activityLevel,
+    int? proteinGoal_g,
+    int? carbsGoal_g,
+    int? fatGoal_g,
+    double? waterGoal_L,
+    double? bmi,
+    List<String>? dietaryPreferences,
+    String? city,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -132,6 +162,15 @@ class UserModel {
       hotelName: hotelName ?? this.hotelName,
       hotelType: hotelType ?? this.hotelType,
       rooms: rooms ?? this.rooms,
+      healthGoal: healthGoal ?? this.healthGoal,
+      activityLevel: activityLevel ?? this.activityLevel,
+      proteinGoal_g: proteinGoal_g ?? this.proteinGoal_g,
+      carbsGoal_g: carbsGoal_g ?? this.carbsGoal_g,
+      fatGoal_g: fatGoal_g ?? this.fatGoal_g,
+      waterGoal_L: waterGoal_L ?? this.waterGoal_L,
+      bmi: bmi ?? this.bmi,
+      dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,
+      city: city ?? this.city,
     );
   }
 
@@ -141,6 +180,7 @@ class UserModel {
       'name': name,
       'email': email,
       'phone': phone,
+      'city': city,
       'dateOfBirth': dateOfBirth?.toIso8601String(),
       'gender': gender,
       'conditions': conditions,
@@ -167,6 +207,14 @@ class UserModel {
       'hotelName': hotelName,
       'hotelType': hotelType,
       'rooms': rooms,
+      'healthGoal': healthGoal,
+      'activityLevel': activityLevel,
+      'proteinGoal_g': proteinGoal_g,
+      'carbsGoal_g': carbsGoal_g,
+      'fatGoal_g': fatGoal_g,
+      'waterGoal_L': waterGoal_L,
+      'bmi': bmi,
+      'dietaryPreferences': dietaryPreferences,
     };
 
     // Prevent merge-writes from overwriting fields with null.
@@ -209,6 +257,15 @@ class UserModel {
       hotelName: json['hotelName'] as String?,
       hotelType: json['hotelType'] as String?,
       rooms: (json['rooms'] as num?)?.toInt(),
+      healthGoal: json['healthGoal'] as String?,
+      activityLevel: json['activityLevel'] as String?,
+      proteinGoal_g: (json['proteinGoal_g'] as num?)?.toInt(),
+      carbsGoal_g: (json['carbsGoal_g'] as num?)?.toInt(),
+      fatGoal_g: (json['fatGoal_g'] as num?)?.toInt(),
+      waterGoal_L: (json['waterGoal_L'] as num?)?.toDouble(),
+      bmi: (json['bmi'] as num?)?.toDouble(),
+      dietaryPreferences: (json['dietaryPreferences'] as List?)?.cast<String>() ?? <String>[],
+      city: json['city'] as String?,
     );
   }
 

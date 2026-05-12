@@ -166,7 +166,11 @@ class _PortalScanHistoryScreenState extends State<PortalScanHistoryScreen> {
     if (_filters.sort == HistorySort.highestRisk) {
       docs.sort((a, b) => _riskRank(b.data()).compareTo(_riskRank(a.data())));
     }
-    if (_filters.riskLevel != 'all') {
+    if (_filters.riskLevel == 'expiry_check') {
+      docs = docs
+          .where((doc) => (doc.data()['type'] ?? '') == 'expiry_check')
+          .toList(growable: false);
+    } else if (_filters.riskLevel != 'all') {
       docs = docs
           .where((doc) => _riskLevel(doc.data()) == _filters.riskLevel)
           .toList(growable: false);
@@ -205,8 +209,13 @@ class _PortalScanHistoryScreenState extends State<PortalScanHistoryScreen> {
 
   void _openDetail(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
+    if ((data['type'] ?? '') == 'expiry_check') return;
     if (_isCustomer) {
-      context.go(
+      final cal = _calories(data);
+      final prot = _protein(data);
+      final carb = _carbs(data);
+      final fat = _fat(data);
+      context.push(
         AppRoutes.customerResult,
         extra: {
           'readOnly': true,
@@ -220,6 +229,17 @@ class _PortalScanHistoryScreenState extends State<PortalScanHistoryScreen> {
           },
           'imagePath': data['imagePath'],
           'imageUrl': data['imageUrl'],
+          if (cal > 0 || prot > 0 || carb > 0 || fat > 0)
+            'calorieResult': {
+              'mass': 0.0,
+              'calories': cal,
+              'fat': fat,
+              'carb': carb,
+              'protein': prot,
+              'calorieLevel': cal > 600 ? 'High' : cal > 300 ? 'Moderate' : 'Low',
+              'r2Calories': 0.0,
+              'maeCalories': 0.0,
+            },
         },
       );
       return;
@@ -462,6 +482,9 @@ class _ScanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if ((data['type'] ?? '') == 'expiry_check') {
+      return _ExpiryCheckCard(data: data, color: color, onDelete: onDelete);
+    }
     final timestamp = _timestamp(data);
     return Dismissible(
       key: ValueKey(data['id'] ?? data['scanId'] ?? '$timestamp'),
@@ -537,7 +560,10 @@ class _CustomerCardBody extends StatelessWidget {
           style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
-        Text('${_calories(data).toStringAsFixed(0)} kcal', style: _subStyle()),
+        Text(
+          '${_calories(data).toStringAsFixed(0)} kcal · P: ${_protein(data).toStringAsFixed(0)}g · C: ${_carbs(data).toStringAsFixed(0)}g · F: ${_fat(data).toStringAsFixed(0)}g',
+          style: _subStyle(),
+        ),
         const SizedBox(height: 6),
         if (hasAllergenAlert)
           Container(
@@ -934,6 +960,160 @@ class _CompostChip extends StatelessWidget {
   }
 }
 
+class _ExpiryCheckCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final Color color;
+  final Future<void> Function() onDelete;
+
+  const _ExpiryCheckCard({
+    required this.data,
+    required this.color,
+    required this.onDelete,
+  });
+
+  static DateTime _parseDate(String raw) {
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      final parts = raw.split('/');
+      if (parts.length == 3) {
+        return DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      }
+      return DateTime.now();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = (data['imageUrl'] as String?)?.trim() ?? '';
+    final rawDate =
+        (data['expiryDate'] ?? data['expiry_date'] ?? '').toString().trim();
+    final status = (data['status'] ?? 'unknown').toString().toLowerCase();
+
+    DateTime? expiryDate;
+    if (rawDate.isNotEmpty) {
+      try {
+        expiryDate = _parseDate(rawDate);
+      } catch (_) {}
+    }
+
+    String daysLabel = '';
+    Color daysColor = Colors.grey;
+    if (expiryDate != null) {
+      final diff = expiryDate.difference(DateTime.now()).inDays;
+      if (diff > 3) {
+        daysLabel = '⏳ $diff days left';
+        daysColor = Colors.green;
+      } else if (diff > 0) {
+        daysLabel = '⚠️ $diff days left';
+        daysColor = Colors.orange;
+      } else if (diff == 0) {
+        daysLabel = '⚠️ Expires today';
+        daysColor = Colors.orange;
+      } else {
+        final expired = diff.abs();
+        daysLabel = '❌ Expired $expired day${expired > 1 ? 's' : ''} ago';
+        daysColor = Colors.red;
+      }
+    }
+
+    Color statusColor;
+    String statusLabel;
+    switch (status) {
+      case 'fresh':
+      case 'valid':
+        statusColor = const Color(0xFF52C98A);
+        statusLabel = '✅ Fresh';
+        break;
+      case 'expiring':
+      case 'expiring_soon':
+        statusColor = Colors.orange;
+        statusLabel = '⚠️ Expiring Soon';
+        break;
+      default:
+        statusColor = Colors.red;
+        statusLabel = '❌ Spoiled';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: 58,
+              height: 58,
+              color: const Color(0xFFEDE9FE),
+              child: imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          const ShimmerBox(width: 58, height: 58, radius: 10),
+                      errorWidget: (_, __, ___) =>
+                          const Icon(Icons.image_outlined),
+                    )
+                  : const Icon(Icons.image_outlined),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (rawDate.isNotEmpty)
+                  Text(
+                    'Expiry: $rawDate',
+                    style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                const SizedBox(height: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                        color: statusColor.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  daysLabel,
+                  style: TextStyle(color: daysColor, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Thumb extends StatelessWidget {
   final dynamic url;
   final dynamic path;
@@ -997,17 +1177,32 @@ TextStyle _subStyle() =>
 
 String _dishName(Map<String, dynamic> data) {
   final results = data['results'];
-  if (results is Map &&
-      (results['dishName'] as String?)?.trim().isNotEmpty == true) {
-    return (results['dishName'] as String).trim();
+  if (results is Map) {
+    final n = (results['dishName'] as String?)?.trim() ?? '';
+    if (n.isNotEmpty && n != 'Unknown dish') return n;
   }
   final result = data['result'];
-  if (result is Map &&
-      (result['dishName'] as String?)?.trim().isNotEmpty == true) {
-    return (result['dishName'] as String).trim();
+  if (result is Map) {
+    final n = (result['dishName'] as String?)?.trim() ?? '';
+    if (n.isNotEmpty && n != 'Unknown dish') return n;
   }
   final root = (data['dishName'] ?? data['name'] ?? '').toString().trim();
-  return root.isEmpty ? 'Unknown dish' : root;
+  if (root.isNotEmpty && root != 'Unknown dish') return root;
+
+  // Build a friendly label from zone + time-of-day
+  final zone = (data['zone'] ?? '').toString().trim();
+  final ts = _timestamp(data);
+  final hour = ts.hour;
+  final period = hour < 6
+      ? 'Night'
+      : hour < 12
+          ? 'Morning'
+          : hour < 15
+              ? 'Lunch'
+              : hour < 19
+                  ? 'Afternoon'
+                  : 'Evening';
+  return zone.isNotEmpty ? '$zone · $period' : '$period Scan';
 }
 
 String _riskLevel(Map<String, dynamic> data) {
@@ -1109,14 +1304,81 @@ DateTime _timestamp(Map<String, dynamic> data) {
 }
 
 double _calories(Map<String, dynamic> data) {
-  final results = data['results'];
-  final nutrition = results is Map ? results['nutrition'] : null;
+  final nutrition = data['nutrition'];
   if (nutrition is Map && nutrition['calories'] is num) {
     return (nutrition['calories'] as num).toDouble();
   }
+  final results = data['results'];
+  final resNutrition = results is Map ? results['nutrition'] : null;
+  if (resNutrition is Map && resNutrition['calories'] is num) {
+    return (resNutrition['calories'] as num).toDouble();
+  }
   final result = data['result'];
   if (result is Map && result['calories'] is num) {
+    if (result['calories'] is Map) {
+      return ((result['calories'] as Map)['value'] as num?)?.toDouble() ?? 0;
+    }
     return (result['calories'] as num).toDouble();
+  }
+  return 0;
+}
+
+double _protein(Map<String, dynamic> data) {
+  final nutrition = data['nutrition'];
+  if (nutrition is Map && (nutrition['protein_g'] ?? nutrition['protein'] ?? nutrition['proteins']) is num) {
+    return ((nutrition['protein_g'] ?? nutrition['protein'] ?? nutrition['proteins']) as num).toDouble();
+  }
+  final results = data['results'];
+  final resNutrition = results is Map ? results['nutrition'] : null;
+  if (resNutrition is Map && (resNutrition['protein'] ?? resNutrition['proteins']) is num) {
+    return ((resNutrition['protein'] ?? resNutrition['proteins']) as num).toDouble();
+  }
+  final result = data['result'];
+  if (result is Map && (result['protein'] ?? result['proteins']) is num) {
+    if (result['protein'] is Map) {
+      return ((result['protein'] as Map)['value'] as num?)?.toDouble() ?? 0;
+    }
+    return ((result['protein'] ?? result['proteins']) as num).toDouble();
+  }
+  return 0;
+}
+
+double _carbs(Map<String, dynamic> data) {
+  final nutrition = data['nutrition'];
+  if (nutrition is Map && (nutrition['carbs_g'] ?? nutrition['carbs'] ?? nutrition['carbohydrates']) is num) {
+    return ((nutrition['carbs_g'] ?? nutrition['carbs'] ?? nutrition['carbohydrates']) as num).toDouble();
+  }
+  final results = data['results'];
+  final resNutrition = results is Map ? results['nutrition'] : null;
+  if (resNutrition is Map && (resNutrition['carbs'] ?? resNutrition['carbohydrates']) is num) {
+    return ((resNutrition['carbs'] ?? resNutrition['carbohydrates']) as num).toDouble();
+  }
+  final result = data['result'];
+  if (result is Map && (result['carbs'] ?? result['carbohydrates']) is num) {
+    if (result['carbs'] is Map) {
+      return ((result['carbs'] as Map)['value'] as num?)?.toDouble() ?? 0;
+    }
+    return ((result['carbs'] ?? result['carbohydrates']) as num).toDouble();
+  }
+  return 0;
+}
+
+double _fat(Map<String, dynamic> data) {
+  final nutrition = data['nutrition'];
+  if (nutrition is Map && (nutrition['fat_g'] ?? nutrition['fat'] ?? nutrition['fats']) is num) {
+    return ((nutrition['fat_g'] ?? nutrition['fat'] ?? nutrition['fats']) as num).toDouble();
+  }
+  final results = data['results'];
+  final resNutrition = results is Map ? results['nutrition'] : null;
+  if (resNutrition is Map && (resNutrition['fat'] ?? resNutrition['fats']) is num) {
+    return ((resNutrition['fat'] ?? resNutrition['fats']) as num).toDouble();
+  }
+  final result = data['result'];
+  if (result is Map && (result['fat'] ?? result['fats']) is num) {
+    if (result['fat'] is Map) {
+      return ((result['fat'] as Map)['value'] as num?)?.toDouble() ?? 0;
+    }
+    return ((result['fat'] ?? result['fats']) as num).toDouble();
   }
   return 0;
 }
