@@ -1,93 +1,71 @@
 # ORKA — Conscious Living
 
-> Application mobile IA pour la sécurité alimentaire, la réduction du gaspillage et le suivi nutritionnel.
+> AI-powered mobile application for food safety, waste reduction, and personalized nutrition tracking.
+
+![Flutter](https://img.shields.io/badge/Flutter-3.19.0+-02569B?logo=flutter)
+![Dart](https://img.shields.io/badge/Dart-3.3.0+-0175C2?logo=dart)
+![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%7C%20Auth%20%7C%20Functions-FFCA28?logo=firebase&logoColor=black)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
 ## Description
 
-**ORKA** est une application mobile Flutter construite autour du thème du *Conscious Living*. Elle répond à deux défis urgents dans la restauration et l'hôtellerie : le gaspillage alimentaire et la sécurité sanitaire.
+**ORKA** is a Flutter mobile application built around the theme of *Conscious Living*. It addresses two urgent challenges in the food service industry: food waste and health safety.
 
-Avec une simple photo d'un plat, d'un buffet ou d'une étiquette produit, ORKA transforme l'information visuelle en décisions intelligentes pour les équipes cuisine, les hôtels et les clients individuels. Elle calcule également l'impact environnemental via le suivi du compost et l'équivalent CO₂ par scan.
+With a single photo of a dish, buffet, or product label, ORKA transforms visual information into intelligent decisions for kitchen teams, hotels, and individual customers. The app also calculates environmental impact through compost tracking and CO₂ equivalent per scan.
 
-**Côté gaspillage & durabilité :**
-- Détection des restes et estimation des quantités
-- Surveillance de la fraîcheur et lecture des dates de péremption
-- Alertes avant que les aliments deviennent impropres à la consommation
-- Suivi du compost avec calcul de l'équivalent CO₂ — impact environnemental mesurable par scan
+ORKA serves three distinct user types through dedicated portals:
 
-**Côté santé & nutrition :**
-- Reconnaissance de plats et signalement des allergènes en temps réel
-- Analyse calorique et nutritionnelle personnalisée (protéines, glucides, lipides, sodium, cholestérol)
-- Suivi quotidien des apports et alertes de dépassement
-- Adapté aux personnes atteintes de maladies chroniques
+| Portal | Users | Core Features |
+|---|---|---|
+| 🍽️ **Restaurant** | Managers & kitchen staff | Freshness detection, expiry alerts, waste monitoring, contamination alerts, compost tracking |
+| 🏨 **Hotel** | F&B teams | Multi-department waste analytics, HACCP compliance, cross-kitchen safety, Sage AI consultant |
+| 👤 **Customer** | End consumers | Dish scanning, allergen detection, nutrient tracking, daily limit alerts, Nora AI nutritionist |
 
-**Assistants IA spécialisés :**
-- **Nora** — Nutritionniste IA pour les clients
-- **Chef AI** — Assistant opérations cuisine pour les restaurants
-- **Sage** — Consultant durabilité pour les hôtels (HACCP, déchets, sécurité)
+All AI predictions are powered by vision models analyzing food photos in real time.
 
 ---
 
-## Technologies utilisées
+## Technologies
 
-| Couche | Technologies |
+| Layer | Technologies |
 |---|---|
 | **Mobile** | Flutter 3.x / Dart |
-| **Backend & Base de données** | Firebase (Firestore, Authentication, Cloud Messaging, Hosting) |
-| **IA / Vision par ordinateur** | Google Gemini API, YOLO v8 (détection de contamination) |
-| **Inference APIs** | Hugging Face Spaces (SegFormer-B3 compost, EfficientNet waste, freshness) |
-| **Stockage images** | Cloudinary |
-| **Cartographie** | Google Places API |
+| **Backend & Database** | Firebase (Firestore, Authentication, Cloud Messaging, Cloud Functions) |
+| **AI / Computer Vision** | Google Gemini API, YOLOv8 (contamination detection) |
+| **Inference APIs** | Hugging Face Spaces (SegFormer-B3 compost, EfficientNet waste, freshness, Dual SwinV2-Small nutrition) |
+| **Image Storage** | Cloudinary |
+| **Mapping** | Google Places API |
 | **Navigation** | go_router |
-| **Gestion d'état** | Provider |
-| **Interface chat** | DashChat 2 |
-| **Fonctions cloud** | Firebase Cloud Functions (Node.js 18) |
+| **State Management** | Provider |
+| **Chat UI** | DashChat 2 |
+| **Cloud Functions** | Firebase Cloud Functions (Node.js 18) |
 
 ---
 
-## Prérequis
+## Prerequisites
 
-- Flutter SDK **3.19.0+**
-- Dart **3.3.0+**
-- Android Studio (pour émulateur Android) ou appareil physique Android
-- Node.js **18+** (pour Firebase Cloud Functions)
-- Un projet Firebase configuré (voir section Configuration)
+- **Flutter SDK** 3.19.0+
+- **Dart** 3.3.0+
+- **Android Studio** (for Android emulator) or a physical Android / iOS device
+- **Node.js 18+** (for Firebase Cloud Functions)
+- A configured Firebase project (see Configuration section)
+- A Cloudinary account (free tier is sufficient)
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/ZeinebDoghri/Concious-Living.git
+# 1. Clone the repository
+git clone https://github.com/ZeinebDoghri/Esprit-AI_Project-3AI4-2526-ORKA.git
 cd Concious-Living
+
+# 2. Install Flutter dependencies
 flutter pub get
-```
 
----
-
-## Configuration
-
-### 1. Clés API
-
-Crée le fichier `lib/config/api_keys.dart` à partir du template :
-
-```bash
-cp .env.example lib/config/api_keys.dart
-```
-
-Remplis-le avec tes propres clés (Gemini, Google Places, Cloudinary, OpenWeather).
-
-### 2. Firebase
-
-- Crée un projet sur [Firebase Console](https://console.firebase.google.com)
-- Télécharge `google-services.json` → place-le dans `android/app/`
-- Télécharge `GoogleService-Info.plist` → place-le dans `ios/Runner/`
-- Active dans Firebase : **Firestore**, **Authentication** (Email/Password), **Cloud Messaging**
-
-### 3. Firebase Functions
-
-```bash
+# 3. Install Firebase Cloud Functions dependencies
 cd functions
 npm install
 cd ..
@@ -95,85 +73,159 @@ cd ..
 
 ---
 
-## Lancement
+## Configuration
+
+### 1. API Keys
+
+Create your API keys file from the provided template:
 
 ```bash
-# Sur émulateur ou appareil Android connecté
+cp .env.example lib/config/api_keys.dart
+```
+
+Open `lib/config/api_keys.dart` and fill in your own keys (Gemini, Google Places, Cloudinary, OpenWeather).
+> ⚠️ **Never commit this file.** It is listed in `.gitignore`.
+
+### 2. Firebase
+
+1. Create a project on [Firebase Console](https://console.firebase.google.com)
+2. Download `google-services.json` → place it in `android/app/`
+3. Download `GoogleService-Info.plist` → place it in `ios/Runner/`
+4. Enable: **Firestore**, **Authentication** (Email/Password), **Cloud Messaging**
+
+> A `google-services.json.example` is included to show the expected structure. Replace it with your own credentials.
+
+---
+
+## Running the App
+
+```bash
+# Run on a connected emulator or physical device
 flutter run
 
-# Sur navigateur (Chrome)
+# Run in Chrome (web preview only)
 flutter run -d chrome
 
-# Build APK Android (release)
+# Build a release APK for Android
 flutter build apk --release
-# APK généré dans : build/app/outputs/flutter-apk/app-release.apk
+# Output: build/app/outputs/flutter-apk/app-release.apk
+
+# Build for iOS (macOS only)
+flutter build ios --release
 ```
 
 ---
 
-## Variables d'environnement
+## Environment Variables
 
-Voir `.env.example` pour toutes les clés nécessaires.
+See `.env.example` for all required keys. Never put real values in the repository.
 
 | Variable | Description |
 |---|---|
-| `GEMINI_API_KEY_1` à `_5` | Clés Google Gemini API (rotation 5 clés x 6 modèles) |
-| `GOOGLE_PLACES_API_KEY` | Google Places API (carte alimentaire) |
-| `OPENWEATHER_API_KEY` | OpenWeatherMap (météo) |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary (stockage images scans) |
+| `GEMINI_API_KEY_1` to `_5` | Google Gemini API keys (5-key rotation across 6 models) |
+| `GOOGLE_PLACES_API_KEY` | Google Places API (food map feature) |
+| `OPENWEATHER_API_KEY` | OpenWeatherMap (weather-based recommendations) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary (scan image storage) |
 
 ---
 
-## Structure du projet
+## Project Structure
 
 ```
 lib/
-├── config/          # Clés API (non versionnées — à créer depuis .env.example)
-├── core/            # Modèles, constantes, Firebase service, API config
+├── config/          # API keys — not versioned, create from .env.example
+├── core/            # Models, constants, Firebase service, API config
 ├── features/
-│   ├── auth/        # Authentification (Customer, Restaurant, Hotel)
-│   ├── customer/    # Home, scan, nutrition, carte, profil, chatbot Nora
-│   ├── restaurant/  # Dashboard, scan, inventaire, alertes, déchets, Chef AI
-│   └── hotel/       # Dashboard, scan, profil, chatbot Sage
+│   ├── auth/        # Authentication (Customer, Restaurant, Hotel)
+│   ├── customer/    # Home, scan, nutrition, map, profile, Nora chatbot
+│   ├── restaurant/  # Dashboard, scan, inventory, alerts, waste, Chef AI
+│   └── hotel/       # Dashboard, scan, profile, Sage chatbot
 ├── providers/       # State management (Provider)
 ├── services/        # AI Chat, Cloudinary, Nutrition, Weather, Google Places
-└── shared/          # Widgets partagés, scaffold chatbot IA
-functions/           # Firebase Cloud Functions (Node.js)
-docs/                # Documentation technique et diagrammes
-demo/                # APK, captures d'écran, vidéo de démonstration
+└── shared/          # Shared widgets, AI chatbot scaffold
+functions/           # Firebase Cloud Functions (Node.js 18)
+docs/                # Technical documentation and architecture diagrams
+demo/
+├── app-release.apk
+├── screenshots/
+│   ├── home.png
+│   ├── dashboard.png
+│   └── profil.png
+└── demo.mp4
 ```
 
 ---
 
-## Démo
+## AI Models
 
-- APK Android : `demo/app-release.apk`
-- Captures d'écran : `demo/screenshots/`
+All models are hosted externally and called via REST API. **No model files are stored in this repository.**
+
+| Model | Architecture | Hosted on | Link |
+|---|---|---|---|
+| Nutrition prediction | Dual SwinV2-Small | Hugging Face Spaces | [Link](https://huggingface.co/spaces/zeinebzino/nutrients-model) |
+| Allergen detection | — | Hugging Face Spaces | [Link](https://huggingface.co/spaces/nadiahafhouf/allergyModel) |
+| Freshness detection | — | Hugging Face Spaces | [Link](https://huggingface.co/spaces/jawher0000/freshness-check) |
+| Expiry detection | — | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
+| Compost segmentation | SegFormer-B3 | Hugging Face Spaces | [Link](https://huggingface.co/spaces/touuuuuuuuuuta/compost-api) |
+| Calories prediction | — | Hugging Face Spaces | *(add link)* |
+| Waste estimation | EfficientNet | Hugging Face Spaces | *(add link)* |
+| Contamination detection | YOLOv8 | Hugging Face Spaces | *(add link)* |
 
 ---
 
-## Fonctionnalités principales
+## Datasets
 
-| Fonctionnalité | Description |
+Training datasets are not included in this repository. All datasets are public and can be downloaded from the links below.
+
+| Dataset | Used for | Source | Link |
+|---|---|---|---|
+| Nutrition5k | Nutrition & calorie prediction | Kaggle | [Link](https://www.kaggle.com/datasets/gillesokhin/nutrition5k-dataset) |
+| Food-101 | Allergen detection | Kaggle | [Link](https://www.kaggle.com/datasets/dansbecker/food-101) |
+| Fresh and Stale Classification | Freshness detection | Kaggle | [Link](https://www.kaggle.com/datasets/swoyam2609/fresh-and-stale-classification) |
+| Expiry Date Recognition | Expiry detection | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
+| FoodSeg103 | Compost segmentation | Kaggle | [Link](https://www.kaggle.com/datasets/ggrill/foodseg103) |
+| *(dataset name)* | Waste estimation | *(source)* | *(add link)* |
+| *(dataset name)* | Contamination detection | *(source)* | *(add link)* |
+
+> No training data is stored in this repository.
+
+---
+
+## Key Features
+
+| Feature | Description |
 |---|---|
-| Scan IA multi-modèles | Fraîcheur, contamination, gaspillage, compost en une photo |
-| Suivi CO₂ & compost | Calcul de l'impact environnemental par scan |
-| Analyse nutritionnelle | Calories, macros, micros, suivi quotidien personnalisé |
-| Chatbots IA | Nora (nutrition), Chef AI (cuisine), Sage (durabilité hôtel) |
-| Détection allergènes | Signalement temps réel depuis photo de plat |
-| Carte alimentaire | Restaurants & hôtels proches via Google Places |
-| Historique des scans | Sauvegarde Firebase + images Cloudinary |
-| Alertes HACCP | Conformité et sécurité alimentaire en temps réel |
-| Gestion multi-rôles | Customer · Restaurant · Hotel — interfaces dédiées |
+| Multi-model AI scan | Freshness, contamination, waste, compost — from a single photo |
+| CO₂ & compost tracking | Environmental impact calculated per scan |
+| Nutrition analysis | Calories, proteins, carbs, fats, sugar, cholesterol, sodium — personalized daily tracking with limit alerts |
+| AI assistants | Nora (nutrition · customer), Chef AI (kitchen ops · restaurant), Sage (sustainability · hotel) |
+| Allergen detection | Real-time flagging from dish photos |
+| Food map | Nearby restaurants & hotels via Google Places |
+| Scan history | Saved in Firebase + images on Cloudinary |
+| HACCP alerts | Real-time food safety compliance for restaurant and hotel portals |
+| Multi-role management | Customer · Restaurant · Hotel — fully dedicated interfaces |
 
 ---
 
-## Auteurs
+## Demo
 
-| Nom | Classe | Année universitaire |
+- **APK (Android):** `demo/app-release.apk`
+- **Screenshots:** `demo/screenshots/`
+- **Demo video:** [Watch ORKA Demo](https://esprittncom-my.sharepoint.com/personal/aziza_eya_esprit_tn/_layouts/15/stream.aspx?id=%2Fpersonal%2Faziza_eya_esprit_tn%2FDocuments%2FORKA_Demo%2Emp4)
+
+---
+
+## Authors
+
+| Name | Class | Academic Year |
 |---|---|---|
-| Eya | *(à compléter)* | 2025–2026 |
-| Zeineb Doghri | *(à compléter)* | 2025–2026 |
+| Eya Aziza | 3AI4 | 2025–2026 |
+| Zeineb Doghri | 3AI4 | 2025–2026 |
+| Fatma Lajmi | 3AI4 | 2025–2026 |
+| Nadia Hafhouf | 3AI4 | 2025–2026 |
+| Chams Nmiri | 3AI4 | 2025–2026 |
+| Jawher Farhat | 3AI4 | 2025–2026 |
+| Ahmed Belhsen | 3AI4 | 2025–2026 |
 
-**Tuteur :** *(à compléter)*  
-**École :** ESPRIT School of Engineering
+**Supervisors:** Nardine Hanfi · Safouene Jebali
+**School:** ESPRIT School of Engineering
