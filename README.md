@@ -60,7 +60,7 @@ All AI predictions are powered by vision models analyzing food photos in real ti
 ```bash
 # 1. Clone the repository
 git clone https://github.com/ZeinebDoghri/Esprit-AI_Project-3AI4-2526-ORKA.git
-cd Concious-Living
+cd Esprit-AI_Project-3AI4-2526-ORKA
 
 # 2. Install Flutter dependencies
 flutter pub get
@@ -160,16 +160,16 @@ demo/
 
 All models are hosted externally and called via REST API. **No model files are stored in this repository.**
 
-| Model | Architecture | Hosted on | Link |
-|---|---|---|---|
-| Nutrition prediction | Dual SwinV2-Small | Hugging Face Spaces | [Link](https://huggingface.co/spaces/zeinebzino/nutrients-model) |
-| Allergen detection | — | Hugging Face Spaces | [Link](https://huggingface.co/spaces/nadiahafhouf/allergyModel) |
-| Freshness detection | — | Hugging Face Spaces | [Link](https://huggingface.co/spaces/jawher0000/freshness-check) |
-| Expiry detection | — | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
-| Compost segmentation | SegFormer-B3 | Hugging Face Spaces | [Link](https://huggingface.co/spaces/touuuuuuuuuuta/compost-api) |
-| Calories prediction | — | Hugging Face Spaces | *(add link)* |
-| Waste estimation | EfficientNet | Hugging Face Spaces | *(add link)* |
-| Contamination detection | YOLOv8 | Hugging Face Spaces | *(add link)* |
+| Model | Hosted on | Link |
+|---|---|---|
+| Nutrition prediction | Hugging Face Spaces | [Link](https://huggingface.co/spaces/zeinebzino/nutrients-model) |
+| Allergen detection | Hugging Face Spaces | [Link](https://huggingface.co/spaces/nadiahafhouf/allergyModel) |
+| Freshness detection | Hugging Face Spaces | [Link](https://huggingface.co/spaces/jawher0000/freshness-check) |
+| Expiry detection | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
+| Compost segmentation | Hugging Face Spaces | [Link](https://huggingface.co/spaces/touuuuuuuuuuta/compost-api) |
+| Calories prediction | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/chamsun/myAPI)) |
+| Waste estimation | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/Fatmaaaaa10/food-waste-pipeline)) |
+| Contamination detection | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/AhmedBH03/projetai53)) |
 
 ---
 
@@ -180,12 +180,11 @@ Training datasets are not included in this repository. All datasets are public a
 | Dataset | Used for | Source | Link |
 |---|---|---|---|
 | Nutrition5k | Nutrition & calorie prediction | Kaggle | [Link](https://www.kaggle.com/datasets/gillesokhin/nutrition5k-dataset) |
-| Food-101 | Allergen detection | Kaggle | [Link](https://www.kaggle.com/datasets/dansbecker/food-101) |
+| Food 101 | Allergen detection | Kaggle | [Link](https://www.kaggle.com/datasets/dansbecker/food-101) |
 | Fresh and Stale Classification | Freshness detection | Kaggle | [Link](https://www.kaggle.com/datasets/swoyam2609/fresh-and-stale-classification) |
 | Expiry Date Recognition | Expiry detection | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
 | FoodSeg103 | Compost segmentation | Kaggle | [Link](https://www.kaggle.com/datasets/ggrill/foodseg103) |
-| *(dataset name)* | Waste estimation | *(source)* | *(add link)* |
-| *(dataset name)* | Contamination detection | *(source)* | *(add link)* |
+| FoodSeg103 | Waste estimation | Kaggle | [Link](https://www.kaggle.com/datasets/ggrill/foodseg103) |
 
 > No training data is stored in this repository.
 
