@@ -167,7 +167,7 @@ class HotelProfileScreen extends StatelessWidget {
                           ? Image.network(
                               logoUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
+                              errorBuilder: (_, _, _) => const Icon(
                                 Icons.hotel,
                                 size: 40,
                                 color: _kDeep,

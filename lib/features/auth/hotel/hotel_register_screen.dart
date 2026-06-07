@@ -102,8 +102,9 @@ class _HotelRegisterScreenState extends State<HotelRegisterScreen>
     if (v.length >= 6) score++;
     if (v.length >= 10) score++;
     if (RegExp(r'[A-Z]').hasMatch(v)) score++;
-    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v))
+    if (RegExp(r'[0-9]').hasMatch(v) || RegExp(r'[!@#\$%\^&\*]').hasMatch(v)) {
       score++;
+    }
     return score.clamp(0, 4);
   }
 
@@ -222,7 +223,7 @@ class _HotelRegisterScreenState extends State<HotelRegisterScreen>
           // ── Full background blobs ────────────────────────────────────
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, __) => CustomPaint(
+            builder: (_, _) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
               size: Size(double.infinity, MediaQuery.of(context).size.height),
             ),
@@ -246,7 +247,7 @@ class _HotelRegisterScreenState extends State<HotelRegisterScreen>
                 children: [
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, __) => CustomPaint(
+                    builder: (_, _) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),

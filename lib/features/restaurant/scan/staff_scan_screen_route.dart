@@ -71,35 +71,59 @@ class _StaffScanScreenState extends State<StaffScanScreen>
     super.dispose();
   }
 
+  /// Wake up a sleeping HF Space by sending a lightweight GET request.
+  static Future<void> _wakeSpace(String baseUrl) async {
+    try {
+      await http.get(Uri.parse(baseUrl)).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
   Future<Map<String, dynamic>> _predictFreshnessBytes(
     Uint8List imageBytes,
     String filename,
   ) async {
-    try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://jawher0000-freshness-check.hf.space/predict'),
-      );
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          imageBytes,
-          filename: filename.isEmpty ? 'image.jpg' : filename,
-        ),
-      );
-      final streamed = await request.send().timeout(
-        const Duration(seconds: 60),
-      );
-      final response = await http.Response.fromStream(streamed);
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) return decoded;
+    const url = 'https://jawher0000-freshness-check.hf.space/predict';
+    // Retry up to 3 times to handle cold-start delays
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final request = http.MultipartRequest('POST', Uri.parse(url));
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            imageBytes,
+            filename: filename.isEmpty ? 'image.jpg' : filename,
+          ),
+        );
+        final streamed = await request.send().timeout(
+          const Duration(seconds: 90),
+        );
+        final response = await http.Response.fromStream(streamed);
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            // Handle both direct format and Gradio format
+            if (decoded.containsKey('label') || decoded.containsKey('status')) {
+              return decoded;
+            }
+            // Gradio format: {"data": [...], "duration": ...}
+            final data = decoded['data'];
+            if (data is List && data.isNotEmpty) {
+              if (data[0] is Map<String, dynamic>) return data[0] as Map<String, dynamic>;
+              if (data[0] is String) {
+                return {
+                  'status': (data[0] as String).toLowerCase(),
+                  'label': data[0] as String,
+                  'confidence': data.length > 1 ? (data[1] as num?)?.toDouble() ?? 0.85 : 0.85,
+                };
+              }
+            }
+          }
+        }
+        debugPrint('[Freshness] attempt $attempt status=${response.statusCode}');
+      } catch (e) {
+        debugPrint('[Freshness] attempt $attempt error: $e');
+        if (attempt < 2) await Future.delayed(const Duration(seconds: 5));
       }
-      debugPrint(
-        '[Restaurant Scan] Freshness API error: ${response.statusCode}',
-      );
-    } catch (e) {
-      debugPrint('[Restaurant Scan] Freshness error: $e');
     }
     return <String, dynamic>{
       'status': 'unknown',
@@ -129,6 +153,13 @@ class _StaffScanScreenState extends State<StaffScanScreen>
       final imageBytes = await file.readAsBytes();
       _lastBytes = imageBytes;
 
+      // ── Wake up sleeping HF Spaces first ──────────────────────────────
+      setState(() => _step = 'Waking up AI models...');
+      await Future.wait([
+        _wakeSpace('https://jawher0000-freshness-check.hf.space'),
+        _wakeSpace(ApiConfig.wastePipelineApi),
+      ]);
+
       // ── Run ALL models in parallel ─────────────────────────────────────
       setState(() => _step = 'Running 3 AI analyses in parallel...');
 
@@ -136,7 +167,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
         // Freshness API (server-side)
         _predictFreshnessBytes(imageBytes, file.name),
 
-        // Waste detection API (server-side)
+        // Waste detection API (HF Space)
         _wasteService
             .analyze(imageBytes)
             .then((result) {
@@ -357,7 +388,7 @@ class _StaffScanScreenState extends State<StaffScanScreen>
                     builder: (context, constraints) {
                       return AnimatedBuilder(
                         animation: _scanLine,
-                        builder: (_, __) {
+                        builder: (_, _) {
                           final maxTop = (constraints.maxHeight - 2).clamp(
                             0.0,
                             double.infinity,

@@ -408,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   stream: NutrientTrackingService.watchTodayLog(user!.id),
                                   builder: (context, logSnap) {
                                     return StreamBuilder<Map<String, dynamic>>(
-                                      stream: NutrientTrackingService.watchLimits(user!.id),
+                                      stream: NutrientTrackingService.watchLimits(user.id),
                                       builder: (context, limitSnap) {
                                         final log = logSnap.data ?? const <String, dynamic>{};
                                         final limits = limitSnap.data ?? const {
@@ -442,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               stream: NutrientTrackingService.watchTodayLog(user!.id),
                               builder: (context, logSnap) {
                                 return StreamBuilder<Map<String, dynamic>>(
-                                  stream: NutrientTrackingService.watchLimits(user!.id),
+                                  stream: NutrientTrackingService.watchLimits(user.id),
                                   builder: (context, limitSnap) {
                                     final log = logSnap.data ?? const <String, dynamic>{};
                                     final limits = limitSnap.data ?? const {
@@ -613,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: IgnorePointer(
                       child: AnimatedBuilder(
                         animation: _motionController,
-                        builder: (_, __) => CustomPaint(
+                        builder: (_, _) => CustomPaint(
                           painter: _BlobPainter(
                             _motionController.value,
                             _kBlob1,
@@ -657,7 +657,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   builder: (context, snap) {
                     final log = snap.data ?? {};
                     final consumed = (log['calories'] ?? 0.0) as double;
-                    final goal = user?.calorieGoal ?? 2000;
+                    final goal = user.calorieGoal ?? 2000;
                     final pct = goal > 0 ? (consumed / goal).clamp(0.0, 1.0) : 0.0;
 
                     return Container(
@@ -671,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         TweenAnimationBuilder<double>(
                           tween: Tween(begin: 0, end: pct),
                           duration: const Duration(milliseconds: 800),
-                          builder: (_, value, __) => CircularPercentIndicator(
+                          builder: (_, value, _) => CircularPercentIndicator(
                             radius: 55,
                             lineWidth: 8,
                             percent: value,
@@ -860,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 stream: NutrientTrackingService.watchTodayLog(user!.id),
                 builder: (context, logSnap) {
                   return StreamBuilder<Map<String, dynamic>>(
-                    stream: NutrientTrackingService.watchLimits(user!.id),
+                    stream: NutrientTrackingService.watchLimits(user.id),
                     builder: (context, limitSnap) {
                       final log = logSnap.data ?? const <String, dynamic>{};
                       final limits = limitSnap.data ?? const {
@@ -938,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
                               itemCount: alertCards.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 12),
+                              separatorBuilder: (_, _) => const SizedBox(width: 12),
                               itemBuilder: (context, index) =>
                                   _AlertCard(data: alertCards[index]),
                             ),
@@ -1043,7 +1043,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       stream: NutrientTrackingService.watchTodayLog(user!.id),
                       builder: (context, logSnap) {
                         return StreamBuilder<Map<String, dynamic>>(
-                          stream: NutrientTrackingService.watchLimits(user!.id),
+                          stream: NutrientTrackingService.watchLimits(user.id),
                           builder: (context, limitSnap) {
                             final log = logSnap.data ?? const <String, dynamic>{};
                             final limits = limitSnap.data ?? const {
@@ -1131,7 +1131,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             children: [
                               AnimatedBuilder(
                                 animation: _motionController,
-                                builder: (_, __) {
+                                builder: (_, _) {
                                   final wave = math.sin(
                                     _motionController.value * 2 * math.pi +
                                         index * 0.8,

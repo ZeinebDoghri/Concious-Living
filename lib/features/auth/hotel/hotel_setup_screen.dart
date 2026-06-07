@@ -112,10 +112,12 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
 
   String _readableError(Object e) {
     final message = e.toString();
-    if (message.startsWith('Exception: '))
+    if (message.startsWith('Exception: ')) {
       return message.substring('Exception: '.length);
-    if (message.startsWith('StateError: '))
+    }
+    if (message.startsWith('StateError: ')) {
       return message.substring('StateError: '.length);
+    }
     return message;
   }
 
@@ -277,7 +279,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen>
                 Container(color: _primary),
                 AnimatedBuilder(
                   animation: _blobController,
-                  builder: (_, __) => CustomPaint(
+                  builder: (_, _) => CustomPaint(
                     painter: _BlobPainter(_blobController.value, _primary),
                     size: Size(double.infinity, heroH),
                   ),
@@ -757,7 +759,7 @@ class _TeamSetupStep extends StatelessWidget {
           child: SwitchListTile(
             value: allergyHandling,
             onChanged: onAllergyHandling,
-            activeColor: _primary,
+            activeThumbColor: _primary,
             activeTrackColor: _softBg,
             title: Text(
               'Allergy handling',
@@ -818,7 +820,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifySpoilage,
                 onChanged: onNotifySpoilage,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(
                   'Spoilage alerts',
@@ -833,7 +835,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifyLowInventory,
                 onChanged: onNotifyLowInventory,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(
                   'Low inventory alerts',
@@ -848,7 +850,7 @@ class _AlertPreferencesStep extends StatelessWidget {
               SwitchListTile(
                 value: notifyWasteTips,
                 onChanged: onNotifyWasteTips,
-                activeColor: _primary,
+                activeThumbColor: _primary,
                 activeTrackColor: _softBg,
                 title: Text(
                   'Waste reduction tips',

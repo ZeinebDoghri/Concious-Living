@@ -27,7 +27,7 @@ class _HealthQuizScreenState extends State<HealthQuizScreen> {
   final _heightCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
   String _selectedGender = 'Male';
-  List<String> _selectedPreferences = [];
+  final List<String> _selectedPreferences = [];
 
   bool _isSaving = false;
 
@@ -409,8 +409,11 @@ class _HealthQuizScreenState extends State<HealthQuizScreen> {
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    if (isSel) _selectedPreferences.remove(opt);
-                    else _selectedPreferences.add(opt);
+                    if (isSel) {
+                      _selectedPreferences.remove(opt);
+                    } else {
+                      _selectedPreferences.add(opt);
+                    }
                   });
                 },
                 child: Container(

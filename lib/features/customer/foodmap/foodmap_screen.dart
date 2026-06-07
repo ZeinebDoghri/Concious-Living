@@ -240,7 +240,7 @@ class _FoodMapScreenState extends State<FoodMapScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _filters.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final f = _filters[i];
                   final active = f == _activeFilter;
@@ -310,7 +310,7 @@ class _FoodMapScreenState extends State<FoodMapScreen> {
                             child: ListView.separated(
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                               itemCount: _filtered.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              separatorBuilder: (_, _) => const SizedBox(height: 12),
                               itemBuilder: (_, i) => _RestaurantCard(
                                 restaurant: _filtered[i],
                                 userAllergens: _userAllergens,
@@ -328,8 +328,8 @@ class _FoodMapScreenState extends State<FoodMapScreen> {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       itemCount: 5,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, __) => _SkeletonCard(),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, _) => _SkeletonCard(),
     );
   }
 
@@ -416,7 +416,7 @@ class _RestaurantCard extends StatelessWidget {
                     ? Image.network(
                         GooglePlacesService.getPhotoUrl(restaurant.photoReference!),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _PhotoPlaceholder(),
+                        errorBuilder: (_, _, _) => _PhotoPlaceholder(),
                       )
                     : _PhotoPlaceholder(),
               ),
@@ -495,7 +495,7 @@ class _RestaurantCard extends StatelessWidget {
                         if (restaurant.rating != null) ...[
                           const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFFB347)),
                           const SizedBox(width: 3),
-                          Text('${restaurant.rating!.toStringAsFixed(1)}',
+                          Text(restaurant.rating!.toStringAsFixed(1),
                               style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _kTextBody)),
                           const SizedBox(width: 8),
                         ],

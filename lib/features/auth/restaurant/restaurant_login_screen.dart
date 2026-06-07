@@ -151,7 +151,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
           // Background blobs
           AnimatedBuilder(
             animation: _blobCtrl,
-            builder: (_, __) => CustomPaint(
+            builder: (_, _) => CustomPaint(
               painter: _BlobBgPainter(_blobCtrl.value),
               size: Size(double.infinity, MediaQuery.of(context).size.height),
             ),
@@ -175,7 +175,7 @@ class _RestaurantLoginScreenState extends State<RestaurantLoginScreen>
                 children: [
                   AnimatedBuilder(
                     animation: _blobCtrl,
-                    builder: (_, __) => CustomPaint(
+                    builder: (_, _) => CustomPaint(
                       painter: _HeroBlobPainter(_blobCtrl.value),
                       size: Size(double.infinity, heroH),
                     ),

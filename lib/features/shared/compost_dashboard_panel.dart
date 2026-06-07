@@ -294,7 +294,7 @@ class _DepartmentSelector extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: chips.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, index) => chips[index],
           ),
         );
@@ -439,7 +439,7 @@ class _AnimatedKpiCard extends StatelessWidget {
             tween: Tween(begin: 0, end: value),
             duration: const Duration(milliseconds: 800),
             curve: Curves.easeOutCubic,
-            builder: (_, animatedValue, __) => Text(
+            builder: (_, animatedValue, _) => Text(
               unit == '%'
                   ? '${animatedValue.toStringAsFixed(0)}%'
                   : '${animatedValue.toStringAsFixed(1)} $unit',

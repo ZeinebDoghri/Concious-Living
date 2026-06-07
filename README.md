@@ -1,250 +1,179 @@
-# 🌿 ORKA — Flutter AI Food Safety & Waste Reduction App
+# ORKA — Conscious Living
 
-ORKA is a **Flutter / Dart** application focused on **food safety**, **food waste reduction**, and **nutrition tracking**.
-It provides role-based experiences for **customers**, **restaurants**, and **hotels**, combining mobile UX with **computer vision** and **AI inference**.
-
-## Overview
-
-ORKA supports operational decision-making around:
-- Food freshness and expiry handling
-- Compostability and waste monitoring
-- Food contamination screening
-- Nutrition and calorie estimation
-- Allergen awareness and scan history
-
-The application uses:
-- A cloud data layer with **Firebase (Auth, Firestore, Storage, Messaging)**
-- A model inference backend exposed as HTTP APIs (see **Backend**)
-
-## Features
-
-### Customer portal
-- Dish scan with results (nutrition/risk) and history persistence
-- Health profile: goals, preferences, allergens
-- Nutrition tools (calorie/macronutrient estimation)
-- Food map experience (places + details)
-
-### Restaurant / Hotel portal
-- Staff scan workflows (multi-analysis depending on mode):
-  - Compost segmentation
-  - Food waste pipeline analysis
-  - Food contamination analysis
-- Dashboards (KPIs and charts)
-- Inventory and history screens
-- Alerts and follow-up workflows
-
-### AI & analytics
-- External inference APIs for vision models (image multipart upload)
-- In-app AI assistant flows (Gemini API) for guidance and insights
-- Optional on-device model assets via **ONNX Runtime** (see `assets/models/`)
-
-## Tech Stack
-
-### Frontend
-- **Flutter** (multi-platform: Android / iOS / Web / Desktop)
-- **Dart** (`environment: sdk: ^3.11.5`)
-- Navigation: **GoRouter**
-- State management: **Provider**
-- UI: Material, `google_fonts`, `flutter_animate`, `lottie`
-- Charts: `fl_chart`, `percent_indicator`
-
-### Backend
-- **FastAPI (Python)** for model-serving APIs
-- **Hugging Face Spaces** for hosting public inference endpoints used by the app
-- **Hugging Face / Computer Vision models** used through the APIs, including:
-  - Compost segmentation (SegFormer-B3) exposed as `POST /segment`
-  - Food waste pipeline (classifier + detector + mass estimation) exposed as `POST /analyze`
-  - Food contamination screening (classifier + YOLO detector) exposed as `POST /analyze`
-  - Nutrition & calorie inference (CalorieSwinV2-style API) exposed as `POST /predict`
-
-Backend URL configuration in Flutter:
-- Central API base URLs are defined in `lib/core/api_config.dart`.
-- Additional endpoints exist in feature services (example: compost web service uses a Hugging Face Space base URL and calls `/health` + `/segment`).
-- One nutrition endpoint is called directly from `lib/core/api_service.dart`.
-
-### Cloud / data
-- **Firebase Auth** (Email/Password)
-- **Cloud Firestore** (profiles, scans, alerts, inventory, history)
-- **Firebase Storage** (images)
-- **Firebase Messaging** + local notifications
-- Firebase Cloud Functions starter (TypeScript) is available in `docs/functions/`
-
-### Other tools
-- Local cache & storage: `shared_preferences`, `hive_flutter`
-- Camera & scanning: `image_picker`, `mobile_scanner`
-- Document export & sharing: `pdf`, `printing`, `share_plus`
-- Optional image upload utility: Cloudinary integration (customer scan uploads)
-
-## Directory Structure
-
-Detailed overview (matches the current codebase layout):
-
-```text
-concious_living_app/
-  lib/
-    main.dart
-    app_router.dart
-    firebase_options.dart
-
-    config/
-      api_keys.dart
-
-    constants/
-      tunisian_calendar.dart
-
-    core/
-      api_config.dart
-      api_service.dart
-      constants.dart
-      firebase_service.dart
-      venue_alert_service.dart
-      models/            (user_model.dart, scan_history_item.dart, ...)
-
-    features/
-      role_selector/
-      onboarding/
-      splash/
-
-      auth/
-        customer/
-        restaurant/
-        hotel/
-
-      customer/
-        customer_shell.dart
-        home/
-        scan/
-        history/
-        allergens/
-        nutrition/
-        nutritionist/
-        foodmap/
-        profile/
-
-      restaurant/
-        restaurant_shell.dart
-        dashboard/
-        alerts/
-        inventory/
-        history/
-        scan/              (staff_scan_screen.dart, staff_result_screen.dart, contamination_*)
-        waste/
-        profile/
-
-      hotel/
-        hotel_shell.dart
-        dashboard/
-        scan/
-        history/
-        chatbot/
-        profile/
-
-      freshness/
-      shared/
-
-    providers/
-      user_provider.dart
-      venue_type_provider.dart
-      (alerts_provider.dart, inventory_provider.dart, scan_history_provider.dart, ...)
-
-    services/
-      ai_chat_service.dart
-      google_places_service.dart
-      weather_service.dart
-      (other feature services)
-
-    shared/
-      animations/
-      widgets/
-        (reusable UI components)
-
-    theme/
-      app_theme.dart
-
-    widgets/             (app-wide widgets used by multiple features)
-
-  assets/
-    images/
-    lottie/
-    models/
-
-  docs/
-    architecture.md
-    functions/          (Firebase Cloud Functions - TypeScript)
-      package.json
-      tsconfig.json
-      src/
-
-  android/ ios/ web/ macos/ windows/ linux/
-```
-
-For a detailed screen/route map, see [docs/architecture.md](docs/architecture.md).
-
-## Getting Started
-
-### Prerequisites
-- Flutter SDK installed (stable)
-- A Firebase project (Auth + Firestore + Storage)
-
-### Install
-
-```bash
-flutter pub get
-```
-
-### Firebase (important)
-
-Firebase setup steps are in [SETUP.md](SETUP.md).
-
-Quick summary:
-1. Create a Firebase project (Firebase Console)
-2. Enable **Email/Password** in Authentication
-3. Generate `firebase_options.dart` via FlutterFire CLI:
-
-```bash
-dart pub global activate flutterfire_cli
-flutterfire configure
-```
-
-### API Keys (no secrets in Git)
-
-Keys are shipped as **placeholders** in [lib/config/api_keys.dart](lib/config/api_keys.dart):
-- `geminiApiKeys` (list of keys)
-- `openWeatherApiKey`
-- `googlePlacesApiKey`
-
-Add your real keys locally (do not commit).
-
-### Backend URLs (FastAPI / Hugging Face Spaces)
-
-If you deploy your own FastAPI services or new Hugging Face Spaces, update the base URLs in `lib/core/api_config.dart`.
-Some endpoints are also referenced directly in specific features/services, so search for `hf.space` and update those URLs if needed.
-
-### Run
-
-```bash
-flutter run
-```
-
-## Usage
-
-- Customer: sign in → scan a dish → review results → save → review scan history → manage allergens/goals
-- Restaurant/Hotel staff: sign in → open dashboard → run staff scan → review results → follow alerts/inventory/history flows
-
-## Keywords
-
-`ORKA` · `Flutter` · `Dart` · `Firebase` · `Firestore` · `Firebase Auth` · `Firebase Storage` · `Firebase Cloud Messaging (FCM)` · `GoRouter` · `Provider` · `FastAPI` · `Python` · `Hugging Face` · `Hugging Face Spaces` · `computer vision` · `image inference API` · `multipart upload` · `SegFormer` · `YOLO` · `food waste reduction` · `food safety` · `contamination detection` · `allergen detection` · `nutrition tracking` · `calorie estimation` · `Gemini API` · `ONNX Runtime` · `mobile app`
-
-## Acknowledgments
-
-- Flutter & Dart ecosystem
-- Firebase (Auth, Firestore, Storage, Messaging)
-- FastAPI ecosystem
-- Hugging Face Spaces and open-source packages used in `pubspec.yaml`
+> Application mobile IA pour la sécurité alimentaire, la réduction du gaspillage et le suivi nutritionnel.
 
 ---
 
-<p align="center">
-  Built with 💚 for a safer, smarter, and more conscious world.
-</p>
+## Description
 
+**ORKA** est une application mobile Flutter construite autour du thème du *Conscious Living*. Elle répond à deux défis urgents dans la restauration et l'hôtellerie : le gaspillage alimentaire et la sécurité sanitaire.
+
+Avec une simple photo d'un plat, d'un buffet ou d'une étiquette produit, ORKA transforme l'information visuelle en décisions intelligentes pour les équipes cuisine, les hôtels et les clients individuels. Elle calcule également l'impact environnemental via le suivi du compost et l'équivalent CO₂ par scan.
+
+**Côté gaspillage & durabilité :**
+- Détection des restes et estimation des quantités
+- Surveillance de la fraîcheur et lecture des dates de péremption
+- Alertes avant que les aliments deviennent impropres à la consommation
+- Suivi du compost avec calcul de l'équivalent CO₂ — impact environnemental mesurable par scan
+
+**Côté santé & nutrition :**
+- Reconnaissance de plats et signalement des allergènes en temps réel
+- Analyse calorique et nutritionnelle personnalisée (protéines, glucides, lipides, sodium, cholestérol)
+- Suivi quotidien des apports et alertes de dépassement
+- Adapté aux personnes atteintes de maladies chroniques
+
+**Assistants IA spécialisés :**
+- **Nora** — Nutritionniste IA pour les clients
+- **Chef AI** — Assistant opérations cuisine pour les restaurants
+- **Sage** — Consultant durabilité pour les hôtels (HACCP, déchets, sécurité)
+
+---
+
+## Technologies utilisées
+
+| Couche | Technologies |
+|---|---|
+| **Mobile** | Flutter 3.x / Dart |
+| **Backend & Base de données** | Firebase (Firestore, Authentication, Cloud Messaging, Hosting) |
+| **IA / Vision par ordinateur** | Google Gemini API, YOLO v8 (détection de contamination) |
+| **Inference APIs** | Hugging Face Spaces (SegFormer-B3 compost, EfficientNet waste, freshness) |
+| **Stockage images** | Cloudinary |
+| **Cartographie** | Google Places API |
+| **Navigation** | go_router |
+| **Gestion d'état** | Provider |
+| **Interface chat** | DashChat 2 |
+| **Fonctions cloud** | Firebase Cloud Functions (Node.js 18) |
+
+---
+
+## Prérequis
+
+- Flutter SDK **3.19.0+**
+- Dart **3.3.0+**
+- Android Studio (pour émulateur Android) ou appareil physique Android
+- Node.js **18+** (pour Firebase Cloud Functions)
+- Un projet Firebase configuré (voir section Configuration)
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/ZeinebDoghri/Concious-Living.git
+cd Concious-Living
+flutter pub get
+```
+
+---
+
+## Configuration
+
+### 1. Clés API
+
+Crée le fichier `lib/config/api_keys.dart` à partir du template :
+
+```bash
+cp .env.example lib/config/api_keys.dart
+```
+
+Remplis-le avec tes propres clés (Gemini, Google Places, Cloudinary, OpenWeather).
+
+### 2. Firebase
+
+- Crée un projet sur [Firebase Console](https://console.firebase.google.com)
+- Télécharge `google-services.json` → place-le dans `android/app/`
+- Télécharge `GoogleService-Info.plist` → place-le dans `ios/Runner/`
+- Active dans Firebase : **Firestore**, **Authentication** (Email/Password), **Cloud Messaging**
+
+### 3. Firebase Functions
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+---
+
+## Lancement
+
+```bash
+# Sur émulateur ou appareil Android connecté
+flutter run
+
+# Sur navigateur (Chrome)
+flutter run -d chrome
+
+# Build APK Android (release)
+flutter build apk --release
+# APK généré dans : build/app/outputs/flutter-apk/app-release.apk
+```
+
+---
+
+## Variables d'environnement
+
+Voir `.env.example` pour toutes les clés nécessaires.
+
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY_1` à `_5` | Clés Google Gemini API (rotation 5 clés x 6 modèles) |
+| `GOOGLE_PLACES_API_KEY` | Google Places API (carte alimentaire) |
+| `OPENWEATHER_API_KEY` | OpenWeatherMap (météo) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary (stockage images scans) |
+
+---
+
+## Structure du projet
+
+```
+lib/
+├── config/          # Clés API (non versionnées — à créer depuis .env.example)
+├── core/            # Modèles, constantes, Firebase service, API config
+├── features/
+│   ├── auth/        # Authentification (Customer, Restaurant, Hotel)
+│   ├── customer/    # Home, scan, nutrition, carte, profil, chatbot Nora
+│   ├── restaurant/  # Dashboard, scan, inventaire, alertes, déchets, Chef AI
+│   └── hotel/       # Dashboard, scan, profil, chatbot Sage
+├── providers/       # State management (Provider)
+├── services/        # AI Chat, Cloudinary, Nutrition, Weather, Google Places
+└── shared/          # Widgets partagés, scaffold chatbot IA
+functions/           # Firebase Cloud Functions (Node.js)
+docs/                # Documentation technique et diagrammes
+demo/                # APK, captures d'écran, vidéo de démonstration
+```
+
+---
+
+## Démo
+
+- APK Android : `demo/app-release.apk`
+- Captures d'écran : `demo/screenshots/`
+
+---
+
+## Fonctionnalités principales
+
+| Fonctionnalité | Description |
+|---|---|
+| Scan IA multi-modèles | Fraîcheur, contamination, gaspillage, compost en une photo |
+| Suivi CO₂ & compost | Calcul de l'impact environnemental par scan |
+| Analyse nutritionnelle | Calories, macros, micros, suivi quotidien personnalisé |
+| Chatbots IA | Nora (nutrition), Chef AI (cuisine), Sage (durabilité hôtel) |
+| Détection allergènes | Signalement temps réel depuis photo de plat |
+| Carte alimentaire | Restaurants & hôtels proches via Google Places |
+| Historique des scans | Sauvegarde Firebase + images Cloudinary |
+| Alertes HACCP | Conformité et sécurité alimentaire en temps réel |
+| Gestion multi-rôles | Customer · Restaurant · Hotel — interfaces dédiées |
+
+---
+
+## Auteurs
+
+| Nom | Classe | Année universitaire |
+|---|---|---|
+| Eya | *(à compléter)* | 2025–2026 |
+| Zeineb Doghri | *(à compléter)* | 2025–2026 |
+
+**Tuteur :** *(à compléter)*  
+**École :** ESPRIT School of Engineering

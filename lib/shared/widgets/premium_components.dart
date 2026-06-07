@@ -18,14 +18,14 @@ class PremiumCard extends StatelessWidget {
   final bool animate;
 
   const PremiumCard({
-    Key? key,
+    super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
     this.borderRadius = 20,
     this.onTap,
     this.backgroundColor,
     this.animate = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +75,7 @@ class PremiumStatTile extends StatelessWidget {
   final int animationDelay;
 
   const PremiumStatTile({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     this.subtitle,
@@ -83,7 +83,7 @@ class PremiumStatTile extends StatelessWidget {
     this.accentColor,
     this.onTap,
     this.animationDelay = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -170,12 +170,12 @@ class PremiumSectionHeader extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   const PremiumSectionHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     this.trailing,
     this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +244,7 @@ class PremiumButton extends StatefulWidget {
   final EdgeInsetsGeometry padding;
 
   const PremiumButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onPressed,
     this.icon,
@@ -252,7 +252,7 @@ class PremiumButton extends StatefulWidget {
     this.isFullWidth = true,
     this.backgroundColor,
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-  }) : super(key: key);
+  });
 
   @override
   State<PremiumButton> createState() => _PremiumButtonState();
@@ -332,7 +332,7 @@ class PremiumAlertCard extends StatelessWidget {
   final int animationDelay;
 
   const PremiumAlertCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     this.level = AlertLevel.info,
@@ -340,7 +340,7 @@ class PremiumAlertCard extends StatelessWidget {
     this.onAction,
     this.actionLabel = 'View',
     this.animationDelay = 0,
-  }) : super(key: key);
+  });
 
   Color _getColorForLevel() {
     switch (level) {
@@ -460,13 +460,13 @@ class PremiumEmptyState extends StatelessWidget {
   final VoidCallback? onAction;
 
   const PremiumEmptyState({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.message,
     this.actionLabel,
     this.onAction,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -546,10 +546,10 @@ class PremiumLoadingIndicator extends StatelessWidget {
   final Color? color;
 
   const PremiumLoadingIndicator({
-    Key? key,
+    super.key,
     this.size = 48,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

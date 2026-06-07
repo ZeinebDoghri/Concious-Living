@@ -70,10 +70,12 @@ class _HotelForgotPasswordScreenState extends State<HotelForgotPasswordScreen>
 
   String _readableError(Object e) {
     final message = e.toString();
-    if (message.startsWith('Exception: '))
+    if (message.startsWith('Exception: ')) {
       return message.substring('Exception: '.length);
-    if (message.startsWith('StateError: '))
+    }
+    if (message.startsWith('StateError: ')) {
       return message.substring('StateError: '.length);
+    }
     return message;
   }
 

@@ -144,7 +144,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   ? Image.network(
                       GooglePlacesService.getPhotoUrl(photoRef),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         color: _kPrimary,
                         child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 60),
                       ),

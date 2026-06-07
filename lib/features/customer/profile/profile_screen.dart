@@ -303,7 +303,7 @@ class ProfileScreen extends StatelessWidget {
                               size: 14, color: Colors.white70),
                           const SizedBox(width: 4),
                           Text(
-                            user!.city!,
+                            user.city!,
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.8),
@@ -355,7 +355,7 @@ class ProfileScreen extends StatelessWidget {
                         stream: NutrientTrackingService.watchTodayLog(user!.id),
                         builder: (context, logSnap) {
                           return StreamBuilder<Map<String, dynamic>>(
-                            stream: NutrientTrackingService.watchLimits(user!.id),
+                            stream: NutrientTrackingService.watchLimits(user.id),
                             builder: (context, limitSnap) {
                               final log = logSnap.data ?? const <String, dynamic>{};
                               final limits = limitSnap.data ?? const {
@@ -435,7 +435,7 @@ class ProfileScreen extends StatelessWidget {
                                     child: Divider(color: _kSoftBg, height: 1),
                                   ),
                                   StreamBuilder<DocumentSnapshot>(
-                                    stream: FirebaseFirestore.instance.collection('users').doc(user!.id).snapshots(),
+                                    stream: FirebaseFirestore.instance.collection('users').doc(user.id).snapshots(),
                                     builder: (context, userSnap) {
                                       final userData = userSnap.data?.data() as Map<String, dynamic>?;
                                       final allergens = List<String>.from(userData?['allergens'] ?? []);

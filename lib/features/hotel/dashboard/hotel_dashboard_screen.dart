@@ -1034,7 +1034,7 @@ class _ExpiryAlertsStream extends StatelessWidget {
                                 child: Image.memory(
                                   base64Decode(alert.imageBase64!),
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
+                                  errorBuilder: (_, _, _) => const Icon(
                                       Icons.image_not_supported_rounded),
                                 ),
                               ),
@@ -1610,7 +1610,7 @@ class _ActionBtnState extends State<_ActionBtn> {
       child: AnimatedScale(
         scale: _pressed ? 0.95 : 1,
         duration: const Duration(milliseconds: 100),
-        child: Container(
+        child: SizedBox(
           width: 64,
           child: Column(
             mainAxisSize: MainAxisSize.min,

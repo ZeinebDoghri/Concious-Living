@@ -874,7 +874,7 @@ class _RestaurantKpiGrid extends StatelessWidget {
                   freshnessValue: hasFreshness
                       ? '${freshness.toStringAsFixed(0)}%'
                       : '—',
-                  alertsValue: '${alertCount} alerts',
+                  alertsValue: '$alertCount alerts',
                   wasteLoading: weeklyLoading,
                   compostLoading: weeklyLoading,
                   freshnessLoading: freshnessLoading,
@@ -1531,7 +1531,7 @@ class _QuickActions extends StatelessWidget {
                   }
                   context.go(a.route);
                 },
-                child: Container(
+                child: SizedBox(
                   width: 64,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

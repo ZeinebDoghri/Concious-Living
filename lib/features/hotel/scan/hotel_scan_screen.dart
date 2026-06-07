@@ -188,7 +188,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
             }),
 
         // 5. Nutritional inference (Gemini)
-        _nutritionService.predict(imageBytes).then((r) => r?.toJson()).catchError((
+        _nutritionService.predict(imageBytes).then((r) => r.toJson()).catchError((
           e,
         ) {
           debugPrint('[Hotel Scan] Nutrition error: $e');
@@ -359,7 +359,7 @@ class _HotelScanScreenState extends State<HotelScanScreen>
                     builder: (_, box) {
                       return AnimatedBuilder(
                         animation: _scanLine,
-                        builder: (_, __) {
+                        builder: (_, _) {
                           final maxTop = (box.maxHeight - 24).clamp(
                             0.0,
                             double.infinity,
