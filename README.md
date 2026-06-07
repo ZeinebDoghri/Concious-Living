@@ -167,9 +167,9 @@ All models are hosted externally and called via REST API. **No model files are s
 | Freshness detection | Hugging Face Spaces | [Link](https://huggingface.co/spaces/jawher0000/freshness-check) |
 | Expiry detection | Roboflow Universe | [Link](https://universe.roboflow.com/ml-model-tlmqd/expiry-date-recognition) |
 | Compost segmentation | Hugging Face Spaces | [Link](https://huggingface.co/spaces/touuuuuuuuuuta/compost-api) |
-| Calories prediction | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/chamsun/myAPI) |
-| Waste estimation | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/Fatmaaaaa10/food-waste-pipeline) |
-| Contamination detection | Hugging Face Spaces | ([Link](https://huggingface.co/spaces/AhmedBH03/projetai53) |
+| Calories prediction | Hugging Face Spaces | [Link](https://huggingface.co/spaces/chamsun/myAPI) |
+| Waste estimation | Hugging Face Spaces | [Link](https://huggingface.co/spaces/Fatmaaaaa10/food-waste-pipeline) |
+| Contamination detection | Hugging Face Spaces | [Link](https://huggingface.co/spaces/AhmedBH03/projetai53) |
 
 ---
 
